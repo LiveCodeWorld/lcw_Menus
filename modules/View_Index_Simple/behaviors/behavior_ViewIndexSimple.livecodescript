@@ -123,6 +123,67 @@ command LayoutControl pRect
 end LayoutControl
 
 
+--> Working on
+-
+/*
+May be a bug when passing number lists in setprop params - conversts to long falsefalsefalse string
+*/
+
+getprop line_Colours
+   put _fieldObject() into fieldObject
+   
+   put the number of lines of the text of fieldObject into maxNum
+   repeat with lineNum = 1 to maxNum
+      put the textcolor of line lineNum of fieldObject into someColour
+      if someColour = empty then put "none" into someColour
+      put the textstyle of line lineNum of fieldObject into someStyle
+      put someStyle into colourArray [someColour][lineNum]
+   end repeat
+   return colourArray
+end line_Colours
+
+setprop line_Colours colourArray
+   put _fieldObject() into fieldObject
+   
+   lock screen
+   repeat for each key someColour in colourArray
+      put colourArray [someColour] into lineNumArray
+      if someColour = "none" then put empty into someColour
+      repeat for each key lineNum in lineNumArray
+         set the textcolor of line lineNum of fieldObject to someColour
+         -- put colourArray [someColour][lineNum] into someStyle
+         -- set the textstyle of line lineNum of fieldObject to someStyle
+      end repeat
+   end repeat
+   unlock screen
+end line_Colours
+
+getprop line_Colour [lineNum]
+   put _fieldObject() into fieldObject
+   if lineNum is empty then
+      put line 1 of the hilitedlines of fieldObject into lineNum
+   end if
+   put the textcolor of line lineNum of fieldObject into someColour
+   return someColour
+end line_Colour
+
+setprop line_Colour [lineNumList] someColour
+   -- could change to using:
+   -- put the styledText of fieldObject into styledArray
+   
+   put _fieldObject() into fieldObject
+   if lineNumList is empty then
+      put line 1 of the hilitedlines of fieldObject into lineNumList
+   end if
+   
+   lock screen
+   repeat for each item lineNum in lineNumList
+      set the textcolor of line lineNum of fieldObject to someColour
+   end repeat
+   unlock screen
+end line_Colour
+
+
 --> Menus
 -
 getprop menu_Target [mTitlePath]
@@ -221,28 +282,6 @@ end title_Text
 
 --> Index | Selected
 -
-getprop line_Colour [lineNum]
-   put _fieldObject() into fieldObject
-   if lineNum is empty then
-      put line 1 of the hilitedlines of fieldObject into lineNum
-   end if
-   put the textcolor of line lineNum of fieldObject into someColour
-   return someColour
-end line_Colour
-
-setprop line_Colour [lineNumList] someColour
-   put _fieldObject() into fieldObject
-   if lineNumList is empty then
-      put line 1 of the hilitedlines of fieldObject into lineNumList
-   end if
-   
-   lock screen
-   repeat for each item lineNum in lineNumList
-      set the textcolor of line lineNum of fieldObject to someColour
-   end repeat
-   unlock screen
-end line_Colour
-
 getprop hilited_Lines
    put the hilitedlines of _fieldObject() into lineNumList
    return lineNumList
@@ -306,11 +345,26 @@ setprop view_Text someText
    unlock screen
 end view_Text
 
-getprop field_Style
-   put the field_Style of me into someStyle
-   return someStyle
+getprop field_Align
+   put _fieldObject() into fieldView
+   put the textalign of fieldView into fieldAlign
+   return fieldAlign
+end field_Align
+
+setprop field_Align fieldAlign
+   put _fieldObject() into fieldView
+   set the textalign of fieldView to fieldAlign
+   return fieldView
+end field_Align
+
+getprop field_Aligns
+   return "left,right"
+end field_Aligns
    
-   /*
+getprop field_Style
+   -- put the field_Style of me into someStyle
+   -- return someStyle
+   
    put _fieldObject() into fieldView
    switch
       case the dontwrap of fieldView = false
@@ -320,7 +374,6 @@ getprop field_Style
       default
          return "multiselect"
    end switch
-   */
 end field_Style
 
 setprop field_Style someStyle
@@ -332,6 +385,14 @@ setprop field_Style someStyle
          set the dontwrap of fieldView to false
          set the locktext of fieldView to false
          set the autoHilite of fieldView to true
+         break
+      case "click"
+         set the listbehavior of fieldView to true
+         set the multiple_Hilites of fieldView to false
+         set the dontwrap of fieldView to true
+         set the locktext of fieldView to true
+         set the autoHilite of fieldView to true
+         set the toggleHilites of fieldView to false
          break
       case "scrolling"
          set the listbehavior of fieldView to true

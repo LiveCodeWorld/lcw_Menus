@@ -11,24 +11,43 @@ version: 0.1
 -
 on menu_EditMenuItem pigeon, mController, sentMenuTarget
    put "What would you like to do with the script of this menu item?" into someQuestion
-   answer someQuestion with "Cancel" or "Edit"
-   if it = "Edit" then
-      menu_EditMenuItemScript pigeon, mController, sentMenuTarget
-   else if it = "Export" then
-      menu_ExportMenuItemScript pigeon, mController
-   end if
-   return the result
+   
+   -- answer someQuestion with "Cancel" or "Edit" as sheet
+   put rev_TopScriptEditor() into stackObject
+   dispatch "lcw_AnswerSheet" to stackObject with someQuestion,"Edit"
+   put the result into answerResult
+   
+   switch answerResult
+      case "Edit"
+         put word 1 of pigeon into handlerName
+         menu_EditMenuItemScript handlerName, mController, sentMenuTarget
+         put the result into foundInfo
+         --
+         if foundInfo is empty then
+            -- let's try to find it another way?
+            lcw_Notify "Cannot locate menu!"
+            put pigeon,mController,sentMenuTarget
+            edit the script of mController
+         end if
+         break
+      case "Export"
+         menu_ExportMenuItemScript pigeon, mController
+         break
+      default
+         exit to top
+   end switch
 end menu_EditMenuItem
 
-command menu_EditMenuItemScript pigeon, mController, sentMenuTarget
-   put word 1 of pigeon into handlerName
+command menu_EditMenuItemScript handlerName, mController, sentMenuTarget
    put hkey_Construct (handlerName, "c", mController) into hKey
    try
       hkey_Edit hKey
+      put the result into foundInfo
+      return foundInfo
    catch e
       edit the script of mController
+      return "Error: canot edit script of" && mController
    end try
-   return hKey
 end menu_EditMenuItemScript
 
 command menu_ExportMenuItemScript pigeon, mController
@@ -62,7 +81,8 @@ command hkey_Edit hKey, pExternalObjects
    --
    put the hkey_StartLine [hkeyLine] of fObject into foundLineNum
    rev_SetSelectedHandlerTreeLineNum foundLineNum
-   return foundLineNum
+   --
+   return foundHkey & CR & foundLineNum
 end hkey_Edit
 
 function hkey_Construct hName, hType, hObject, pHandlerNum

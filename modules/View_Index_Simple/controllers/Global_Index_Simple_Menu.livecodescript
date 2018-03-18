@@ -47,6 +47,11 @@ on menu_FieldStyle displayedObject, fStyle
    set the field_Style of indexView to fStyle
 end menu_FieldStyle
 
+on menu_FieldAlign displayedObject, fAlign
+   put LocalArray ["indexView"] into indexView
+   set the field_Align of indexView to fAlign
+end menu_FieldAlign
+
 on menu_DontWrap displayedObject, someBoolean
    put LocalArray ["indexView"] into indexView
    set the dont_Wrap of indexView to someBoolean
@@ -174,6 +179,15 @@ on menu_EditViewScript
    edit the script of indexView
 end menu_EditViewScript
 
+on menu_EditViewBehavior
+   put LocalArray ["indexView"] into indexView
+   put the behavior of indexView into bObject
+   edit the script of bObject
+end menu_EditViewBehavior
+
+on _
+end _
+
 on submenu_Dev
    return "Dev | Menu"
 end submenu_Dev
@@ -201,6 +215,19 @@ getprop dont_Wrap [displayedObject]
    return someBoolean
 end dont_Wrap
 
+getprop f_Align [displayedObject]
+   put LocalArray ["indexView"] into indexView
+   put the field_Align of indexView into fStyle
+   return fStyle
+end f_Align
+
+getprop f_Aligns [displayedObject]
+   put LocalArray ["indexView"] into indexView
+   if exists (indexView) is false then return empty
+   put the field_Aligns of indexView into fStyles
+   return fStyles
+end f_Aligns
+
 getprop f_Style [displayedObject]
    put LocalArray ["indexView"] into indexView
    put the field_Style of indexView into fStyle
@@ -221,13 +248,6 @@ end f_Styles
 
 --> Dev | Menu
 -
-on menu_EditBehavior
-   put LocalArray ["indexView"] into indexView
-   
-   put the behavior of indexView into bObject
-   edit the script of bObject
-end menu_EditBehavior
-
 on menu_SetStandardBehavior
    put LocalArray ["indexView"] into indexView
    
