@@ -54,5 +54,5 @@ end menu_RevealFolder
 
 on menu_Refresh indexView
    put the title_Text of indexView into projectName
-   display_ProjectControllers projectName, indexView
+   display_ProjectControllers projectName
 end menu_Refresh

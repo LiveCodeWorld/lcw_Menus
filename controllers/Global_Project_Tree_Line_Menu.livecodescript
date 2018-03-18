@@ -14,7 +14,7 @@ local LocalArray
 on menu_Init tObject
    put the index_View of tObject into indexView
    
-   put the selected_Index of indexView into projectName
+   put the title_Text of indexView into projectName
    put library_FetchProjectFolder (projectName) into projectFolder
    
    put project_GetHomeStackPath (projectName) into homeStackPath
