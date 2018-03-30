@@ -15,6 +15,9 @@ on menu_Init tObject
    put the index_View of tObject into indexView
    
    put the title_Text of indexView into projectName
+   if projectName = "List of projects" then
+      put "LCW" into projectName
+   end if
    put library_FetchProjectFolder (projectName) into projectFolder
    
    put project_GetHomeStackPath (projectName) into homeStackPath

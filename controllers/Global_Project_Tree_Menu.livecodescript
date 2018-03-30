@@ -14,7 +14,11 @@ version: 0.2
 local LocalArray
 
 on menu_Init tObject
-   put the index_View of tObject into LocalArray ["indexView"]
+   put the index_View of tObject into indexView
+   put indexView into LocalArray ["indexView"]
+   put the title_Text of indexView into projectName
+   put the git_IsActive of stack projectName into gitIsActive
+   put gitIsActive into LocalArray ["gitIsActive"]
 end menu_Init
 
 getprop menu_CheckTarget [projectName]
@@ -35,45 +39,13 @@ on menu_StartProject projectName, someBoolean
    end if
 end menu_StartProject
 
-on menu_GitStatus projectName
-   display_GitProjectStatus projectName
-end menu_GitStatus
+on submenu_Init
+   return "Global | GIT | Init | Menu"
+end submenu_Init
 
-on menu_AddProjectWiki projectName
-   put projectName & ".wiki" into wikiProjectName
-   
-   answer folder "Select a folder containing a project..."
-   put it into projectFolder
-   if it is empty then exit to top
-   if projectFolder ends with ".wiki" is false then
-      answer warning "Not a GitHub wiki project"
-      exit to top
-   end if
-   
-   put projectFolder into projectArray ["projectFolder"]
-   put "wiki" into projectArray ["projectType"]
-   library_StoreProjectArray wikiProjectName, projectArray
-   
-   display_LcwProjectList
-end menu_AddProjectWiki
-
-on menu_CreateLibraryPages projectName
-   -- put projectName & ".wiki" into wikiProjectName
-   -- put library_FetchProjectFolder (wikiProjectName) into wikiFolder
-   put LocalArray ["wikiFolder"] into wikiFolder
-   put LocalArray ["indexView"] into indexView
-   put the view_Index of indexView into stackNames
-   repeat for each line stackName in stackNames
-      put wikiFolder & stackName & ".md" into wikiPageFile
-      if there is a file wikiPageFile then
-         breakpoint
-      else
-         put the github_WikiPage of stack stackName into wikiMarkdown
-         put "file:" & wikiPageFile into someURL
-         put wikiMarkdown into url someURL
-      end if
-   end repeat
-end menu_CreateLibraryPages
+on submenu_Git
+   return "Global | GIT | Basics | Menu"
+end submenu_Git
 
 on _
 end _
@@ -92,6 +64,62 @@ on menu_EditHomeStackScript homeStackName
    edit the script of stack homeStackPath
 end menu_EditHomeStackScript
 
+on _
+end _
+
+on menu_ExportMenusAndStackFiles projectName
+   put project_GetFolder (projectName) into projectFolder
+   project_ExportMenusAndStackFiles projectFolder
+   --
+   display_RefreshProjectLibs projectName
+end menu_ExportMenusAndStackFiles
+
+on _
+end _
+
+on submenu_Dev
+   return "Dev | Menu"
+end submenu_Dev
+
+on _
+end _
+
+on menu_Refresh homeStackName
+   display_RefreshProjectLibs homeStackName
+end menu_Refresh
+
+
+--> Global | Project | Tree | Menu | Props
+-
+getprop start_Project [projectName]
+   put project_IsActive (projectName) is true into someBoolean
+   return someBoolean
+end start_Project
+
+getprop home_IsScriptOnly [projectName]
+   put project_GetHomeStackPath (projectName) into homeStackPath
+   put the scriptonly of stack homeStackPath into someBoolean
+   return someBoolean
+end home_IsScriptOnly
+
+getprop project_Choice [indexView]
+   put menu_GettargetObject() into tObject
+   put the index_View of tObject into indexView
+   
+   put the title_Text of indexView into displayedProjectName
+   return displayedProjectName
+end project_Choice
+
+getprop project_Choices
+   return library_ListProjectNames()
+end project_Choices
+
+
+--> Global | Project | Tree | Menu | Disabled
+-
+
+--> Dev | Menu
+-
 on menu_HomeIsScriptOnly projectName, someBoolean
    if someBoolean is false then
       put project_GetHomeStackPath (projectName) into homeStackPath
@@ -118,19 +146,6 @@ on menu_InspectHomeStack homeStackName
    object_Inspect stackObject
 end menu_InspectHomeStack
 
-on menu_ExportStandaloneSettings homeStackName
-   put "cRevStandaloneSettings" into setName
-   put the name of stack homeStackName into homeStackObject
-   
-   put the customproperties [setName] of homeStackObject into customArray
-   -- display_Array customArray
-   
-   set the project_Array of homeStackObject to  customArray
-   -- custom_DeleteSet setName, homeStackObject
-   put the project_Array of homeStackObject into customArray
-   display_Array customArray
-end menu_ExportStandaloneSettings
-
 on _
 end _
 
@@ -154,6 +169,19 @@ end menu_ExportHomeStackFiles
 
 on _
 end _
+
+on menu_ExportStandaloneSettings homeStackName
+   put "cRevStandaloneSettings" into setName
+   put the name of stack homeStackName into homeStackObject
+   
+   put the customproperties [setName] of homeStackObject into customArray
+   -- display_Array customArray
+   
+   set the project_Array of homeStackObject to  customArray
+   -- custom_DeleteSet setName, homeStackObject
+   put the project_Array of homeStackObject into customArray
+   display_Array customArray
+end menu_ExportStandaloneSettings
 
 on menu_ChangeProject projectName, projectChoice
    put library_FetchProjectHomeStackPath (projectChoice) into homeStackPath
@@ -194,59 +222,3 @@ on menu_ExportAndIndexProject projectName
    put the result into hkeyPlaceArray
    display_Array hkeyPlaceArray
 end menu_ExportAndIndexProject
-
-on _
-end _
-
-on menu_Refresh homeStackName
-   display_RefreshProjectLibs homeStackName
-end menu_Refresh
-
-
---> Global | Project | Tree | Menu | Props
--
-getprop start_Project [projectName]
-   put project_IsActive (projectName) is true into someBoolean
-   return someBoolean
-end start_Project
-
-getprop home_IsScriptOnly [projectName]
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   put the scriptonly of stack homeStackPath into someBoolean
-   return someBoolean
-end home_IsScriptOnly
-
-getprop project_Choice [indexView]
-   put menu_GettargetObject() into tObject
-   put the index_View of tObject into indexView
-   
-   put the title_Text of indexView into displayedProjectName
-   return displayedProjectName
-end project_Choice
-
-getprop project_Choices
-   return library_ListProjectNames()
-end project_Choices
-
-
---> Global | Project | Tree | Menu | Disabled
--
-getprop disabled_AddProjectWiki [projectName]
-   -- put projectName & ".wiki" into wikiProjectName
-   -- put library_FetchProjectFolder (wikiProjectName) into wikiFolder
-   put LocalArray ["wikiFolder"] into wikiFolder
-   if there is a folder wikiFolder then
-      return "delete"
-   else
-      return false
-   end if
-end disabled_AddProjectWiki
-
-getprop disabled_CreateLibraryPages [projectName]
-   put LocalArray ["wikiFolder"] into wikiFolder
-   if there is a folder wikiFolder then
-      return false
-   else
-      return true
-   end if
-end disabled_CreateLibraryPages

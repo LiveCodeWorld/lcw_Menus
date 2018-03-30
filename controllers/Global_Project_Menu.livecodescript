@@ -153,8 +153,8 @@ getprop project_Choices
    return library_ListProjectNames() & CR & "-,Active environment"
 end project_Choices
 
-getprop p_Name
-   return env_GetProjectFocus()
+-- getprop p_Name
+return env_GetProjectFocus()
 end p_Name
 
 getprop p_Names
