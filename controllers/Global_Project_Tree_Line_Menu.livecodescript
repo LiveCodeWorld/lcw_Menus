@@ -104,11 +104,9 @@ on menu_ExportAndIndexProject indexView
    -- put library_FetchProjectFolder (projectName) into projectFolder
    -- put project_GetFolder (projectName) into projectFolder
    
-   breakpoint
    env_ExportAndIndexProject projectName
    put the result into hkeyPlaceArray
-   
-   display_Array hkeyPlaceArray
+   display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
 end menu_ExportAndIndexProject
 
 on _
@@ -135,6 +133,17 @@ on menu_LaunchGithub
    put github_FindRepoName (remoteAddress) into repoName
    github_Launch repoName
 end menu_LaunchGithub
+
+on menu_GithubReadme indexView
+   put the selected_Index of indexView into projectName
+   --
+   put github_FetchReadmeMD (projectName) into readmeMarkdown
+   put "Project" && projectName into pageTitle
+   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
+   put json_FromArray (pageArray) into readmeJSON
+   --
+   display_FedwikiPageJson readmeJSON
+end menu_GithubReadme
 
 on menu_DisplayGithubInfo
    put LocalArray ["remoteAddress"] into remoteAddress

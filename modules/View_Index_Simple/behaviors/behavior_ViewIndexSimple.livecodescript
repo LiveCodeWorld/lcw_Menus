@@ -1,4 +1,4 @@
-﻿script "behavior_ViewIndexSimple"
+﻿script "behavior_ViewIndexSimple" with behavior "behavior_ViewIndexFiles"
 --> MetaData
 -
 copyright: David Bovill
@@ -18,12 +18,57 @@ local LocalArray
 
 --> Working on
 -
-getprop menu_Button
-   -- this causes double menu drawing
-   put the long id of btn 1 of me into mButton
-   return mButton
-end menu_Button
 
+--> Data
+-
+getprop displayed_Index
+   return the view_Index of me
+end displayed_Index
+
+setprop displayed_Index [someTitle] someIndex
+   set the view_Index [someTitle] of me to someIndex
+   return the result
+end displayed_Index
+
+getprop displayed_Array
+   put LocalArray ["displayed_Data"] into someArray
+   return someArray
+end displayed_Array
+
+setprop displayed_Array [someTitle] someArray
+   -- also sets the display
+   put keys (someArray) into someIndex
+   sort someIndex
+   set the view_Index [someTitle] of me to someIndex
+   put someArray into LocalArray ["displayed_Data"]
+end displayed_Array
+
+getprop displayed_Data
+   put LocalArray ["displayed_Data"] into someArray
+   return someArray
+end displayed_Data
+
+setprop displayed_Data someArray
+   put someArray into LocalArray ["displayed_Data"]
+end displayed_Data
+
+
+--> Metadata
+-
+-- a place to store things that don't need displaying
+
+getprop meta_Data [someKey]
+   put LocalArray ["meta_Data"][someKey] into someValue
+   return someValue
+end meta_Data
+
+setprop meta_Data [someKey] someValue
+   put someValue into LocalArray ["meta_Data"][someKey]
+end meta_Data
+
+
+--> Events
+-
 on mouseDown
    switch word 1 of the name of the target
       case "button"
@@ -35,25 +80,6 @@ on mouseDown
    end switch
 end mouseDown
 
-/*
-private command _doButtonMenu
-   -- now using buttons script (menu_MouseDown" to set text and actual button behavior
-   put the title_Menu of me into mTitle
-   switch
-      case the controlkey is "Down"
-         menu_PullDown "Global | Index | Simple | Menu"
-         break
-      case mTitle is not empty
-         menu_PullDown mTitle
-         break
-      default
-         menu_PullDown "Title | Menu"
-   end switch
-end _doButtonMenu
-*/
-
---> Events
--
 on preOpenControl
    local headerHeight
    _setDefaultHeight headerHeight
@@ -89,15 +115,6 @@ on resizeControl
    LayoutControl viewRect
 end resizeControl
 
--- on nameChanged oldName, newName
--- here we change field and button names
--- this will break any references to them by name
--- but you shouldn't do that lightly anyway as this view hides it's inner workings.
-set the name of _titleView() to newName
-set the label of _titleView() to empty
-set the name of _fieldObject() to newName
-end nameChanged
-
 
 --> Events | Custom
 -
@@ -129,17 +146,67 @@ end LayoutControl
 May be a bug when passing number lists in setprop params - conversts to long falsefalsefalse string
 */
 
-getprop line_Colours
+getprop title_Lines
+   put LocalArray ["title_Lines"] into lineNumList
+   return lineNumList
+end title_Lines
+
+setprop title_Lines [someColour] lineNumList
+   replace CR with comma in lineNumList
+   put _fieldObject() into fieldObject
+   --
+   lock screen
+   repeat for each item lineNum in lineNumList
+      if someColour is not empty then
+         set the textcolor of line lineNum of fieldObject to someColour
+      end if
+      set the textstyle of line lineNum of fieldObject to "bold"
+   end repeat
+   unlock screen
+   --
+   put lineNumList into LocalArray ["title_Lines"]
+end title_Lines
+
+getprop hilited_Line
+   put the hilited_Lines of me into lineNumList
+   return item 1 of lineNumList
+end hilited_Line
+
+setprop hilited_Line lineNum
+   set the hilited_Lines of _fieldObject() to lineNum
+   put the result into fieldObject
+   return fieldObject
+end hilited_Line
+
+getprop hilited_Lines
+   put the hilitedlines of _fieldObject() into lineNumList
+   return lineNumList
+end hilited_Lines
+
+setprop hilited_Lines lineNumList
+   put _fieldObject() into fieldObject
+   replace CR with comma in lineNumList
+   set the hilitedlines of fieldObject to lineNumList
+   return fieldObject
+end hilited_Lines
+
+getprop line_Colours [someColour]
    put _fieldObject() into fieldObject
    
    put the number of lines of the text of fieldObject into maxNum
    repeat with lineNum = 1 to maxNum
-      put the textcolor of line lineNum of fieldObject into someColour
-      if someColour = empty then put "none" into someColour
+      put the textcolor of line lineNum of fieldObject into foundColour
+      if foundColour = empty then put "none" into foundColour
       put the textstyle of line lineNum of fieldObject into someStyle
-      put someStyle into colourArray [someColour][lineNum]
+      put someStyle into colourArray [foundColour][lineNum]
    end repeat
-   return colourArray
+   
+   if someColour is empty then
+      return colourArray
+   else
+      put colourArray [someColour] into lineArray
+      return keys (lineArray)
+   end if
 end line_Colours
 
 setprop line_Colours colourArray
@@ -151,8 +218,6 @@ setprop line_Colours colourArray
       if someColour = "none" then put empty into someColour
       repeat for each key lineNum in lineNumArray
          set the textcolor of line lineNum of fieldObject to someColour
-         -- put colourArray [someColour][lineNum] into someStyle
-         -- set the textstyle of line lineNum of fieldObject to someStyle
       end repeat
    end repeat
    unlock screen
@@ -178,6 +243,7 @@ setprop line_Colour [lineNumList] someColour
    
    lock screen
    repeat for each item lineNum in lineNumList
+      if lineNum is not a number then next repeat
       set the textcolor of line lineNum of fieldObject to someColour
    end repeat
    unlock screen
@@ -214,6 +280,9 @@ setprop view_MenuArray menuArray
    set the line_Menu of me to menuArray ["line"]
 end view_MenuArray
 
+
+--> Titles
+-
 getprop title_Menu
    put LocalArray ["title_Menu"] into titleMenuName
    return titleMenuName
@@ -282,16 +351,30 @@ end title_Text
 
 --> Index | Selected
 -
-getprop hilited_Lines
-   put the hilitedlines of _fieldObject() into lineNumList
-   return lineNumList
-end hilited_Lines
+setprop deleted_Line someLine
+   put the line_Number [someLine] of me into lineNum
+   put the short id of _fieldObject() into fldID
+   delete line lineNum of fld id fldID of me
+   return lineNum
+end deleted_Line
 
-setprop hilited_Lines lineNumList
-   replace CR with comma in lineNumList
-   set the hilitedlines of _fieldObject() to lineNumList
-   return lineNumList
-end hilited_Lines
+getprop line_Number [someLine]
+   put the view_Index of _fieldObject() into someIndex
+   set the wholeMatches to true
+   put lineOffset (someLine, someIndex) into lineNum
+   return lineNum
+end line_Number
+
+setprop line_Number [someLine] someValue
+   put the view_Index of _fieldObject() into someIndex
+   set the wholeMatches to true
+   put lineOffset (someLine, someIndex) into lineNum
+   if lineNum is 0 then return 0
+   
+   put the short id of _fieldObject() into fldID
+   set the text of line lineNum of fld id fldID of me to someValue
+   return lineNum
+end line_Number
 
 getprop selected_Line
    put the selected_Index of _fieldObject() into someIndex
@@ -300,6 +383,8 @@ end selected_Line
 
 setprop selected_Line someLine
    set the selected_Index of me to line 1 of someLine
+   put the result into lineNum
+   return lineNum
 end selected_Line
 
 getprop selected_Index
@@ -310,6 +395,7 @@ end selected_Index
 setprop selected_Index someLines
    put the view_Index of me into viewIndex
    set the itemdelimiter to slash
+   set the wholematches to true
    repeat for each line someLine in someLines
       put lineOffset (someLine, viewIndex) into lineNum
       if lineNum > 0 then
@@ -321,6 +407,28 @@ setprop selected_Index someLines
    set the hilitedlines of _fieldObject() to lineNumList
    return lineNumList
 end selected_Index
+
+getprop selected_Value
+   put the selectedtext of _fieldObject() into someIndex
+   put LocalArray ["displayed_Data"] into someArray
+   put someArray [someIndex] into someValue
+   return someValue
+end selected_Value
+
+setprop selected_Value someValue
+   put LocalArray ["displayed_Data"] into someArray
+   put the view_Index of me into viewIndex
+   repeat with lineNum = 1 to the number of lines of viewIndex
+      put line lineNum of viewIndex into testLine
+      put someArray [testLine] into testValue
+      if testValue = someValue then
+         set the hilitedlines of _fieldObject() to lineNum
+         return lineNum
+      end if
+   end repeat
+   set the hilitedlines of _fieldObject() to 0
+   return 0
+end selected_Value
 
 
 --> Field | Props
@@ -532,15 +640,14 @@ setprop displayed_Object displayedObject
    set the displayed_Object of me to displayedObject -- so it is stored for each view
 end displayed_Object
 
--- getprop displayed_Data -- not needed???
-put the view_Index of me into someIndex
-return someIndex
-end displayed_Data
+getprop displayed_Title
+   return the title_Text of me
+end displayed_Title
 
--- setprop displayed_Data someIndex -- not needed???
-set the view_Index of me to someIndex
-end displayed_Data
-
+setprop displayed_Title [setName] someTitle
+   set the title_Text [setName] of me to someTitle
+end displayed_Title
+   
 getprop displayed_Text
    return the view_Index of me
 end displayed_Text
@@ -549,15 +656,6 @@ setprop displayed_Text someText
    set the view_Index of me to someText
    return the result
 end displayed_Text
-
-getprop displayed_Index
-   return the view_Index of me
-end displayed_Index
-
-setprop displayed_Index someIndex
-   set the view_Index of me to someIndex
-   return the result
-end displayed_Index
 
 getprop view_Index
    put the text of _fieldObject() into someIndex
@@ -727,6 +825,12 @@ end index_View
 getprop index_Field
    return _fieldObject()
 end index_Field
+
+getprop menu_Button
+   -- this causes double menu drawing
+   put the long id of btn 1 of me into mButton
+   return mButton
+end menu_Button
 
 
 --> Private

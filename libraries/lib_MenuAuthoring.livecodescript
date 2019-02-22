@@ -27,6 +27,189 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+getprop menu_ItemDisabed [hName]
+   -- new format => write a converter for old menus
+   put hName & "Disabled" into getPropName
+   put the getPropName of the target is true into someBoolean
+   return someBoolean
+end menu_ItemDisabed
+
+getprop menu_ItemChecked [hName]
+   -- new format => write a converter for old menus (see "script_ParamToHandlerName")
+   put hName & "Checked" into getPropName
+   put the getPropName of the target is true into someBoolean
+   return someBoolean
+end menu_ItemChecked
+
+getprop script_MenuArray [mTitle]
+   local mArray
+   put the long id of the target into tObject
+   put the menu_Controller [mTitle] of tObject into mController
+   mArray_AddScriptMenu mArray, mTitle, mController
+   return mArray
+end script_MenuArray
+
+getprop script_MenuHandlers [mTitle]
+   put the long id of the target into mController
+   --
+   if mTitle is empty then
+      -- faster
+      -- assumes only one menu and all named "menu_"
+      put the revAvailableHandlers of mController into hTable
+      -- filter hTable with "M menu_*"
+      sort numeric hTable by word 3 of each
+      repeat for each line hLine in hTable
+         switch
+            case hLine begins with "M menu_"
+            case word 1 to 2 of hLine = "M _"
+               put word 2 of hLine into hName
+               put hName & CR after hNames
+               break
+            default
+               -- not a menu
+         end switch
+      end repeat
+   else
+      -- slower
+      put the script of mController into someScript
+      put script_GetSuite (mTitle, someScript) into hLines
+      filter hLines with "on *"
+      repeat for each line scriptLine in hLines
+         put word 2 of scriptLine into hName
+         put hName & CR after hNames
+      end repeat
+   end if
+   delete char -1 of hNames
+   return hNames
+end script_MenuHandlers
+
+command mArray_AddDivider @mArray
+   put (item 2 of the extents of mArray) + 1 into indexNum
+   put "-" into mArray [indexNum]["name"]
+   put "-" into mArray [indexNum]["label"]
+   put false into mArray [indexNum]["checked"]
+   return indexNum
+end mArray_AddDivider
+
+command mArray_AddScriptMenu @mArray, mTitle, mController
+   if mArray is an array then
+      put item 2 of the extents of mArray into indexNum
+   else
+      put 0 into indexNum
+   end if
+   --
+   put the script_MenuHandlers [mTitle] of mController into scriptHandlers
+   repeat for each line hName in scriptHandlers      
+      add 1 to indexNum
+      if hName = "_" then
+         put "-" into mArray [indexNum]["name"]
+         put "-" into mArray [indexNum]["label"]
+         put false into mArray [indexNum]["checked"]
+         next repeat
+      end if
+      
+      put the menu_ItemDisabed [hName] of mController into isDisabled
+      switch isDisabled
+         case true -- we can delete it as right now there is no graying out
+         case "delete"
+            next repeat
+         case false
+         default
+            mArray_SetMenuItem mArray, hName, indexNum, mController
+      end switch
+   end repeat
+   return mArray
+end mArray_AddScriptMenu
+
+command mArray_SetMenuItem @mArray, hName, indexNum, mController
+   switch
+      case hName begins with "submenu_"
+         dispatch hName to mController
+         put the result into mTitle
+         put (item 2 of the extents of mArray) + 1 into indexNum
+         
+         -- check for recursion
+         put the script_MenuArray [mTitle] of mController into subMenuArray
+         if subMenuArray is not an array then return false
+         
+         put subMenuArray into mArray [indexNum]["menu"]
+         
+         replace " | " with "_" in mTitle -- = mPath
+         put mTitle into mArray [indexNum]["name"]
+         put menu_CommandToText (hName) into mArray [indexNum]["label"]
+         return true
+      case hName begins with "insert_"
+         break
+      default
+         put hName into mArray [indexNum]["name"]
+         put menu_CommandToText (hName) into mArray [indexNum]["label"]
+         -- bug in Livecode widget being strict on boolean type an text type
+         -- put true into mArray [indexNum]["disabled"] does not seem possible
+         if the menu_ItemChecked [hName] of mController is true then
+            put true into mArray [indexNum]["checked"]
+         else
+            put false into mArray [indexNum]["checked"]
+         end if
+         return true
+   end switch
+end mArray_SetMenuItem
+
+
+--> Menu | Param | Names | Old
+-
+command menu_DispatchPick mItem
+   -- menupick "idePropertyInspector_labels|false"
+   put the long id of the target into tObject
+   --
+   set the itemDelimiter to "|"
+   put item -1 of mItem into someCommand
+   put item 1 to -2 of mItem into mTitlePath
+   put item -1 of mTitlePath into mTitle
+   replace "_" with " | " in mTitle
+   replace "_" with " | " in mTitlePath
+   --
+   put the menu_Controller [mTitle] of tObject into mController
+   put the menu_Target [mTitlePath] of tObject into mTarget
+   --
+   dispatch someCommand to mController with mTarget,someParam
+   switch it
+      case "handled"
+         break
+      case "unhandled"
+         put someCommand
+         break
+      case "passed"
+         break
+   end switch
+end menu_DispatchPick
+
+function menu_CommandToText handlerName
+   -- was "menu_TextFromCommand"
+   -- used only by "_extractInsertedTitle"
+   
+   set the itemdelimiter to "_"
+   put item 2 of handlerName into mSuffix
+   put text_SplitCaps (mSuffix) into mLine
+   return mLine
+end menu_CommandToText
+
+function script_ParamToHandlerName customParam
+   put word 1 of customParam into customParam
+   put tolower(char 1 of customParam) into char 1 of customParam
+   
+   repeat with charNum = 1 to the number of chars of customParam
+      if text_StartsWithCaps(char charNum of customParam) is true then
+         put "_" before char charNum of customParam
+         return customParam
+      end if
+   end repeat
+   return customParam
+end script_ParamToHandlerName
+
+private function param_IsBoolean customParam
+   return customParam is among the items of "boolean,someBoolean,isBoolean"
+end param_IsBoolean
+
 
 --> Menu | Update
 -
@@ -60,6 +243,18 @@ setprop menu_Update someBoolean
    
    return menuTitleArray
 end menu_Update
+
+getprop menu_Handlers [mTitle]
+   put the script_MenuTitleTableArray of the target into mTitleTableArray
+   put mTitleTableArray [mTitle] into mTitleTable
+   set the itemdelimiter to tab
+   repeat for each line tLine in mTitleTable
+      put item 2 of tLine into mHandler
+      put mHandler & CR after mHandlers
+   end repeat
+   delete char -1 of mHandlers
+   return mHandlers
+end menu_Handlers
 
 getprop script_MenuTitleTableArray
    -- this is what constructs the mTitleTableArray from a script
@@ -180,20 +375,6 @@ command menu_DeconstructCommandLine mVersion, handlerLine, @handlerName, @handle
    put token 1 of handlerLine into handlerName
    put token 2 of item 1 of handlerLine into firstParam
    put token 1 of item 2 of handlerLine into secondParam
-   
-   /*
-   -- old way which switches depending on the menu_Version (too complicated)
-   if mVersion is empty then
-      if param_IsObject (firstParam) then
-         put empty into customParam
-      else
-         put firstParam into customParam 
-      end if
-   else
-      put secondParam into customParam
-   end if
-   */
-   
    put secondParam into customParam -- new way (always pass mTarget as first param)
    set the itemdelimiter to "_"
    put item 1 of handlerName into handlerPrefix
@@ -488,33 +669,6 @@ command handler_ParseSwitchStatement someHandler, @switchSection, @caseCondition
    put line startLineNum to endLineNum of someHandler into switchSection
 end handler_ParseSwitchStatement
 
-function hkeyLine_GetHandler hkeyLine, hTable, someScript
-   -- required by "menu_Update"
-   hkeyLine_FindInTable hkeyLine, hTable, startLineNum, endLineNum
-   if endLineNum = 0 then return empty
-   put line startLineNum to endLineNum of someScript into foundHandler
-   return foundHandler
-end hkeyLine_GetHandler
-
-command hkeyLine_FindInTable hkeyLine, hTable, @startLineNum, @endLineNum
-   -- see also "hkey_FindInTable"
-   -- uses lineOffset instead of repeat loop
-   
-   set the wholematches to false
-   put word 1 to 2 of hkeyLine & space into searchString
-   put lineOffset (searchString, hTable) into lineNum
-   if lineNum = 0 then
-      put 0 into startLineNum
-      put 0 into endLineNum
-      return false
-   end if
-   
-   put line lineNum of hTable into hTableLine
-   put word 3 of hTableLine into startLineNum
-   put word 4 of hTableLine into endLineNum
-   return true
-end hkeyLine_FindInTable
-
 function script_GetSuite suiteTitle, someScript
    -- get rid of
    script_SetSuiteOffsets suiteTitle, someScript, startLineNum, endLineNum
@@ -564,28 +718,28 @@ private function kwote someText, pQuoteChar
 end kwote
 
 private function text_InitialCaps someText
-    repeat with wordNum = 1 to the number of words of someText
-        put tolower(word wordNum of someText) into someWord
-        put toupper(char 1 of someWord ) into char 1 of someWord
-        put someWord into word wordNum of someText
-    end repeat
-    return someText
+   repeat with wordNum = 1 to the number of words of someText
+      put tolower(word wordNum of someText) into someWord
+      put toupper(char 1 of someWord ) into char 1 of someWord
+      put someWord into word wordNum of someText
+   end repeat
+   return someText
 end text_InitialCaps
 
 private function text_SplitCaps someWord
-    -- was "capsSplit"
-    put 1 into charNum
-    repeat the number of chars of someWord
-        put char charNum of someWord into someChar
-        if text_StartsWithCaps(someChar) is true then
-            put space before char charNum of someWord
-            add 2 to charNum
-        else
-            add 1 to charNum
-        end if
-    end repeat
-    put text_InitialCaps(word 1 of someWord) into word 1 of someWord
-    return word 1 to -1 of someWord
+   -- was "capsSplit"
+   put 1 into charNum
+   repeat the number of chars of someWord
+      put char charNum of someWord into someChar
+      if text_StartsWithCaps (someChar) is true then
+         put space before char charNum of someWord
+         add 2 to charNum
+      else
+         add 1 to charNum
+      end if
+   end repeat
+   put text_InitialCaps (word 1 of someWord) into word 1 of someWord
+   return word 1 to -1 of someWord
 end text_SplitCaps
 
 private function text_StartsWithCaps someText
@@ -679,30 +833,3 @@ private command _extractInsertedTitle mCommand, mController, someScript, hTable,
       put empty into dynamicTitleProp
    end if
 end _extractInsertedTitle
-
-private function menu_CommandToText handlerName
-   -- was "menu_TextFromCommand"
-   -- used only by "_extractInsertedTitle"
-   
-   set the itemdelimiter to "_"
-   put item 2 of handlerName into mSuffix
-   put text_SplitCaps (mSuffix) into mLine
-   return mLine
-end menu_CommandToText
-
-private function script_ParamToHandlerName customParam
-   put word 1 of customParam into customParam
-   put tolower(char 1 of customParam) into char 1 of customParam
-   
-   repeat with charNum = 1 to the number of chars of customParam
-      if text_StartsWithCaps(char charNum of customParam) is true then
-         put "_" before char charNum of customParam
-         return customParam
-      end if
-   end repeat
-   return customParam
-end script_ParamToHandlerName
-
-private function param_IsBoolean customParam
-   return customParam is among the items of "boolean,someBoolean,isBoolean"
-end param_IsBoolean

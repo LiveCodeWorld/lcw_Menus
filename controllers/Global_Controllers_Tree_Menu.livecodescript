@@ -11,6 +11,7 @@ version: 0.2
 -
 on menu_CreateProjectMenu projectName
    menu_Do "menu_CreateProjectMenu", "Global | Project | Create | Menu", projectName
+   display_ProjectControllers projectName
 end menu_CreateProjectMenu
 
 on _
@@ -26,8 +27,7 @@ on menu_ExportMenusAndStackFiles projectName
    project_ExportMenusAndStackFiles projectFolder
 end menu_ExportMenusAndStackFiles
 
-on menu_LoadMenusAndStackFiles indexView
-   put the title_Text of indexView into projectName
+on menu_LoadMenusAndStackFiles projectName
    put project_GetFolder (projectName) into projectFolder
    project_LoadMenusAndStackFiles projectFolder
 end menu_LoadMenusAndStackFiles
@@ -35,23 +35,15 @@ end menu_LoadMenusAndStackFiles
 on _
 end _
 
-on submenu_Project
-   return "Global | Project | Display | Menu"
-end submenu_Project
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
-on menu_RevealFolder projectName
+on menu_ControllerFolder projectName
    put library_FetchProjectFolder (projectName) into projectFolder
    put project_ConstructFolder ("controllers", projectFolder) into controllerFolder
    finder_Reveal controllerFolder
-end menu_RevealFolder
+end menu_ControllerFolder
 
-on menu_Refresh
+on _
+end _
+
+on menu_Refresh projectName
    display_ProjectControllers projectName
 end menu_Refresh

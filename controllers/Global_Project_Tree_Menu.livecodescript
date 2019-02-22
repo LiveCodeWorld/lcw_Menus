@@ -47,22 +47,15 @@ on submenu_Git
    return "Global | GIT | Basics | Menu"
 end submenu_Git
 
-on _
-end _
-
-on menu_GoToHomeStack homeStackName
-   put library_FetchProjectHomeStackPath (homeStackName) into homeStackPath
-   if exists (stack homeStackPath) is false then breakpoint
-   
-   go to stack homeStackPath
-end menu_GoToHomeStack
-
-on menu_EditHomeStackScript homeStackName
-   put library_FetchProjectHomeStackPath (homeStackName) into homeStackPath
-   if exists (stack homeStackPath) is false then breakpoint
-   
-   edit the script of stack homeStackPath
-end menu_EditHomeStackScript
+on menu_GithubReadme projectName
+   put github_FetchReadmeMD (projectName) into readmeMarkdown
+   put "Project" && projectName into pageTitle
+   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
+   --
+   put json_ToArray (pageArray) into readmeJSON
+   --
+   display_FedwikiPageJson readmeJSON
+end menu_GithubReadme
 
 on _
 end _
@@ -74,6 +67,12 @@ on menu_ExportMenusAndStackFiles projectName
    display_RefreshProjectLibs projectName
 end menu_ExportMenusAndStackFiles
 
+on menu_ExportAndIndexProject projectName
+   env_ExportAndIndexProject projectName
+   put the result into hkeyPlaceArray
+   display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
+end menu_ExportAndIndexProject
+
 on _
 end _
 
@@ -84,8 +83,8 @@ end submenu_Dev
 on _
 end _
 
-on menu_Refresh homeStackName
-   display_RefreshProjectLibs homeStackName
+on menu_Refresh projectName
+   display_RefreshProjectLibs projectName
 end menu_Refresh
 
 
@@ -117,108 +116,3 @@ end project_Choices
 
 --> Global | Project | Tree | Menu | Disabled
 -
-
---> Dev | Menu
--
-on menu_HomeIsScriptOnly projectName, someBoolean
-   if someBoolean is false then
-      put project_GetHomeStackPath (projectName) into homeStackPath
-      stack_ConvertScriptOnly homeStackPath
-      put the result into tempStackFileName
-      
-      answer warning "Saved old script only home stack to temporary file, and created new livecode stack in it's place. Check everything is saved you need before continuing!"
-      put tempStackFileName
-      put tempStackFileName into tempFolder
-      set the itemdelimiter to slash
-      put empty into item -1 of tempFolder
-      finder_Reveal tempFolder
-   else
-      -- don't automatically change to scriptonly stack. Do manually ?
-      breakpoint
-   end if
-end menu_HomeIsScriptOnly
-
-on menu_InspectHomeStack homeStackName
-   put library_FetchProjectHomeStackPath (homeStackName) into homeStackPath
-   if exists (stack homeStackPath) is false then breakpoint
-   
-   put the name of stack homeStackPath into stackObject
-   object_Inspect stackObject
-end menu_InspectHomeStack
-
-on _
-end _
-
-on menu_SetHomeStackfiles homeStackName
-   put the stack_Folder of stack homeStackName into projectFolder
-   project_SetFoundStackFiles projectFolder
-   
-   menu_DisplayHomeStackFiles homeStackName
-end menu_SetHomeStackfiles
-
-on menu_DisplayHomeStackFiles homeStackName
-   put the stackFile_Array of stack homeStackName into stackFileArray
-   put the name of stack homeStackName into stackObject
-   display_Array stackFileArray, merge ("[[stackObject]],stackFile_Array")
-end menu_DisplayHomeStackFiles
-
-on menu_ExportHomeStackFiles homeStackName
-   put the stackfiles of stack homeStackName into homeStackFiles
-   put homeStackFiles
-end menu_ExportHomeStackFiles
-
-on _
-end _
-
-on menu_ExportStandaloneSettings homeStackName
-   put "cRevStandaloneSettings" into setName
-   put the name of stack homeStackName into homeStackObject
-   
-   put the customproperties [setName] of homeStackObject into customArray
-   -- display_Array customArray
-   
-   set the project_Array of homeStackObject to  customArray
-   -- custom_DeleteSet setName, homeStackObject
-   put the project_Array of homeStackObject into customArray
-   display_Array customArray
-end menu_ExportStandaloneSettings
-
-on menu_ChangeProject projectName, projectChoice
-   put library_FetchProjectHomeStackPath (projectChoice) into homeStackPath
-   put the project_UsedStackNames of stack homeStackPath into stackNames
-   
-   lock screen
-   put menu_GettargetObject() into tObject
-   put the index_View of tObject into indexView
-   
-   set the view_Index of indexView to stackNames
-   set the title_Text of indexView to projectChoice
-   put the stack_Object of indexView into stackObject
-   set the label of stackObject to "Model and Libraries"
-   unlock screen
-end menu_ChangeProject
-
-on _
-end _
-
-on menu_DisplayProjectFolder homeStackName
-   put the project_Folder of stack homeStackName into projectFolder
-   if there is not a folder projectFolder then
-      answer warning "Cannot find project folder!"
-      put projectFolder
-      exit to top
-   end if
-   
-   finder_Reveal projectFolder
-end menu_DisplayProjectFolder
-
-on menu_ExportAndIndexProject projectName
-   put merge ("Do you want to export and index project '[[projectName]]'?") into someComment
-   lcw_Answer someComment
-   
-   -- project_ExportAndIndex projectName, true
-   
-   env_ExportAndIndexProject projectName
-   put the result into hkeyPlaceArray
-   display_Array hkeyPlaceArray
-end menu_ExportAndIndexProject
