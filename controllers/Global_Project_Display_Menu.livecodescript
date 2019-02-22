@@ -33,7 +33,7 @@ end menu_ProjectViews
 
 --> Global | Project | Display | Menu | Disabled
 -
-getprop disabled_ProjectMenus [projectName]
+-- getprop disabled_ProjectMenus [projectName]
    put project_ListControllerPaths (projectName) into filePaths
    if filePaths is empty then
       return true
@@ -69,7 +69,3 @@ getprop disabled_ProjectModules [homeStackName]
       return false
    end if
 end disabled_ProjectModules
-
-on errorDialog pExecutionError, pParseError
-   
-end errorDialog

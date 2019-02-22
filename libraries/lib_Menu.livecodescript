@@ -354,6 +354,9 @@ function menu_ConvertTable mTable, mView, pTitlePath, pTextPath, pMenuTarget, pM
 end menu_ConvertTable
 
 function menu_TargetFromGlobal mPath
+   -- we sometimes want smething like a project name instead of an object in mTarget
+   -- this is currently allowed, but should probably not be?
+   
    -- try to get rid of and replace with the menu_Target
    -- used by "menu_ConvertTable" and "menu_SendMessage"
    
@@ -373,11 +376,7 @@ function menu_TargetFromGlobal mPath
    -- so go get a default!
    put menu_GetTargetObject() into targetObject
    put _GetDefaultMenuTarget (mPath, mTitlePath, targetObject) into mTarget
-   if exists (mTarget) then
-      put mTarget into gLCW ["activeMenuArray"]["top"]["mTarget"]
-   else
-      put the long id of the target into mTarget
-   end if
+   put mTarget into gLCW ["activeMenuArray"]["top"]["mTarget"]
    return mTarget
 end menu_TargetFromGlobal
 

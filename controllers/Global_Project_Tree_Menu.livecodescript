@@ -17,16 +17,7 @@ on menu_Init tObject
    put the index_View of tObject into indexView
    put indexView into LocalArray ["indexView"]
    put the title_Text of indexView into projectName
-   put the git_IsActive of stack projectName into gitIsActive
-   put gitIsActive into LocalArray ["gitIsActive"]
 end menu_Init
-
-getprop menu_CheckTarget [projectName]
-   put projectName & ".wiki" into wikiProjectName
-   put library_FetchProjectFolder (wikiProjectName) into wikiFolder
-   put wikiFolder into LocalArray ["wikiFolder"]
-   return true
-end menu_CheckTarget
 
 
 --> Global | Project | Tree | Menu
@@ -38,24 +29,6 @@ on menu_StartProject projectName, someBoolean
       project_Stop projectName
    end if
 end menu_StartProject
-
-on submenu_Init
-   return "Global | GIT | Init | Menu"
-end submenu_Init
-
-on submenu_Git
-   return "Global | GIT | Basics | Menu"
-end submenu_Git
-
-on menu_GithubReadme projectName
-   put github_FetchReadmeMD (projectName) into readmeMarkdown
-   put "Project" && projectName into pageTitle
-   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
-   --
-   put json_ToArray (pageArray) into readmeJSON
-   --
-   display_FedwikiPageJson readmeJSON
-end menu_GithubReadme
 
 on _
 end _
@@ -72,13 +45,6 @@ on menu_ExportAndIndexProject projectName
    put the result into hkeyPlaceArray
    display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
 end menu_ExportAndIndexProject
-
-on _
-end _
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
 
 on _
 end _
