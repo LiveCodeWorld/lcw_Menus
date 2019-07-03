@@ -25,174 +25,19 @@ while making it compatible with more complex indexing.
 - Change the menu tabe to an array
 */
 
+
 --> Working on
 -
-getprop menu_ItemDisabed [hName]
-   -- new format => write a converter for old menus
-   put hName & "Disabled" into getPropName
-   put the getPropName of the target is true into someBoolean
-   return someBoolean
-end menu_ItemDisabed
-
-getprop menu_ItemChecked [hName]
-   -- new format => write a converter for old menus (see "script_ParamToHandlerName")
-   put hName & "Checked" into getPropName
-   put the getPropName of the target is true into someBoolean
-   return someBoolean
-end menu_ItemChecked
-
-getprop script_MenuArray [mTitle]
-   local mArray
-   put the long id of the target into tObject
-   put the menu_Controller [mTitle] of tObject into mController
-   mArray_AddScriptMenu mArray, mTitle, mController
-   return mArray
-end script_MenuArray
-
-getprop script_MenuHandlers [mTitle]
-   put the long id of the target into mController
-   --
-   if mTitle is empty then
-      -- faster
-      -- assumes only one menu and all named "menu_"
-      put the revAvailableHandlers of mController into hTable
-      -- filter hTable with "M menu_*"
-      sort numeric hTable by word 3 of each
-      repeat for each line hLine in hTable
-         switch
-            case hLine begins with "M menu_"
-            case word 1 to 2 of hLine = "M _"
-               put word 2 of hLine into hName
-               put hName & CR after hNames
-               break
-            default
-               -- not a menu
-         end switch
-      end repeat
-   else
-      -- slower
-      put the script of mController into someScript
-      put script_GetSuite (mTitle, someScript) into hLines
-      filter hLines with "on *"
-      repeat for each line scriptLine in hLines
-         put word 2 of scriptLine into hName
-         put hName & CR after hNames
-      end repeat
-   end if
-   delete char -1 of hNames
-   return hNames
-end script_MenuHandlers
-
-command mArray_AddDivider @mArray
-   put (item 2 of the extents of mArray) + 1 into indexNum
-   put "-" into mArray [indexNum]["name"]
-   put "-" into mArray [indexNum]["label"]
-   put false into mArray [indexNum]["checked"]
-   return indexNum
-end mArray_AddDivider
-
-command mArray_AddScriptMenu @mArray, mTitle, mController
-   if mArray is an array then
-      put item 2 of the extents of mArray into indexNum
-   else
-      put 0 into indexNum
-   end if
-   --
-   put the script_MenuHandlers [mTitle] of mController into scriptHandlers
-   repeat for each line hName in scriptHandlers      
-      add 1 to indexNum
-      if hName = "_" then
-         put "-" into mArray [indexNum]["name"]
-         put "-" into mArray [indexNum]["label"]
-         put false into mArray [indexNum]["checked"]
-         next repeat
-      end if
-      
-      put the menu_ItemDisabed [hName] of mController into isDisabled
-      switch isDisabled
-         case true -- we can delete it as right now there is no graying out
-         case "delete"
-            next repeat
-         case false
-         default
-            mArray_SetMenuItem mArray, hName, indexNum, mController
-      end switch
-   end repeat
-   return mArray
-end mArray_AddScriptMenu
-
-command mArray_SetMenuItem @mArray, hName, indexNum, mController
-   switch
-      case hName begins with "submenu_"
-         dispatch hName to mController
-         put the result into mTitle
-         put (item 2 of the extents of mArray) + 1 into indexNum
-         
-         -- check for recursion
-         put the script_MenuArray [mTitle] of mController into subMenuArray
-         if subMenuArray is not an array then return false
-         
-         put subMenuArray into mArray [indexNum]["menu"]
-         
-         replace " | " with "_" in mTitle -- = mPath
-         put mTitle into mArray [indexNum]["name"]
-         put menu_CommandToText (hName) into mArray [indexNum]["label"]
-         return true
-      case hName begins with "insert_"
-         break
-      default
-         put hName into mArray [indexNum]["name"]
-         put menu_CommandToText (hName) into mArray [indexNum]["label"]
-         -- bug in Livecode widget being strict on boolean type an text type
-         -- put true into mArray [indexNum]["disabled"] does not seem possible
-         if the menu_ItemChecked [hName] of mController is true then
-            put true into mArray [indexNum]["checked"]
-         else
-            put false into mArray [indexNum]["checked"]
-         end if
-         return true
-   end switch
-end mArray_SetMenuItem
-
-
---> Menu | Param | Names | Old
--
-command menu_DispatchPick mItem
-   -- menupick "idePropertyInspector_labels|false"
-   put the long id of the target into tObject
-   --
-   set the itemDelimiter to "|"
-   put item -1 of mItem into someCommand
-   put item 1 to -2 of mItem into mTitlePath
-   put item -1 of mTitlePath into mTitle
-   replace "_" with " | " in mTitle
-   replace "_" with " | " in mTitlePath
-   --
-   put the menu_Controller [mTitle] of tObject into mController
-   put the menu_Target [mTitlePath] of tObject into mTarget
-   --
-   dispatch someCommand to mController with mTarget,someParam
-   switch it
-      case "handled"
-         break
-      case "unhandled"
-         put someCommand
-         break
-      case "passed"
-         break
-   end switch
-end menu_DispatchPick
-
 function menu_CommandToText handlerName
-   -- was "menu_TextFromCommand"
-   -- used only by "_extractInsertedTitle"
-   
    set the itemdelimiter to "_"
    put item 2 of handlerName into mSuffix
    put text_SplitCaps (mSuffix) into mLine
    return mLine
 end menu_CommandToText
 
+
+--> Menu | Param | Names | Old
+-
 function script_ParamToHandlerName customParam
    put word 1 of customParam into customParam
    put tolower(char 1 of customParam) into char 1 of customParam
@@ -249,8 +94,22 @@ getprop menu_Handlers [mTitle]
    put mTitleTableArray [mTitle] into mTitleTable
    set the itemdelimiter to tab
    repeat for each line tLine in mTitleTable
-      put item 2 of tLine into mHandler
-      put mHandler & CR after mHandlers
+      menu_DeconstructTableLine tLine, mController, pigeon, mTitle, mLine, mFormatProp, mItemType, submenuProp, paramProp, mSendLine
+      -- put word 1 of item 2 of tLine into mHandler
+      put word 1 of pigeon into mHandler
+      switch
+         case tLine = "-"
+            put "-" & CR after mHandlers
+            break
+         case mItemType = "submenu"
+            put submenuProp & CR after mHandlers
+            break
+         case mHandler is empty
+            breakpoint
+            break
+         default
+            put mHandler & CR after mHandlers
+      end switch
    end repeat
    delete char -1 of mHandlers
    return mHandlers
@@ -268,6 +127,7 @@ getprop script_MenuTitleTableArray
    put someScript into mTitleLines
    filter mTitleLines with "--> * Menu"
    
+   menu_ClearRecursionCheck
    repeat for each line mTitleLine in mTitleLines
       put word 2 to -1 of mTitleLine into mTitle
       put menu_ExtractTableFromScript (mTitle, someScript, hTable, mController) into mTable

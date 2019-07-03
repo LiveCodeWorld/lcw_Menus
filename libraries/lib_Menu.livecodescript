@@ -36,24 +36,8 @@ This will mess up the menu functioning.
 Any new refactoring should be more robust, and tolerate this.
 */
 
-/*
-getprop menu_Target [mPath]
-   -- new simplified version of menu_TargetFromGlobal()
-   put menu_GetTopController() into mTopController
-   
-   -- so go get a default!
-   put menu_GetTargetObject() into targetObject
-   put _GetDefaultMenuTarget (mPath, mTitlePath, targetObject) into mTarget
-   if exists (mTarget) then
-      put mTarget into gLCW ["activeMenuArray"]["top"]["mTarget"]
-   else
-      put the long id of the target into mTarget
-   end if
-   return mTarget
-end menu_Target
-*/
-
 command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
+   -- updated to use "call"
    menu_DeconstructPath mPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType -- look up in array
    if the result is false then return empty
    if exists (mController) is false then breakPoint
@@ -62,8 +46,6 @@ command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
       menu_SetItemTargetOveride mPath, pMenuTarget -- not sure we are using this any more ?
       put pMenuTarget into mTarget
    else
-      -- put menu_TitlePathFromPath (mPath) into mTitlePath
-      -- put the menu_Target [mTitlePath] of mController into mTarget
       put menu_TargetFromGlobal (mPath) into mTarget
    end if
    
@@ -75,16 +57,224 @@ command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
       dispatch "menu_EditMenuItem" with pigeon,mController,mTarget
    else
       put token 1 of pigeon into mCommand
-      put token 2 of pigeon into firstParamName
-      put token 4 of pigeon into secondParamName
-      dispatch mCommand to mController with mTarget, subMenuPath
+      -- put token 2 of pigeon into firstParamName
+      -- put token 4 of pigeon into secondParamName
+      -- dispatch mCommand to mController with mTarget, subMenuPath
+      put mCommand && "mTarget,subMenuPath" into callCommand
+      call callCommand of mController
    end if
    send "menu_DeleteActiveArray" to mController in 2 ticks
 end menu_SendMessage
 
+command lcw_CreateMenuButton pProjectName
+   -- this should be part of the new script-only  menu library 
+   -- in case we call this handler more that once, do not create multiple buttons
+   if pProjectName is empty then
+      -- put lcw_HomeStackName() into pProjectName
+      put "lcw_Menus" into pProjectName
+   end if
+   
+   if exists (button "Global Menu Button" of cd 1 of stack pProjectName) then
+      return the long id of button "Global Menu Button" of cd 1 of stack pProjectName
+   end if
+   
+   -- this should be a "menu" button
+   go to cd 1 of stack pProjectName
+   create invisible button "Global Menu Button"
+   put it into mButton
+   
+   menu_SetButtonStyle mButton
+   
+   put "on menuPick menuPath" into someScript
+   put CR & "   menu_SendMessage menuPath" after someScript
+   put CR & "end menuPick" after someScript
+   
+   set the script of mButton to someScript
+   return mButton
+end lcw_CreateMenuButton
+
+command menu_SetButtonStyle pButton
+   if pButton is empty then put the menu_Button of me into pButton
+   set the style of pButton to "menu"
+   -- set the menumode of pButton to "popup"
+   set the menumode of pButton to "pulldown"
+   -- set the backgroundcolor of pButton to "green" -- for no reason
+end menu_SetButtonStyle
+
+on menu_ClearRecursionCheck
+   global gLCW
+   delete variable gLCW ["activeMenuArray"]["Recursion title Check"]
+end menu_ClearRecursionCheck
+
+command menu_DeleteActiveArray
+   global gLCW
+   delete variable gLCW ["activeMenuArray"]
+end menu_DeleteActiveArray
+
+function menu_GetTextFromTitleTable mTitleTable, targetObject, pMenuTarget
+   -- repeats over mTitles in table
+   -- called by "menu_PullDown"
+   local mText, pTitlePath, mTopTitle
+   global gLCW
+   
+   replace comma with tab in mTitleTable
+   set the itemdelimiter to tab
+   repeat for each line mTitleLine in mTitleTable
+      put item 1 of mTitleLine into mTitle
+      put item 2 of mTitleLine into mType
+      put item 3 of mTitleLine into pTextPath
+      
+      if mTitleLine = "-" then
+         put "-" & CR after mText
+         next repeat
+      end if
+      
+      -- menu_CheckRecursionOnGet mTitle, targetObject
+      menu_CheckRecursionOnExtract mTitle, targetObject
+      if the result is true then
+         -- project menus appear not to clear and are repeated twice?
+         get gLCW ["activeMenuArray"]["Recursion title Check"][mTitle] -- is not empty into isRepeated
+         -- breakpoint
+         next repeat
+      end if
+      
+      put the menu_Table [mTitle] of targetObject into mTable
+      
+      switch 
+         case mType = "submenu"  
+            if pTextPath is empty then put mTitle_ConstructText (mTitle) into pTextPath -- old ?? Why not use "put mType into pTitlePath"
+            
+            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
+            if moreMenuText is empty then
+               -- submenu is empty
+            else
+               put pTextPath  & CR after mText
+               put text_Indent (moreMenuText) & CR after mText
+            end if
+            break
+         case mType is not empty
+            put mType into pTitlePath
+            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
+            if moreMenuText is not empty then
+               put moreMenuText & CR after mText
+            end if
+            break
+         default
+            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
+            if moreMenuText is not empty then
+               put moreMenuText & CR after mText
+            end if
+      end switch
+   end repeat
+   delete char -1 of mText
+   return mText
+end menu_GetTextFromTitleTable
+
+command menu_CheckRecursionOnExtract mTitle, mController
+   -- used by "menu_ExtractTableFromScript"
+   global gLCW
+   
+   put menu_TitleIsGlobal (mTitle) into menuIsGlobal
+   if menuIsGlobal is true then
+      put gLCW ["activeMenuArray"]["Recursion title Check"][mTitle] is not empty into isRepeated
+   else
+      put gLCW ["activeMenuArray"]["Recursion title Check"][mController][mTitle] is not empty into isRepeated
+   end if
+   
+   if isRepeated is true then 
+      put merge ("[[menu_CheckRecursionOnExtract]]: Recursion: '[[mTitle]]'. Check for duplicate menus in script.") into errorMessage
+      put CR & merge ("[[menu_CheckRecursionOnExtract]]: For mController: '[[mController]]'") after errorMessage
+      put errorMessage
+      --display_ActiveMenuArray mTitle
+      -- edit the script of mController
+      return true
+   end if
+   
+   -- this is not checking for recursion (we check for a repeat - which is stronger but has false positives)
+   if menuIsGlobal is true then
+      put "menu_CheckRecursionOnExtract" into gLCW ["activeMenuArray"]["Recursion title Check"][mTitle]
+   else
+      put "menu_CheckRecursionOnExtract" into gLCW ["activeMenuArray"]["Recursion title Check"][mController][mTitle]
+   end if
+   
+   return false
+end menu_CheckRecursionOnExtract
+
+
+--> Props
+-
+getprop menu_Button
+   put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
+   return mButton
+end menu_Button
+
+getprop menu_Controller [pMenuTitle]
+   put the long id of the target into tObject
+   --
+   put menu_GetGlobalController (pMenuTitle) into mController
+   if exists (mController) is true then return mController
+   return empty
+   return tObject
+end menu_Controller
+
+getprop menu_DataArray
+   -- the problem with this is if the target has been cloned or copied
+   -- the menu_Controller will have changed
+   put the customproperties ["menu_Table"] of the target into mTitleTableArray
+   return mTitleTableArray
+end menu_DataArray
+
+getprop menu_CheckTarget [topMenuTarget]
+   /*
+   This is a default sent by  "menu_ConvertTable" 
+   Usually - all you want to do is check that the topMenuTarget exists.
+   But it could be a file or some other non-Rev structure.
+   */
+   return true
+end menu_CheckTarget
+
+setprop menu_ButtonText [pMenuTarget] mTitleTable
+   -- was "menu_TextFromTitle"
+   put the long id of the target into tObject
+   set the itemdelimiter to tab
+   put item 1 of line 1 of mTitleTable into mTopTitle
+   if mTopTitle is empty then 
+      put the menu_Title of tObject into mTopTitle
+   end if
+   
+   -- put the menu_Controller [mTopTitle] of tObject into mTopController
+   -- if exists (mTopController) is false then put tObject into mTopController
+   menu_SetController mTopController, tObject, mTopTitle
+   menu_SetTarget mTarget, mTopController, tObject
+   
+   menu_DeleteActiveArray
+   menu_SetTargetObject tObject
+   menu_SetTopController mTopController
+   
+   put menu_GetTextFromTitleTable (mTitleTable, tObject, pMenuTarget) into mText
+   menu_SetActiveText mText 
+   if mText is not empty then
+      put the menu_Button of tObject into mButton
+      if mButton is empty then return empty 
+      set the text of mButton to mText
+   end if
+   return mText
+end menu_ButtonText
+
+getprop menu_OptionEdit
+   put the optionkey is "Down" into someBoolean
+   
+   -- alternative to dispatch as a way of disabling option-editing of menus if library is not present
+   -- put someBoolean and "lib_MenuEdit" is among the lines of the stacksinuse int someBoolean 
+   
+   -- put the uOPN ["menu_OptionEdit"] of me is not false into someBoolean
+   return someBoolean
+end menu_OptionEdit
+
+
+--> Menu | Send
+-
 function menu_ConvertTable mTable, mView, pTitlePath, pTextPath, pMenuTarget, pMenuIsDisabled
-   -- ignoreCall:  dynamicSubmenuTitleProp,g
-   -- ignoreCall:  •••,c
    -- this is called first for each line of mTable to draw a menu
    -- the only handler to use "menu_GetDefaultController" aside from the "menu_Controller"
    
@@ -145,14 +335,6 @@ function menu_ConvertTable mTable, mView, pTitlePath, pTextPath, pMenuTarget, pM
       if exists (mController) is false then next repeat
       
       try
-         -- first lets allow the mController to initialise itself and avoid repeat calls to common routines
-         if initArray [mController]["menu_Init"] is not true then
-            -- now it gets sent one time only for each mController, or recursive call to a submenu
-            -- could cut out multiple call on recursion with some hacking with locals or globals.
-            dispatch "menu_Init" to mController with mView,mPath,mTitlePath -- think mView is the same as targetObject
-            put true into initArray [mController]["menu_Init"]
-         end if
-         
          -- get the mTarget next
          if pMenuTarget is empty then
             put menu_TargetFromGlobal (mPath) into mTarget -- mTarget must be same as what "menu_SendMessage
@@ -160,6 +342,15 @@ function menu_ConvertTable mTable, mView, pTitlePath, pTextPath, pMenuTarget, pM
             -- put the menu_Target [mTitlePath] of mController into mTarget
          else
             put pMenuTarget into mTarget
+         end if
+         
+         -- next allow the mController to initialise itself and avoid repeat calls to common routines
+         if initArray [mController]["menu_Init"] is not true then
+            -- now it gets sent one time only for each mController, or recursive call to a submenu
+            -- could cut out multiple call on recursion with some hacking with locals or globals.
+            
+            dispatch "menu_Init" to mController with mView,mTarget,mTitlePath -- think mView is the same as targetObject
+            put true into initArray [mController]["menu_Init"]
          end if
          
          -- now check the mTarget
@@ -218,12 +409,6 @@ function menu_ConvertTable mTable, mView, pTitlePath, pTextPath, pMenuTarget, pM
                else if dynamicSubmenuTitleProp is empty then
                   put subMenuProp into insertedMenuTitle
                   put paramProp into insertedMenuController
-               else
-                  -- experimental and not tested
-                  breakPoint
-                  put the dynamicSubmenuTitleProp of mController into insertedMenuTitle
-                  put the menu_Controller [insertedMenuTitle] of mController into insertedMenuController
-                  -- put menu_GetDefaultController (subMenuTitle, mController, false) into insertedMenuController
                end if
                
                menu_IncludeMenuText mText, insertedMenuTitle, mView, insertedMenuController, menuIsDisabled, mTitlePath, mPath, pMenuTarget
@@ -381,75 +566,14 @@ function menu_TargetFromGlobal mPath
 end menu_TargetFromGlobal
 
 
---> Objects
--
-getprop menu_Button
-   -- needs to be in an open stack
-   put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
-   return mButton
-   
-   -- put lcw_HomeStackName() into menuButtonStackName
-   put "LCW" into menuButtonStackName
-   -- put "lcw_Menus" into menuButtonStackName
-   
-   if exists (button "Global Menu Button" of cd 1 of stack menuButtonStackName) is false then pass menu_Button
-   return the long id of button "Global Menu Button" of cd 1 of stack menuButtonStackName
-end menu_Button
-
-command lcw_CreateMenuButton pProjectName
-   -- this should be part of the new script-only  menu library 
-   -- in case we call this handler more that once, do not create multiple buttons
-   if pProjectName is empty then
-      -- put lcw_HomeStackName() into pProjectName
-      put "lcw_Menus" into pProjectName
-   end if
-   
-   if exists (button "Global Menu Button" of cd 1 of stack pProjectName) then
-      return the long id of button "Global Menu Button" of cd 1 of stack pProjectName
-   end if
-   
-   -- this should be a "menu" button
-   go to cd 1 of stack pProjectName
-   create invisible button "Global Menu Button"
-   put it into mButton
-   
-   menu_SetButtonStyle mButton
-   
-   put "on menuPick menuPath" into someScript
-   put CR & "   menu_SendMessage menuPath" after someScript
-   put CR & "end menuPick" after someScript
-   
-   set the script of mButton to someScript
-   return mButton
-end lcw_CreateMenuButton
-
-command menu_SetButtonStyle pButton
-   if pButton is empty then put the menu_Button of me into pButton
-   set the style of pButton to "menu"
-   -- set the menumode of pButton to "popup"
-   set the menumode of pButton to "pulldown"
-   -- set the backgroundcolor of pButton to "green" -- for no reason
-end menu_SetButtonStyle
-
-
 --> Menu | Basics
 -
-getprop menu_OptionEdit
-   put the optionkey is "Down" into someBoolean
-   
-   -- alternative to dispatch as a way of disabling option-editing of menus if library is not present
-   -- put someBoolean and "lib_MenuEdit" is among the lines of the stacksinuse int someBoolean 
-   
-   -- put the uOPN ["menu_OptionEdit"] of me is not false into someBoolean
-   return someBoolean
-end menu_OptionEdit
-
 command menu_PopUp pMenuTitle, pLocation, pTargetObject
    if pTargetObject is empty then put the long id of the target into pTargetObject
    if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
    if pMenuTitle is empty then put "Menu" into pMenuTitle
    
-   set the menu_TextFromTitle of pTargetObject to pMenuTitle
+   set the menu_ButtonText of pTargetObject to pMenuTitle
    put the result into mText
    if mText is empty then return "false"
    
@@ -464,14 +588,12 @@ end menu_PopUp
 
 command menu_PullDown pMenuTitle, pLocation, pTargetObject
    if pTargetObject is empty then put the long id of the target into pTargetObject
-   -- if pMenuTitle is empty then put the menu_ToolOrTitle of pTargetObject into pMenuTitle
    if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
    if pMenuTitle is empty then put "Menu" into pMenuTitle
    
-   set the menu_TextFromTitle of pTargetObject to pMenuTitle
+   set the menu_ButtonText of pTargetObject to pMenuTitle
    put the result into mText
    if mText is empty then
-      -- lcw_Notify pMenuTitle -- often useful, but also annoying :)
       return "false"
    end if
    
@@ -491,123 +613,11 @@ command menu_MouseDown pMenuTitleTable, pTargetObject
    if exists(pTargetObject) is false then put the long id of the target into pTargetObject
    if pMenuTitleTable is empty then put the menu_Title of pTargetObject into pMenuTitleTable
    if pMenuTitleTable is empty then put "Menu" into pMenuTitleTable
-   set the menu_TextFromTitle of pTargetObject to pMenuTitleTable
+   set the menu_ButtonText of pTargetObject to pMenuTitleTable
    put the result into mText
    if mText is empty then return "false"
    return mText
 end menu_MouseDown
-
-
---> Props
--
-getprop menu_CheckTarget [topMenuTarget]
-   /*
-   This is a default sent by  "menu_ConvertTable" 
-   Usually - all you want to do is check that the topMenuTarget exists.
-   But it could be a file or some other non-Rev structure.
-   */
-   return true
-end menu_CheckTarget
-
-getprop menu_Controller [pMenuTitle]
-   put the long id of the target into targetObject
-   
-   -- put the burnt_MenuController [pMenuTitle] of targetObject into mController
-   -- if exists(mController) then return mController
-   
-   -- put menu_GetDefaultController (pMenuTitle, targetObject, false) into mController
-   -- check if it is a global menu
-   -- if menu_TitleIsGlobal (mTitle) then
-   put menu_GetGlobalController (pMenuTitle) into mController
-   if exists (mController) is true then
-      return mController
-   end if
-   -- end if
-   
-   return targetObject
-end menu_Controller
-
-getprop menu_DataArray
-   -- the problem with this is if the target has been cloned or copied
-   -- the menu_Controller will have changed
-   put the customproperties ["menu_Table"] of the target into mTitleTableArray
-   return mTitleTableArray
-end menu_DataArray
-
-getprop menu_Table [pMenuTitle]
-   if pMenuTitle is empty then put the menu_Title of the target into pMenuTitle
-   if pMenuTitle is empty then return empty
-   
-   if word 1 of pMenuTitle = "Global" and word 2 of pMenuTitle = "|" then
-      put menu_GetGlobalTable (pMenuTitle) into mTable
-      return mTable
-   else
-      put the menu_Controller [pMenuTitle] of the target into mController
-      put the menu_DataArray of mController into menuTableArray
-      put menuTableArray [pMenuTitle] into mTable
-      
-      -- hack
-      -- fix local contrllers in cases where the object has been copied to another stack
-      set the itemdelimiter to tab
-      repeat for each line mTableLine in mTable
-         put mController into item 3 of mTableLine
-         put mTableLine & CR after fixedLocalMenuTable
-      end repeat
-      delete char -1 of fixedLocalMenuTable
-      return fixedLocalMenuTable
-   end if
-end menu_Table
-
-setprop menu_Text menuText
-   /*
-   menu_Text is a property of the targetObject.
-   the text is derived from the menu_Table
-   which is in turn stored with the menu_Controller 
-   
-   menu_Text is now quickly constructed from the menu_Table (cached with the menu_Controller)
-   Submenus are created by recursively calling menu_Text on the submenu menu_Title
-   So script should be modified to prevent recursion.
-   
-   While fetching the text (usually on a mousedown)
-   the menu_Table is also converted to an array
-   and added to the global gTemp_ActiveMenuArray
-   */
-   
-   put the long id of the target into targetObject
-   put the menu_Button of targetObject into mButton
-   if mButton is empty then return empty
-   -- if the object_IsMenuButton of mButton is false then return  empty
-   
-   set the text of mButton to menuText
-   return mButton
-end menu_Text
-
-setprop menu_TextFromTitle [pMenuTarget] mTitleTable
-   -- don't like the syntax of this
-   put the long id of the target into tObject
-   
-   set the itemdelimiter to tab
-   put item 1 of line 1 of mTitleTable into mTopTitle
-   
-   if mTopTitle is empty then
-      if the controlkey is "Down" then
-         -- put the menu_ToolTitle of tObject into mTopTitle
-         put the menu_Title of tObject into mTopTitle
-      else
-         put the menu_Title of tObject into mTopTitle
-      end if
-   end if
-   put the menu_Controller [mTopTitle] of tObject into mTopController
-   
-   menu_DeleteActiveArray
-   menu_SetTargetObject tObject
-   menu_SetTopController mTopController
-   
-   put menu_GetTextFromTitleTable (mTitleTable, tObject, pMenuTarget) into mText
-   menu_SetActiveText mText 
-   if mText is not empty then set the menu_Text of tObject to mText
-   return mText
-end menu_TextFromTitle
 
 command menu_AddBooleanLine @mText, mLine, paramProp, topMenuTarget, mController
    -- ignoreCall: paramProperty,g
@@ -671,47 +681,7 @@ function menu_CheckDisabledItem mFormatProp, mTarget, mController, menuIsDisable
    return itemIsDisabled
 end menu_CheckDisabledItem
 
-command menu_CheckRecursionOnExtract mTitle, mController
-   -- used by "menu_ExtractTableFromScript"
-   global gLCW
-   
-   put menu_TitleIsGlobal (mTitle) into menuIsGlobal
-   if menuIsGlobal is true then
-      put gLCW ["activeMenuArray"]["Recursion title Check"][mTitle] is not empty into isRepeated
-   else
-      put gLCW ["activeMenuArray"]["Recursion title Check"][mController][mTitle] is not empty into isRepeated
-   end if
-   
-   -- put gLCW ["activeMenuArray"]["Recursion title Check"] into titlesSoFar
-   -- if mTitle is among the lines of titlesSoFar then
-   
-   if isRepeated is true then 
-      put merge ("[[menu_CheckRecursionOnExtract]]: Recursion: '[[mTitle]]'. Check for duplicate menus in script.") into errorMessage
-      put CR & merge ("[[menu_CheckRecursionOnExtract]]: For mController: '[[mController]]'") after errorMessage
-      put errorMessage
-      --display_ActiveMenuArray mTitle
-      -- edit the script of mController
-      return true
-   end if
-   
-   -- this is not checking for recursion (we check for a repeat - which is stronger but has false positives)
-   if menuIsGlobal is true then
-      put "menu_CheckRecursionOnExtract" into gLCW ["activeMenuArray"]["Recursion title Check"][mTitle]
-   else
-      put "menu_CheckRecursionOnExtract" into gLCW ["activeMenuArray"]["Recursion title Check"][mController][mTitle]
-   end if
-   
-   /*
-   -- should speed up using an array
-   line_Insert mTitle, titlesSoFar
-   put titlesSoFar into gLCW ["activeMenuArray"]["Recursion title Check"]
-   */
-   return false
-end menu_CheckRecursionOnExtract
-
-command menu_CheckSub @subMenu, paramProp, mController, mTarget, mItemType
-   -- ignoreCall: paramProperty,g
-   
+command menu_CheckSub @subMenu, paramProp, mController, mTarget, mItemType 
    if paramProp is empty then return empty
    -- passing parameter can cause a custom property to fail to return when no getprop is there.
    put paramProp & "[" & mTarget & "]" into paramProperty
@@ -816,11 +786,6 @@ command menu_DeconstructTableLine mTableLine, @mController, @pigeon, @mTitle, @m
    end if
 end menu_DeconstructTableLine
 
-command menu_DeleteActiveArray
-   global gLCW
-   delete variable gLCW ["activeMenuArray"]
-end menu_DeleteActiveArray
-
 command menu_DisableLine @mLine
    if char 1 of word 1 of mLine is not "(" then put "(" before word 1 of mLine
 end menu_DisableLine
@@ -845,17 +810,6 @@ command menu_FetchCustomMenuItems @mText, mLine, submenuProp, mController, param
    end try
 end menu_FetchCustomMenuItems
 
-command  menu_FixGlobalTitleArray @gMenuTable, gMenuTitle
-   if gMenuTable is empty then
-      put the menu_Controller [gMenuTitle] of the target into mController
-      put the menu_DataArray of mController into gMenuTitleArray
-      put gMenuTitleArray [gMenuTitle] into gMenuTable
-      
-      -- now set it
-      menu_SetGlobalTable gMenuTitle, gMenuTable
-   end if
-end menu_FixGlobalTitleArray
-
 function menu_GetGlobalArray
    global gLCW
    put gLCW ["Global Menus"] into menuGlobalArray
@@ -868,14 +822,6 @@ function menu_GetGlobalController gMenuTitle
    put gMenuArray [gMenuTitle]["mController"] into mController
    return mController
 end menu_GetGlobalController
-
-function menu_GetGlobalTable gMenuTitle
-   put menu_GetGlobalTitleArray (gMenuTitle) into gMenuTitleArray
-   put gMenuTitleArray ["gMenuTable"] into gMenuTable
-   
-   menu_FixGlobalTitleArray gMenuTable, gMenuTitle
-   return gMenuTable
-end menu_GetGlobalTable
 
 function menu_GetGlobalTitleArray gMenuTitle
    put menu_GetGlobalArray() into menuGlobalArray
@@ -914,79 +860,11 @@ function menu_GetLineNum someMenuItem, someMenu
    return 0
 end menu_GetLineNum
 
-function menu_GetTable mTitle, mController
-   if word 1 of mTitle = "Global" and word 2 of mTitle = "|" then
-      put menu_GetGlobalTable (mTitle) into mTable
-      menu_FixGlobalTitleArray mTable, mTitle
-   else
-      put the menu_DataArray of mController into menuTableArray
-      put menuTableArray [mTitle] into mTable
-   end if
-   return mTable
-end menu_GetTable
-
 function menu_GetTargetObject
    global gLCW
    put gLCW ["activeMenuArray"]["top"]["targetObject"] into targetObject
    return targetObject
 end menu_GetTargetObject
-
-function menu_GetTextFromTitleTable mTitleTable, targetObject, pMenuTarget
-   -- repeats over mTitles in table
-   -- called by "menu_PullDown" etc to dynamically create and "set the menu_Text of pTargetObject"
-   local mText, pTitlePath, mTopTitle
-   global gLCW
-   
-   replace comma with tab in mTitleTable
-   set the itemdelimiter to tab
-   repeat for each line mTitleLine in mTitleTable
-      put item 1 of mTitleLine into mTitle
-      put item 2 of mTitleLine into mType
-      put item 3 of mTitleLine into pTextPath
-      
-      if mTitleLine = "-" then
-         put "-" & CR after mText
-         next repeat
-      end if
-      
-      -- menu_CheckRecursionOnGet mTitle, targetObject
-      menu_CheckRecursionOnExtract mTitle, targetObject
-      if the result is true then
-         breakpoint
-         next repeat
-      end if
-      
-      put the menu_Table [mTitle] of targetObject into mTable
-      
-      switch 
-         case mType = "submenu"  
-            if pTextPath is empty then put menu_MenuTextFromTitle (mTitle) into pTextPath -- old ?? Why not use "put mType into pTitlePath"
-            
-            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
-            if moreMenuText is empty then
-               -- submenu is empty
-            else
-               put pTextPath  & CR after mText
-               put text_Indent (moreMenuText) & CR after mText
-            end if
-            break
-         case mType is not empty
-            put mType into pTitlePath
-            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
-            if moreMenuText is not empty then
-               put moreMenuText & CR after mText
-            end if
-            break
-         default
-            put menu_ConvertTable (mTable, targetObject, pTitlePath, pTextPath, pMenuTarget) into moreMenuText
-            if moreMenuText is not empty then
-               put moreMenuText & CR after mText
-            end if
-      end switch
-   end repeat
-   delete char -1 of mText
-   return mText
-end menu_GetTextFromTitleTable
 
 function menu_GetTopController
    -- could probably work out from mTitlePath (by getting first items mController)
@@ -1038,26 +916,17 @@ command menu_InsertSubMenu @mText, mLine, subMenuTitle, mView, subMenuController
    end if
 end menu_InsertSubMenu
 
-function menu_MenuTextFromTitle mTitle
-   set the itemdelimiter to "|"
-   delete item - 1 of mTitle
-   if word 1 to -1 of item 1 of mTitle = "Global" then delete item 1 of mTitle
-   
-   replace " | " with " " in mTitle
-   return word 1 to -1 of mTitle
-end menu_MenuTextFromTitle
-
 command menu_SetActiveText mText
    global gLCW
    put mText into gLCW ["activeMenuArray"]["menu"]["text"]
 end menu_SetActiveText
 
 command menu_SetCheckedItem someMenuItem, @someMenu, someBoolean
-    put someBoolean is not false into someBoolean
-    put menu_GetLineNum (someMenuItem, someMenu) into lineNum
-    if lineNum = 0 then return someMenu
-     
-    put menu_SetCheckedLine (lineNum, someMenu, someBoolean) into someMenu
+   put someBoolean is not false into someBoolean
+   put menu_GetLineNum (someMenuItem, someMenu) into lineNum
+   if lineNum = 0 then return someMenu
+   
+   put menu_SetCheckedLine (lineNum, someMenu, someBoolean) into someMenu
 end menu_SetCheckedItem
 
 function menu_SetCheckedLine lineNum, someMenuText, someBoolean
@@ -1218,3 +1087,4 @@ private function view_FindAbove targetObject
    end repeat
    return empty
 end view_FindAbove
+

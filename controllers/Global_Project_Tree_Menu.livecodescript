@@ -9,7 +9,11 @@ version: 0.2
 
 --> Menu | Props
 -
-/* mTarget should already be set by set the menu_Target of indexView to projectName */
+/* 
+mTarget should already be set by set the menu_Target of indexView to projectName 
+
+The menu is created using a menu_Table
+*/
 
 local LocalArray
 
@@ -22,6 +26,16 @@ end menu_Init
 
 --> Global | Project | Tree | Menu
 -
+on menu_Test
+   put LocalArray ["indexView"] into indexView
+   put the title_Menu of indexView into mTitle
+   
+   put the menu_Table [mTitle] of indexView into mTable
+   put the menu_Titles of indexView into mTitles
+   --
+   put mTable
+end menu_Test
+
 on menu_StartProject projectName, someBoolean
    if someBoolean is true then
       project_Start projectName

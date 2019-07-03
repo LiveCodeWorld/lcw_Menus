@@ -26,14 +26,6 @@ command display_LoadedStacks
    set the selected_Index of displayView to stackNames
 end display_LoadedStacks
 
-function fedwiki_ConstructMarkdownIndex someLines
-   repeat for each line someLine in someLines
-      put "* [[" & word 1 to -1 of someLine && "]]" & CR after markdownIndex
-   end repeat
-   delete char -1 of markdownIndex
-   return markdownIndex
-end fedwiki_ConstructMarkdownIndex
-
 
 --> Display | Events
 -
@@ -113,7 +105,7 @@ end _
 
 on menu_ConstructStackLinkMarkDown mTarget, pName
    put the project_StackObjects of stack pName into projectStackObjects
-   put fedwiki_ConstructMarkdownIndex (projectStackObjects) into markdownIndex
+   put fedwiki_MarkdownIndex (projectStackObjects) into markdownIndex
    put markdownIndex
 end menu_ConstructStackLinkMarkDown
 
