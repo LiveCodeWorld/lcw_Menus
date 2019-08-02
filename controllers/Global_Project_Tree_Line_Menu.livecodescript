@@ -41,6 +41,49 @@ on menu_Init tObject
 end menu_Init
 
 
+--> Git | Menu
+-
+on menu_InitialiseGit indexView
+   put LocalArray ["projectFolder"] into projectFolder
+   git_InitFolder projectFolder
+   
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   display_GitFolderStatus gitCheckoutFolder
+end menu_InitialiseGit
+
+on menu_GitStatus indexView
+   put the selected_Index of indexView into projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   
+   display_GitFolderStatus gitCheckoutFolder
+end menu_GitStatus
+
+on menu_LaunchGithub
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   github_Launch repoName
+end menu_LaunchGithub
+
+on menu_GithubReadme indexView
+   put the selected_Index of indexView into projectName
+   --
+   put github_FetchReadmeMD (projectName) into readmeMarkdown
+   put "Project" && projectName into pageTitle
+   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
+   put json_FromArray (pageArray) into readmeJSON
+   --
+   display_FedwikiPageJson readmeJSON
+end menu_GithubReadme
+
+on menu_DisplayGithubInfo
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   display_GitHubInfo repoName
+end menu_DisplayGithubInfo
+
+
+
 --> Global | Project | Tree | Line | Menu
 -
 on menu_MoveUsed indexView, newProjectName
@@ -112,44 +155,9 @@ end menu_ExportAndIndexProject
 on _
 end _
 
-on menu_InitialiseGit indexView
-   put LocalArray ["projectFolder"] into projectFolder
-   git_InitFolder projectFolder
-   
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   display_GitFolderStatus gitCheckoutFolder
-end menu_InitialiseGit
-
-on menu_GitStatus indexView
-   put the selected_Index of indexView into projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   
-   display_GitFolderStatus gitCheckoutFolder
-end menu_GitStatus
-
-on menu_LaunchGithub
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   github_Launch repoName
-end menu_LaunchGithub
-
-on menu_GithubReadme indexView
-   put the selected_Index of indexView into projectName
-   --
-   put github_FetchReadmeMD (projectName) into readmeMarkdown
-   put "Project" && projectName into pageTitle
-   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
-   put json_FromArray (pageArray) into readmeJSON
-   --
-   display_FedwikiPageJson readmeJSON
-end menu_GithubReadme
-
-on menu_DisplayGithubInfo
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   display_GitHubInfo repoName
-end menu_DisplayGithubInfo
+on submenu_Git
+   return "Git | Menu"
+end submenu_Git
 
 on _
 end _
@@ -201,9 +209,9 @@ end menu_RemoveProjectFromLibrary
 on menu_DisplayProject indexView
    put the selected_Index of indexView into projectName
    display_ProjectLibs projectName
-   
-   put library_ListProjectNames() into projectNames
-   set the view_Index ["List of Projects"] of indexView to projectNames
+   library_ListProjectNames
+   -- put library_ListProjectNames() into projectNames
+   -- set the view_Index ["List of Projects"] of indexView to projectNames
 end menu_DisplayProject
 
 on _

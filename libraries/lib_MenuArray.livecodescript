@@ -4,7 +4,7 @@
 license: GPLv3
 name: lib_MenuArray
 type: library
-version: 0.1
+version: 0.2
 
 /*
 This library is for the set of handlers that deal with new menu array format used by widgets.
@@ -96,7 +96,7 @@ command hKey_Do hKey, pTarget, pValue, pQuestion
       if pQuestion is empty then
          put "Edit script for this handler?" into pQuestion
       end if
-      lcw_AnswerSheet pQuestion, stackObject
+      lcw_Answer pQuestion, stackObject
       --
       hkey_Edit hKey
       return empty

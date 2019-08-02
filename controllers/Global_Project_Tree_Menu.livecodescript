@@ -17,25 +17,80 @@ The menu is created using a menu_Table
 
 local LocalArray
 
+--> Meu | Props
+-
 on menu_Init tObject
    put the index_View of tObject into indexView
    put indexView into LocalArray ["indexView"]
    put the title_Text of indexView into projectName
+   --
+   put library_FetchProjectFolder (projectName) into projectFolder
+   put project_GetHomeStackPath (projectName) into homeStackPath
+   if homeStackPath is empty then
+      put projectFolder & projectName & ".livecode" into homeStackPath
+      if exists (stack homeStackPath) is false then
+         breakpoint
+      end if
+   end if
+   
+   put git_GetCheckoutFolder (homeStackPath) into gitCheckoutFolder
+   put there is a folder gitCheckoutFolder into gitIsInitialised
+   put git_GetRemoteAddress (projectFolder) into remoteAddress
+   
+   put projectName into LocalArray ["projectName"]
+   put projectFolder into LocalArray ["projectFolder"]
+   put remoteAddress into LocalArray ["remoteAddress"]
+   put homeStackPath into LocalArray ["homeStackPath"]
+   put gitCheckoutFolder into LocalArray ["gitCheckoutFolder"]
+   put gitIsInitialised into LocalArray ["gitIsInitialised"]
 end menu_Init
+
+getprop disabled_GitStatus [projectName]
+   if LocalArray ["gitIsInitialised"] then
+      return false
+   else
+      return true
+      return "delete"
+   end if
+end disabled_GitStatus
+
+getprop disabled_InitialiseGit [projectName]
+   if LocalArray ["gitIsInitialised"] then
+      return "delete"
+   else
+      return false
+   end if
+end disabled_InitialiseGit
+
+
+--> Git | Menu
+-
+on menu_InitialiseGit projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   --
+   git_InitFolder projectFolder
+   --
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   display_GitFolderStatus gitCheckoutFolder
+end menu_InitialiseGit
+
+on menu_GitStatus projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   --
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   --
+   display_GitFolderStatus gitCheckoutFolder
+end menu_GitStatus
+
+on menu_LaunchGithub projectName
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   github_Launch repoName
+end menu_LaunchGithub
 
 
 --> Global | Project | Tree | Menu
 -
-on menu_Test
-   put LocalArray ["indexView"] into indexView
-   put the title_Menu of indexView into mTitle
-   
-   put the menu_Table [mTitle] of indexView into mTable
-   put the menu_Titles of indexView into mTitles
-   --
-   put mTable
-end menu_Test
-
 on menu_StartProject projectName, someBoolean
    if someBoolean is true then
       project_Start projectName
@@ -43,6 +98,10 @@ on menu_StartProject projectName, someBoolean
       project_Stop projectName
    end if
 end menu_StartProject
+
+on insert_Git
+   return "Git | Menu"
+end insert_Git
 
 on _
 end _
