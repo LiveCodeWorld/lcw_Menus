@@ -58,37 +58,6 @@ end param_IsBoolean
 
 --> Menu | Update
 -
-setprop menu_Update someBoolean
-   -- let's fix and index the menus 
-   global gLCW
-   
-   menu_DeleteActiveArray
-   put the long id of the target into scriptObject
-   
-   put the script_MenuTitleTableArray of scriptObject into mTitleTableArray
-   if mTitleTableArray is not an array then return empty
-   if someBoolean is true then
-      set the menu_DataArray of scriptObject to mTitleTableArray
-   end if
-   
-   -- now update Global menus
-   repeat for each key gMenuTile in mTitleTableArray
-      if word 1 of gMenuTile = "Global" and word 2 of gMenuTile = "|" then
-         put mTitleTableArray [gMenuTile] into gMenuTable
-         
-         -- menu_NormalizeTitle gMenuTile
-         put gMenuTable into gLCW ["Global Menus"][gMenuTile]["gMenuTable"]
-         put scriptObject into gLCW ["Global Menus"][gMenuTile]["mController"]
-         
-         -- probably not really needed
-         put gMenuTable into menuTitleArray [gMenuTile]["gMenuTable"]
-         put scriptObject into menuTitleArray [gMenuTile]["mController"]
-      end if
-   end repeat
-   
-   return menuTitleArray
-end menu_Update
-
 getprop menu_Handlers [mTitle]
    put the script_MenuTitleTableArray of the target into mTitleTableArray
    put mTitleTableArray [mTitle] into mTitleTable
@@ -114,27 +83,6 @@ getprop menu_Handlers [mTitle]
    delete char -1 of mHandlers
    return mHandlers
 end menu_Handlers
-
-getprop script_MenuTitleTableArray
-   -- this is what constructs the mTitleTableArray from a script
-   local mTitleTableArray
-   
-   put the long id of the target into mController
-   put the script of mController into someScript
-   put the revAvailableHandlers of mController into hTable
-   
-   -- put script_OrderedMenuTitles (someScript) into mTitles
-   put someScript into mTitleLines
-   filter mTitleLines with "--> * Menu"
-   
-   menu_ClearRecursionCheck
-   repeat for each line mTitleLine in mTitleLines
-      put word 2 to -1 of mTitleLine into mTitle
-      put menu_ExtractTableFromScript (mTitle, someScript, hTable, mController) into mTable
-      put mTable into mTitleTableArray [mTitle]
-   end repeat
-   return mTitleTableArray
-end script_MenuTitleTableArray
 
 function menu_ExtractTableFromScript mTitle, someScript, hTable, mController
    -- used by "script_MenuTitleTableArray"
@@ -197,6 +145,7 @@ command menu_TableLineFromScript mVersion, mTitle, comLine, scriptObject, someSc
       case mPrefix is "insert"
          put "insert" into mItemType
          put menu_GetDefaultController (mTitle, scriptObject, true) into mController
+         put revRuggedID (subMenuController) into subMenuController
          
          _extractInsertedTitle mCommand, mController, someScript, hTable, insertedMenuTitle, customControllerParam, dynamicTitleProp, mLine, pigeon, mItemType
          
@@ -219,6 +168,7 @@ command menu_TableLineFromScript mVersion, mTitle, comLine, scriptObject, someSc
          return "insert"
       default
          put menu_GetDefaultController (mTitle, scriptObject, true) into mController
+         put revRuggedID (subMenuController) into subMenuController
          if exists(mController) is false then
             put "Cannot find Global menu" && kwote(mTitle) & "!" into someError
             -- lcw_Notify someError, true
@@ -416,8 +366,8 @@ function menu_GetDefaultController mTitle, targetObject, pSearchScript
    
    -- look up menu in script hierarchy (adds a lot of complexity)
    -- handlers are in "model_MenuSubStacks" for searching menu_SubStackCard's and the script_Hierarchy
-   -- but if that library or a local "getprop menu_FindController" is not present it fails gracefully
-   put the menu_FindController [mTitle] of targetObject into mController
+   -- but if that library or a local "getprop menu_FoundController" is not present it fails gracefully
+   put the menu_FoundController [mTitle] of targetObject into mController
    if exists (mController) then return mController
    
    return targetObject
@@ -429,36 +379,6 @@ function menu_TitleIsGlobal mTitle
    put word 1 to -1 of item 1 of mTitle into mTitleStem
    return mTitleStem is "Global"
 end menu_TitleIsGlobal
-
-function menu_GetGlobalController gMenuTitle
-   -- was "menu_GlobalController"
-   put menu_GetGlobalArray() into gMenuArray
-   put gMenuArray [gMenuTitle]["mController"] into mController
-   return mController
-end menu_GetGlobalController
-
-function menu_GetGlobalArray
-   global gLCW
-   put gLCW ["Global Menus"] into menuGlobalArray
-   return menuGlobalArray
-end menu_GetGlobalArray
-
-command menu_SetGlobalArray menuGlobalArray
-   global gLCW
-   put menuGlobalArray into gLCW ["Global Menus"]
-   return gLCW ["Global Menus"]
-end menu_SetGlobalArray
-
-getprop menu_DataArray
-   -- the problem with this is if the target has been cloned or copied
-   -- the menu_Controller will have changed
-   put the customproperties ["menu_Table"] of the target into mTitleTableArray
-   return mTitleTableArray
-end menu_DataArray
-
-setprop menu_DataArray mTitleTableArray
-   set the customproperties ["menu_Table"] of the target to mTitleTableArray
-end menu_DataArray
 
 
 --> Deps

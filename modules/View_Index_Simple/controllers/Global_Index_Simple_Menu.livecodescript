@@ -1,4 +1,4 @@
-﻿script "Global_Index_Simple_Menu"
+﻿script "Global | Index | Simple | Menu"
 --> MetaData
 -
 license: GPLv3

@@ -9,6 +9,8 @@ licence:  GPLv3
 version: 0.4
 
 /*
+Now looking to move over to "lib_MenuArray"
+
 Latest library to implement dynamic menus from script introspection.
 
 It is designed to be just the minimal set of handlers needed to implement the handlers
@@ -29,12 +31,112 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 */
 
 
---> Working on
+--> Hack | mArray
+-
+private function _HackGetBooleanMenu paramProp, mController, topMenuTarget
+   local paramValues
+   
+   _HackSetParamValues paramValues, paramProp, mController, topMenuTarget
+   if the result is false then
+      return "true" & CR & "false"
+   end if
+   
+   put _HackConstructPropLabel (paramProp) into propLabel
+   put mArray_GetCheckParams (propLabel, mController, topMenuTarget) into someBoolean
+   switch someBoolean
+      case true
+         put "!ctrue" & CR & "!nfalse" into subMenu
+         break
+      case false
+         put "!ntrue" & CR & "!cfalse" into subMenu
+         break
+      case empty
+         put "true" & CR & "false" into subMenu
+         break
+      default
+         -- wierd but OK
+         replace comma with CR in paramValues
+         put paramValues into subMenu
+   end switch
+   return subMenu
+end _HackGetBooleanMenu
+
+private command _HackSetParamValues @paramValues, paramProp, mController, topMenuTarget
+   if paramValues is not empty then return false
+   --
+   put _HackConstructPropLabel (paramProp) into propLabel
+   put mArray_GetParamValues (propLabel, mController, topMenuTarget) into paramValues
+   return true
+end _HackSetParamValues
+
+private function _HackConstructPropLabel paramProp
+   replace "_" with empty in paramProp
+   return paramProp
+end _HackConstructPropLabel
+
+
+--> Menu | Important
 -
 /*
 This will mess up the menu functioning.
 Any new refactoring should be more robust, and tolerate this.
 */
+
+command menu_PopUp pMenuTitle, pLocation, pTargetObject
+   if pTargetObject is empty then put the long id of the target into pTargetObject
+   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
+   if pMenuTitle is empty then put "Menu" into pMenuTitle
+   
+   if the menu_Style of pTargetObject is "array" then
+      put the menu_Button of pTargetObject into mButton
+      mArray_PopUp pMenuTitle, mButton, pTargetObject
+   else
+      set the menu_ButtonText of pTargetObject to pMenuTitle
+      put the result into mText
+      if mText is empty then return "false"
+      
+      put the menu_Button of pTargetObject into mButton
+      if pLocation is not a point then
+         popup mButton
+      else
+         popup mButton at pLocation
+      end if
+   end if
+   return true
+end menu_PopUp
+
+command menu_PullDown pMenuTitle, pLocation, pTargetObject
+   if pTargetObject is empty then put the long id of the target into pTargetObject
+   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
+   if pMenuTitle is empty then put "Menu" into pMenuTitle
+   
+   set the menu_ButtonText of pTargetObject to pMenuTitle
+   put the result into mText
+   if mText is empty then
+      return "false"
+   end if
+   
+   put the menu_Button of pTargetObject into mButton
+   if exists (mButton) is false then return false
+   
+   if pLocation is not a point then
+      put the bottomleft of pTargetObject into pLocation
+      add 3 to item 2 of pLocation
+   end if
+   if exists (mButton) is false then return false
+   popup mButton at pLocation
+   return true
+end menu_PullDown
+
+command menu_MouseDown pMenuTitleTable, pTargetObject
+   if exists(pTargetObject) is false then put the long id of the target into pTargetObject
+   if pMenuTitleTable is empty then put the menu_Title of pTargetObject into pMenuTitleTable
+   if pMenuTitleTable is empty then put "Menu" into pMenuTitleTable
+   set the menu_ButtonText of pTargetObject to pMenuTitleTable
+   put the result into mText
+   if mText is empty then return "false"
+   return mText
+end menu_MouseDown
 
 command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
    -- updated to use "call"
@@ -57,11 +159,43 @@ command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
       dispatch "menu_EditMenuItem" with pigeon,mController,mTarget
    else
       put token 1 of pigeon into mCommand
+      /*
       -- put token 2 of pigeon into firstParamName
       -- put token 4 of pigeon into secondParamName
-      -- dispatch mCommand to mController with mTarget, subMenuPath
+      dispatch mCommand to mController with mTarget, subMenuPath
+      switch it
+         case "handled"
+            
+            break
+         case "unhandled"
+            if exists (mController) then
+            else
+               breakpoint
+            end if
+            break
+         case "passed"
+            
+            break
+      end switch
+      */
+      
       put mCommand && "mTarget,subMenuPath" into callCommand
-      call callCommand of mController
+      if exists (mController) then
+         try
+            call callCommand of mController
+            put the result into tResult
+         catch errorParameter
+            -- mController does not contain callCommand
+            edit the script of mController
+            put mCommand
+            --
+            set the menu_Update of mController to true
+            --
+            lcw_Notify "Updated menu in case it needed one :)"
+         end try
+      else
+         breakpoint
+      end if
    end if
    send "menu_DeleteActiveArray" to mController in 2 ticks
 end menu_SendMessage
@@ -224,7 +358,7 @@ getprop menu_DataArray
    return mTitleTableArray
 end menu_DataArray
 
-getprop menu_CheckTarget [topMenuTarget]
+getprop menu_CheckTarget [mTarget]
    /*
    This is a default sent by  "menu_ConvertTable" 
    Usually - all you want to do is check that the topMenuTarget exists.
@@ -241,12 +375,10 @@ setprop menu_ButtonText [pMenuTarget] mTitleTable
    if mTopTitle is empty then 
       put the menu_Title of tObject into mTopTitle
    end if
-   
-   -- put the menu_Controller [mTopTitle] of tObject into mTopController
-   -- if exists (mTopController) is false then put tObject into mTopController
-   menu_SetController mTopController, tObject, mTopTitle
-   menu_SetTarget mTarget, mTopController, tObject
-   
+   --
+   put menu_FindController (tObject, mTopTitle) into mTopController
+   put mArray_FindMenuTarget (mTopController, tObject) into mTarget
+   --
    menu_DeleteActiveArray
    menu_SetTargetObject tObject
    menu_SetTopController mTopController
@@ -568,57 +700,6 @@ end menu_TargetFromGlobal
 
 --> Menu | Basics
 -
-command menu_PopUp pMenuTitle, pLocation, pTargetObject
-   if pTargetObject is empty then put the long id of the target into pTargetObject
-   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
-   if pMenuTitle is empty then put "Menu" into pMenuTitle
-   
-   set the menu_ButtonText of pTargetObject to pMenuTitle
-   put the result into mText
-   if mText is empty then return "false"
-   
-   put the menu_Button of pTargetObject into mButton
-   if pLocation is not a point then
-      popup mButton
-   else
-      popup mButton at pLocation
-   end if
-   return true
-end menu_PopUp
-
-command menu_PullDown pMenuTitle, pLocation, pTargetObject
-   if pTargetObject is empty then put the long id of the target into pTargetObject
-   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
-   if pMenuTitle is empty then put "Menu" into pMenuTitle
-   
-   set the menu_ButtonText of pTargetObject to pMenuTitle
-   put the result into mText
-   if mText is empty then
-      return "false"
-   end if
-   
-   put the menu_Button of pTargetObject into mButton
-   if exists (mButton) is false then return false
-   
-   if pLocation is not a point then
-      put the bottomleft of pTargetObject into pLocation
-      add 3 to item 2 of pLocation
-   end if
-   if exists (mButton) is false then return false
-   popup mButton at pLocation
-   return true
-end menu_PullDown
-
-command menu_MouseDown pMenuTitleTable, pTargetObject
-   if exists(pTargetObject) is false then put the long id of the target into pTargetObject
-   if pMenuTitleTable is empty then put the menu_Title of pTargetObject into pMenuTitleTable
-   if pMenuTitleTable is empty then put "Menu" into pMenuTitleTable
-   set the menu_ButtonText of pTargetObject to pMenuTitleTable
-   put the result into mText
-   if mText is empty then return "false"
-   return mText
-end menu_MouseDown
-
 command menu_AddBooleanLine @mText, mLine, paramProp, topMenuTarget, mController
    -- ignoreCall: paramProperty,g
    
@@ -631,13 +712,23 @@ command menu_AddBooleanLine @mText, mLine, paramProp, topMenuTarget, mController
    try
       put the paramProperty of mController into someBoolean
       
-      if someBoolean is true then
-         put "!ctrue" & CR & "!nfalse" into subMenu
-      else if someBoolean is false then
-         put "!ntrue" & CR & "!cfalse" into subMenu
-      else
-         put "true" & CR & "false" into subMenu
-      end if
+      -- hack for new mArray version()
+      switch someBoolean
+         case true
+            put "!ctrue" & CR & "!nfalse" into subMenu
+            break
+         case false
+            put "!ntrue" & CR & "!cfalse" into subMenu
+            break
+         case empty
+            put _HackGetBooleanMenu (paramProp, mController, topMenuTarget) into subMenu
+            break
+         default
+            -- wierd but OK
+            replace comma with CR in someBoolean
+            put someBoolean into subMenu
+      end switch
+      
       put text_Indent (subMenu) into subMenu
       put subMenu & CR after mText
       return empty
@@ -1087,4 +1178,3 @@ private function view_FindAbove targetObject
    end repeat
    return empty
 end view_FindAbove
-

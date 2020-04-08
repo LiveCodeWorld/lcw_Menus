@@ -1,8 +1,8 @@
-﻿script "Global_Controllers_Tree_Menu"
+﻿script "Global | Controllers | Tree | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_Controllers_Tree_Menu
+name: Global | Controllers | Tree | Menu
 type: controller
 version: 0.2
 
@@ -10,7 +10,12 @@ version: 0.2
 --> Global | Controllers | Tree | Menu
 -
 on menu_CreateProjectMenu projectName
-   menu_Do "menu_CreateProjectMenu", "Global | Project | Create | Menu", projectName
+   put "menu_CreateProjectMenu" into mCommand
+   put "Global | Project | Create | Menu" into mTitle
+   --
+   menu_DoGlobal mCommand, mTitle, projectName
+   -- mArray_Do mCommand, mTitle, projectName
+   --
    display_ProjectControllers projectName
 end menu_CreateProjectMenu
 

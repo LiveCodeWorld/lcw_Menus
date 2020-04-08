@@ -20,6 +20,51 @@ local LocalArray
 
 --> Working on
 -
+getprop display_View
+   -- oving to this as we look to merge indexViews and arrayViews into a single view
+   return the long id of me
+end display_View
+
+
+--> Working on | Moving away from
+-
+getprop menu_Style
+   put LocalArray ["menu_Style"] into mStyle
+   if mStyle is empty then pass menu_Style
+   return mStyle
+end menu_Style
+
+setprop menu_Style mStyle
+   put mStyle into LocalArray ["menu_Style"]
+   return LocalArray 
+end menu_Style
+
+
+--> Active | Menus
+-
+getprop menu_Controller [pMenuTitle]
+   put menu_GetGlobalController (pMenuTitle) into mController
+   if exists (mController) is true then return mController
+   
+   put LocalArray ["mController"] into mController
+   if exists (mController) is true then return mController
+   
+   return empty
+end menu_Controller
+
+setprop menu_Controller mController
+   if exists (mController) is false then return empty
+   --
+   put mController into LocalArray ["mController"]
+   --
+   put the script_MenuTitles of mController into mTitles
+   set the title_Menu of me to mTitles
+   return mTitles
+end menu_Controller
+
+
+--> Events | Drag
+-
 getprop drag_Command
    put LocalArray ["event"]["dragCommand"] into dragCommand
    return dragCommand
@@ -36,7 +81,8 @@ private command _doFieldDown
       put the line_Menu of me into mTitle
       --
       if the menu_Style of me is "array" then
-         mArray_PopUp mTitle
+         put the menu_Button of me into mButton
+         mArray_PopUp mTitle, mButton
       else
          menu_PopUp mTitle 
       end if
@@ -62,40 +108,6 @@ private command _doFieldDown
       return true
    end if
 end _doFieldDown
-
-getprop menu_Style
-   put LocalArray ["menu_Style"] into mStyle
-   if mStyle is empty then pass menu_Style
-   return mStyle
-end menu_Style
-
-setprop menu_Style mStyle
-   put mStyle into LocalArray ["menu_Style"]
-   return LocalArray 
-end menu_Style
-
-
---> Active | Menus
--
-getprop active_MenuArray
-   return LocalArray ["active_MenuArray"]
-end active_MenuArray
-
-setprop active_MenuArray [mTitle] mArray
-   -- set by "mArray_MouseDown"
-   put mArray into LocalArray ["active_MenuArray"]
-   if mTitle is not empty then
-      set the active_MenuTitle of me to mTitle
-   end if
-end active_MenuArray
-
-getprop active_MenuTitle
-   return LocalArray ["active_MenuTitle"]
-end active_MenuTitle
-
-setprop active_MenuTitle mTitle
-   put mTitle into LocalArray ["active_MenuTitle"]
-end active_MenuTitle
 
 
 --> Events | Menupick
@@ -191,28 +203,6 @@ end resizeControl
 getprop menu_Button
    return _titleView()
 end menu_Button
-
-getprop menu_Controller [pMenuTitle]
-   put menu_GetGlobalController (pMenuTitle) into mController
-   if exists (mController) is true then return mController
-   
-   put LocalArray ["mController"] into mController
-   if exists (mController) is true then return mController
-   
-   -- put the long id of this card into mController
-   put the menu_Button of me into mController
-   return mController
-end menu_Controller
-
-setprop menu_Controller mController
-   if exists (mController) is false then return empty
-   --
-   put mController into LocalArray ["mController"]
-   --
-   put the script_MenuTitles of mController into mTitles
-   set the title_Menu of me to mTitles
-   return mTitles
-end menu_Controller
 
 getprop menu_Target [mTitlePath]
    put LocalArray ["menuTarget"] into mTarget
@@ -545,6 +535,9 @@ setprop deleted_Line someLine
 end deleted_Line
 
 getprop line_Number [someLine]
+   if someLine is empty then
+      return the hilited_Line of me
+   end if
    put the view_Index of _fieldObject() into someIndex
    set the wholeMatches to true
    put lineOffset (someLine, someIndex) into lineNum

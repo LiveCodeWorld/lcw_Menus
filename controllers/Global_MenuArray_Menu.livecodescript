@@ -1,8 +1,8 @@
-﻿script "Global_MenuArray_Menu"
+﻿script "Global | MenuArray | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_MenuArray_Menu
+name: Global | MenuArray | Menu
 type: controller
 version: 0.1
 

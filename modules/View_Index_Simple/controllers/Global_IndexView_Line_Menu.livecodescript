@@ -1,8 +1,8 @@
-﻿script "Global_IndexView_Line_Menu"
+﻿script "Global | IndexView | Line | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_IndexView_Line_Menu
+name: Global | IndexView | Line | Menu
 type: controller
 version: 0.2
 

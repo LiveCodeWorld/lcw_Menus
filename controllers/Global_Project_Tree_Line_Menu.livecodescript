@@ -1,8 +1,8 @@
-﻿script "Global_Project_Tree_Line_Menu"
+﻿script "Global | Project | Tree | Line | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_Project_Tree_Line_Menu
+name: Global | Project | Tree | Line | Menu
 type: controller
 version: 0.2
 
@@ -41,240 +41,27 @@ on menu_Init tObject
 end menu_Init
 
 
---> Git | Menu
+--> Menu | Props
 -
-on menu_InitialiseGit indexView
-   put LocalArray ["projectFolder"] into projectFolder
-   git_InitFolder projectFolder
-   
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   display_GitFolderStatus gitCheckoutFolder
-end menu_InitialiseGit
-
-on menu_GitStatus indexView
-   put the selected_Index of indexView into projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   
-   display_GitFolderStatus gitCheckoutFolder
-end menu_GitStatus
-
-on menu_LaunchGithub
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   github_Launch repoName
-end menu_LaunchGithub
-
-on menu_GithubReadme indexView
-   put the selected_Index of indexView into projectName
-   --
-   put github_FetchReadmeMD (projectName) into readmeMarkdown
-   put "Project" && projectName into pageTitle
-   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
-   put json_FromArray (pageArray) into readmeJSON
-   --
-   display_FedwikiPageJson readmeJSON
-end menu_GithubReadme
-
-on menu_DisplayGithubInfo
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   display_GitHubInfo repoName
-end menu_DisplayGithubInfo
-
-
-
---> Global | Project | Tree | Line | Menu
--
-on menu_MoveUsed indexView, newProjectName
-   put the selected_Index of indexView into stackName
-   put the name of stack stackName into stackObject
-   
-   put the project_Name of stackObject into oProjectName
-   if oProjectName = newProjectName then
-      answer warning merge ("Stack is already in project '[[newProjectName]]'. Choose a new project to move this library to!")
-      exit to top
-   end if
-   
-   put the short name of stackObject into stackName
-   project_MoveStackRelative stackName, newProjectName
-   
-   lcw_Notify merge ("Moved library to new project '[[newProjectName]]'!")
-   
-   breakpoint
-   -- refreshDisplay newProjectName
-   menu_Do "menu_DisplayActive", "Global | Project | Line | Menu", indexView, "libraries"
-end menu_MoveUsed
-
-on menu_ConvertToModule indexView, newProjectName
-   put the selected_Index of indexView into moduleStackName
-   if exists (stack moduleStackName) is false then
-      breakpoint
-      exit to top
-   end if
-   
-   put the filename of stack moduleStackName into oStackPath
-   -- put the module_Folder [newProjectName] of stack moduleStackName into moduleFolder
-   put project_GetFolder (newProjectName) into projectFolder
-   put project_ConstructFolder ("modules", projectFolder) into rootModuleFolder
-   
-   project_CreateModule moduleStackName, rootModuleFolder, oStackPath
-end menu_ConvertToModule
-
-on menu_StartProject indexView, someBoolean
-   put the selected_Index of indexView into projectName
-   if someBoolean is true then
-      project_Start projectName
-   else
-      project_Stop projectName
-   end if
-   set the selected_Index of indexView to env_ListProjects()
-end menu_StartProject
-
-on _
-end _
-
-on menu_ExportMenusAndStackFiles indexView
-   put the selected_Index of indexView into projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   -- put project_GetFolder (projectName) into projectFolder
-   
-   project_ExportMenusAndStackFiles projectFolder
-end menu_ExportMenusAndStackFiles
-
-on menu_ExportAndIndexProject indexView
-   put the selected_Index of indexView into projectName
-   -- put library_FetchProjectFolder (projectName) into projectFolder
-   -- put project_GetFolder (projectName) into projectFolder
-   
-   env_ExportAndIndexProject projectName
-   put the result into hkeyPlaceArray
-   display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
-end menu_ExportAndIndexProject
-
-on _
-end _
-
-on submenu_Git
-   return "Git | Menu"
-end submenu_Git
-
-on _
-end _
-
-on menu_DisplayProjectDeps indexView
-   put the selected_Index of indexView into projectName
-   put project_ListUsedDeps (projectName)
-end menu_DisplayProjectDeps
-
-on _
-end _
-
-on menu_GoToHomeStack indexView
-   put the selected_Index of indexView into projectName
-   put library_FetchProjectHomeStackPath (projectName) into homeStackPath
-   if exists (stack homeStackPath) is false then breakpoint
-   
-   go to stack homeStackPath
-end menu_GoToHomeStack
-
-on menu_EditStackScript indexView
-   put the selected_Index of indexView into projectName
-   put library_FetchProjectHomeStackPath (projectName) into homeStackPath
-   if exists (stack homeStackPath) is false then breakpoint
-   
-   edit the script of stack homeStackPath
-end menu_EditStackScript
-
-on _
-end _
-
-on menu_RevealProjectFolder indexView
-   put the selected_Index of indexView into projectName
-   put project_GetFolder (projectName) into projectFolder
-   finder_Reveal projectFolder
-end menu_RevealProjectFolder
-
-on menu_RemoveProjectFromLibrary indexView
-   put the selected_Index of indexView into projectName
-   answer warning merge ("Are you sure you want to remove the project '[[projectName]]' from the project library?") with "Cancel" or "OK"
-   if it is "Cancel" then exit to top
-   
-   library_DeleteProjectArray projectName
-   
-   put library_ListProjectNames() into projectNames
-   set the view_Index ["List of Projects"] of indexView to projectNames
-end menu_RemoveProjectFromLibrary
-
-on menu_DisplayProject indexView
-   put the selected_Index of indexView into projectName
-   display_ProjectLibs projectName
-   library_ListProjectNames
-   -- put library_ListProjectNames() into projectNames
-   -- set the view_Index ["List of Projects"] of indexView to projectNames
-end menu_DisplayProject
-
-on _
-end _
-
-on menu_TrashProject indexView
-   put the selected_Index of indexView into projectName
-   answer warning merge ("Are you sure you want to close project '[[projectName]]' and move all files to the trash?") with "Cancel" or "OK"
-   if it is "Cancel" then exit to top
-   
-   project_Trash projectName
-end menu_TrashProject
-
-on _
-end _
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
-on menu_FixRemote indexView
-   put LocalArray ["remoteAddress"] into projectFolder
-   put lcw_Ask ("Enter git remote address...", "git@github.com:LiveCodeWorld/lcw.git")into gitRemoteAddress
-   git_SetRemoteOrigin gitRemoteAddress, projectFolder
-   put the result
-end menu_FixRemote
-
-on menu_AddEverythingToGit indexView
-   put the selected_Index of indexView into gitProjectName
-   put library_FetchProjectFolder (gitProjectName) into projectFolder
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   
-   breakpoint
-   git_AddEverything gitCheckoutFolder
-   put the result into shellResult
-   
-   display_GitFolderStatus gitCheckoutFolder
-end menu_AddEverythingToGit
-
-
---> Global | Project | Tree | Line | Menu | Props
--
-getprop new_ProjectName [indexView]
+getprop convertToModule_Param [indexView]
    put the selected_Index of indexView into stackName
    put the project_Name of stack stackName into projectName
    return projectName
-end new_ProjectName
+end convertToModule_Param
 
-getprop new_ProjectNames
+getprop convertToModule_Params
    return library_ListProjectNames()
-end new_ProjectNames
+end convertToModule_Params
 
-getprop start_Project [indexView]
+getprop startProject_Param [indexView]
    put the selected_Index of indexView into projectName
    return project_IsActive (projectName) is true
-end start_Project
+end startProject_Param
 
+getprop startProject_Params
+   return "true,false"
+end startProject_Params
 
---> Global | Project | Tree | Line | Menu | Disabled
--
 getprop disabled_ConvertToModule [indexView]
    put the title_Text of indexView into displayedTitle
    switch displayedTitle
@@ -356,6 +143,217 @@ getprop disabled_StartProject [indexView]
       return "delete"
    end if
 end disabled_StartProject
+
+
+--> Git | Menu
+-
+on menu_InitialiseGit indexView
+   put LocalArray ["projectFolder"] into projectFolder
+   git_InitFolder projectFolder
+   
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   display_GitFolderStatus gitCheckoutFolder
+end menu_InitialiseGit
+
+on menu_GitStatus indexView
+   put the selected_Index of indexView into projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   
+   display_GitFolderStatus gitCheckoutFolder
+end menu_GitStatus
+
+on menu_LaunchGithub
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   github_Launch repoName
+end menu_LaunchGithub
+
+on menu_GithubReadme indexView
+   put the selected_Index of indexView into projectName
+   --
+   put github_FetchReadmeMD (projectName) into readmeMarkdown
+   put "Project" && projectName into pageTitle
+   put fedwiki_ConvertGitHubReadme (readmeMarkdown, pageTitle) into pageArray
+   put json_FromArray (pageArray) into readmeJSON
+   --
+   display_FedwikiPageJson readmeJSON
+end menu_GithubReadme
+
+on menu_DisplayGithubInfo
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   display_GitHubInfo repoName
+end menu_DisplayGithubInfo
+
+
+
+--> Global | Project | Tree | Line | Menu
+-
+on menu_DisplayProject indexView
+   put the selected_Index of indexView into projectName
+   display_ProjectLibs projectName
+end menu_DisplayProject
+
+on menu_StoreProjectFolder indexView
+   put the selected_Index of indexView into projectName
+   --
+   put merge ("Choose the project folder that contains the stack [[projectName]]...") into someQuestion
+   put the env_RepoFolder of stack "LCW" into repoFolder
+   answer folder someQuestion with repoFolder as sheet
+   put it into projectFolder
+   --
+   library_StoreProjectFolder projectName, projectFolder
+end menu_StoreProjectFolder
+
+on menu_RevealProjectFolder indexView
+   put the selected_Index of indexView into projectName
+   put project_GetFolder (projectName) into projectFolder
+   finder_Reveal projectFolder
+end menu_RevealProjectFolder
+
+on menu_RemoveProjectFromLibrary indexView
+   put the selected_Index of indexView into projectName
+   answer warning merge ("Are you sure you want to remove the project '[[projectName]]' from the project library?") with "Cancel" or "OK"
+   if it is "Cancel" then exit to top
+   
+   library_DeleteProjectArray projectName
+   
+   put library_ListProjectNames() into projectNames
+   set the view_Index ["List of Projects"] of indexView to projectNames
+end menu_RemoveProjectFromLibrary
+
+on _
+end _
+
+on menu_TrashProject indexView
+   put the selected_Index of indexView into projectName
+   answer warning merge ("Are you sure you want to close project '[[projectName]]' and move all files to the trash?") with "Cancel" or "OK"
+   if it is "Cancel" then exit to top
+   
+   project_Trash projectName
+end menu_TrashProject
+
+on _
+end _
+
+on menu_StartProject indexView, someBoolean
+   put the selected_Index of indexView into projectName
+   if someBoolean is true then
+      project_Start projectName
+   else
+      project_Stop projectName
+   end if
+   set the selected_Index of indexView to env_ListProjects()
+end menu_StartProject
+
+on _
+end _
+
+on menu_ExportMenusAndStackFiles indexView
+   put the selected_Index of indexView into projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   -- put project_GetFolder (projectName) into projectFolder
+   
+   project_ExportMenusAndStackFiles projectFolder
+end menu_ExportMenusAndStackFiles
+
+on menu_ExportAndIndexProject indexView
+   put the selected_Index of indexView into projectName
+   -- put library_FetchProjectFolder (projectName) into projectFolder
+   -- put project_GetFolder (projectName) into projectFolder
+   
+   env_ExportAndIndexProject projectName
+   put the result into hkeyPlaceArray
+   display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
+end menu_ExportAndIndexProject
+
+on _
+end _
+
+on submenu_Git
+   return "Git | Menu"
+end submenu_Git
+
+on submenu_Dev
+   return "Dev | Menu"
+end submenu_Dev
+
+
+--> Dev | Menu
+-
+on menu_MoveUsed indexView, newProjectName
+   put the selected_Index of indexView into stackName
+   put the name of stack stackName into stackObject
+   
+   put the project_Name of stackObject into oProjectName
+   if oProjectName = newProjectName then
+      answer warning merge ("Stack is already in project '[[newProjectName]]'. Choose a new project to move this library to!")
+      exit to top
+   end if
+   
+   put the short name of stackObject into stackName
+   project_MoveStackRelative stackName, newProjectName
+   
+   lcw_Notify merge ("Moved library to new project '[[newProjectName]]'!")
+   
+   breakpoint
+   -- refreshDisplay newProjectName
+   menu_DoGlobal "menu_DisplayActive", "Global | Project | Line | Menu", indexView, "libraries"
+end menu_MoveUsed
+
+on menu_ConvertToModule indexView, newProjectName
+   put the selected_Index of indexView into moduleStackName
+   if exists (stack moduleStackName) is false then
+      breakpoint
+      exit to top
+   end if
+   
+   put the filename of stack moduleStackName into oStackPath
+   -- put the module_Folder [newProjectName] of stack moduleStackName into moduleFolder
+   put project_GetFolder (newProjectName) into projectFolder
+   put project_ConstructFolder ("modules", projectFolder) into rootModuleFolder
+   
+   project_CreateModule moduleStackName, rootModuleFolder, oStackPath
+end menu_ConvertToModule
+
+on menu_GoToHomeStack indexView
+   put the selected_Index of indexView into projectName
+   put library_FetchProjectHomeStackPath (projectName) into homeStackPath
+   if exists (stack homeStackPath) is false then breakpoint
+   
+   go to stack homeStackPath
+end menu_GoToHomeStack
+
+on menu_EditStackScript indexView
+   put the selected_Index of indexView into projectName
+   put library_FetchProjectHomeStackPath (projectName) into homeStackPath
+   if exists (stack homeStackPath) is false then breakpoint
+   
+   edit the script of stack homeStackPath
+end menu_EditStackScript
+
+on _
+end _
+
+on menu_FixRemote indexView
+   put LocalArray ["remoteAddress"] into projectFolder
+   put lcw_Ask ("Enter git remote address...", "git@github.com:LiveCodeWorld/lcw.git")into gitRemoteAddress
+   git_SetRemoteOrigin gitRemoteAddress, projectFolder
+   put the result
+end menu_FixRemote
+
+on menu_AddEverythingToGit indexView
+   put the selected_Index of indexView into gitProjectName
+   put library_FetchProjectFolder (gitProjectName) into projectFolder
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   
+   breakpoint
+   git_AddEverything gitCheckoutFolder
+   put the result into shellResult
+   
+   display_GitFolderStatus gitCheckoutFolder
+end menu_AddEverythingToGit
 
 
 --> Deps

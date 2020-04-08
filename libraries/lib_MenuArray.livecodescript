@@ -8,6 +8,8 @@ version: 0.2
 
 /*
 This library is for the set of handlers that deal with new menu array format used by widgets.
+
+In order to account for menus that are directed at targets that are not related to the objects clicked on we must use a local or global variable
 */
 
 --> Variables
@@ -17,45 +19,184 @@ local LocalArray
 
 --> Working on
 -
-function menu_ConstructArray gMenuTitle
-   put menu_GetGlobalController (gMenuTitle) into mController
-   if exists (mController) is false then return empty
-   put the script_MenuArray of mController into mArray
-   return mArray
-end menu_ConstructArray
+/*
+These handlers are being slowly ported from the older lib_Menu code
+*/
 
-getprop menu_Index [mTitle]
-   -- used by "help_ConstructMenuStory"
-   put the menu_Handlers [mTitle] of the target into mHandlers
-   return mHandlers
+command mArray_SetMenuController @mController, tObject, mTitle
+   switch
+      case word 1 of mTitle is "Global"
+         put menu_GetGlobalController (mTitle) into gMenuController
+         if exists (gMenuController) is true then
+            put gMenuController into mController
+         else
+            display_DebugHistory mTitle
+         end if
+         break
+      case exists (mController)
+         -- we can override also with a getprop in the controller
+         get the menu_Controller [tObject] of mController
+         if it is not empty then
+            put it into mController
+         end if
+         break
+      default
+         breakpoint
+   end switch
+end mArray_SetMenuController
+
+function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target
+   -- called for every nested menu - but not menu items (I think)
+   -- could optimise by only calling the menu_Target when not already done
    
-   put the script_MenuTitleTableArray of the target into mTitleTableArray
-   put mTitleTableArray [mTitle] into mTitleTable
-   set the itemdelimiter to tab
-   repeat for each line tLine in mTitleTable
-      menu_DeconstructTableLine tLine, mController, pigeon, mTitle, mLine, mFormatProp, mItemType, submenuProp, paramProp, mSendLine
-      -- put word 1 of item 2 of tLine into mHandler
-      put word 1 of pigeon into mHandler
-      switch
-         case tLine = "-"
-            put "-" & CR after mHandlers
-            break
-         case mItemType = "submenu"
-            put submenuProp & CR after mHandlers
-            break
-         case mHandler is empty
-            breakpoint
-            break
-         default
-            put mHandler & CR after mHandlers
-      end switch
+   if exists (mController) is false then
+      display_DebugHistory
+   else
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   
+   put the menu_Target of tObject into mTarget
+   if mTarget is not empty then
+      return mTarget
+   else
+      return tObject
+   end if
+end mArray_FindMenuTarget
+
+private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray
+   dispatch hName to mController
+   put the result into subMenuTitle
+   if subMenuTitle is empty then return false
+   --
+   mArray_SetMenuController mController, tObject, subMenuTitle
+   --
+   put menu_CommandToText (hName) into mLabel
+   --
+   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, mController, recursionArray
+   --
+   return true
+end _SubmenuBit
+
+private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recursionArray
+   dispatch hName to mController
+   put the result into insertMenuTitle
+   switch
+      case insertMenuTitle is empty
+         return false
+      case mTitle_IsGlobal (insertMenuTitle)
+         mArray_SetMenuController mController, tObject, insertMenuTitle
+         break
+      default
+         -- assume it is a non-global menu in the same mController
+         put mController into insertController
+   end switch
+   
+   _AddMenu mArray, insertMenuTitle, insertController, tObject, mTarget, recursionArray
+   return the result
+end _InsertBit
+
+
+--> mArray | Active
+-
+function mArray_GetTopTitle
+   return LocalArray ["active_TopMenuTitle"]
+   
+   /*
+   put menu_GetSentPath() into mSentPath
+   menu_DeconstructPath mSentPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType
+   set the itemdelimiter to "/"
+   put item -1 of mTitlePath into sentMenuTitle
+   return sentMenuTitle
+   */
+end mArray_GetTopTitle
+
+function mArray_GetTopController
+   /*
+   put menu_GetSentPath() into mPath
+   menu_DeconstructPath mPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType
+   */
+   
+   put mArray_GetTopTitle() into mTitle
+   put mArray_GetActiveMenuController (mTitle) into mController
+   return mController
+end mArray_GetTopController
+
+function mArray_GetActiveText
+   return LocalArray ["active_MenuText"]
+end mArray_GetActiveText
+
+function mArray_GetActiveTitle
+   return LocalArray ["active_TopMenuTitle"]
+end mArray_GetActiveTitle
+
+function mArray_GetActiveArray
+   return LocalArray ["active_MenuArray"]
+end mArray_GetActiveArray
+
+command mArray_SetActiveArray mArray
+   put mArray into LocalArray ["active_MenuArray"]
+end mArray_SetActiveArray
+
+command mArray_SetActive mArray, mText, mTitle
+   put mArray into LocalArray ["active_MenuArray"]
+   put mText into LocalArray ["active_MenuText"]
+   put mTitle into LocalArray ["active_TopMenuTitle"]
+end mArray_SetActive
+
+function menu_GetTargetObject
+   put LocalArray ["active_menuTarget"] into tObject
+   return tObject
+end menu_GetTargetObject
+
+command menu_SetTargetObject tObject
+   put tObject into LocalArray ["active_menuTarget"]
+end menu_SetTargetObject
+
+function mArray_ActiveControllerExists mTitle
+   put mArray_GetActiveMenuController (mTitle) into mController
+   return exists (mController)
+end mArray_ActiveControllerExists
+
+function mArray_GetActiveMenuController mTitle
+   put LocalArray ["MenuControllerInit"] into mControllerArray
+   repeat for each key mController in mControllerArray
+      put mControllerArray [mController]["mTitle"] into testMTitle
+      if testMTitle = mTitle then
+         return mController
+      end if
    end repeat
-   delete char -1 of mHandlers
-   return mHandlers
-end menu_Index
+   return empty
+end mArray_GetActiveMenuController
+
+private command mArray_FindActiveItem mItem, @hkeyController, @paramValue
+   put mArray_GetActiveArray() into mArray
+   --
+   set the itemdelimiter to "|"
+   repeat for each item itemText in mItem
+      put keys (mArray) into indexNums
+      sort numeric indexNums
+      repeat for each line indexNum in indexNums
+         put mArray [indexNum] into itemArray
+         if itemArray ["label"] = itemText then
+            get itemArray ["name"]
+            --
+            if word 1 of it is "param" then
+               put word 2 to -1 of it into paramValue
+            else
+               put it into hkeyController
+               put empty into paramValue
+            end if
+            exit repeat
+         end if
+      end repeat
+      put itemArray ["menu"] into mArray
+   end repeat
+end mArray_FindActiveItem
 
 
---> Hkey | Do
+--> mArray | Dispatch
 -
 /*
 These handlers all take the form of "controller messaging".
@@ -65,34 +206,37 @@ This is because we use "dispatch". If we use call we may get around this and try
 */
 
 command mArray_DoController mKey, pValue
-   -- changed "dispatch" to "call"
-   -- which keeps the context of the target
+   -- changed "dispatch" to "call" which keeps the context of the target
    
-   put the long id of the target into tObject
+   -- put the long id of the target into tObject
+   put menu_GetTargetObject() into tObject
+   --
    mArray_UnMarshal mKey
    hkey_Deconstruct mKey, hName, hType, mController, hNum
    --
-   menu_SetTarget mTarget, mController, tObject
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   --
    hKey_Do mKey, mTarget, pValue
    return the result
 end mArray_DoController
 
-command menu_Do mCommand, mTitle, pMenuTarget, pValue
-   -- if pMenuTitle is empty we search all loaded menus and return the first instance
-   put menu_FindGlobalController (mCommand, mTitle) into mController
+command mArray_Do mCommand, mTitle, pMenuTarget, pValue
+   -- only search in active mArray
+   put mArray_GetActiveMenuController (mTitle) into mController
+   --
    if exists (mController) is false then return false
    if pMenuTarget is empty then
       put the long id of the target into tObject
-      menu_SetTarget pMenuTarget, mController, tObject
+      put mArray_FindMenuTarget (mController, tObject) into pMenuTarget
    end if
    --
    handler_Do mCommand, mController, pMenuTarget, pValue
    return the result
-end menu_Do
+end mArray_Do
 
 command hKey_Do hKey, pTarget, pValue, pQuestion
    if the optionKey is "Down" then
-      put rev_TopScriptEditor() into stackObject
+      put scriptEditor_GetTop() into stackObject
       if pQuestion is empty then
          put "Edit script for this handler?" into pQuestion
       end if
@@ -112,79 +256,170 @@ command handler_Do hName, hObject, pTarget, pValue
    --
    call callCommand of hObject
    return the result
-   
-   /*
-   dispatch hName to hObject with pTarget,pValue
-   switch it
-      case "passed"
-      case "unhandled"
-         return it
-      case "handled"
-         return the result
-   end switch
-   */
 end handler_Do
 
-
---> Menu | Dispatch
--
-on menu_Dispatch mItem
-   -- "menu_Dispatch mItem" placed in the mButton target
-   put the long id of the target into tObject
-   switch word 1 of tObject
-      case "widget"
-         menu_DispatchPick mItem
-         break
-      default
-         menu_DispatchTextPick mItem
-   end switch
-end menu_Dispatch
-
-command menu_DispatchTextPick mItem
-   put the long id of the target into tObject
-   put the active_MenuArray of tObject into mArray
-   put the active_MenuTitle of tObject into mTitle
+private command mArray_AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
+   -- this is the one place where menu drawing happens that dispatches a message
+   -- consider changing dispatch to call?
+   
+   mArray_SetMenuController mController, tObject, mTitle
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
    --
-   set the itemdelimiter to "|"
-   repeat for each item itemText in mItem
-      if mArray is not an array then
-         breakpoint
-      end if
-      put keys (mArray) into indexNums
-      sort numeric indexNums
-      repeat for each line indexNum in indexNums
-         put mArray [indexNum] into itemArray
-         if itemArray ["label"] = itemText then
-            get itemArray ["name"]
-            --
-            if word 1 of it is "param" then
-               put word 2 to -1 of it into paramValue
-            else
-               put it into hkeyController
-               put empty into paramValue
-            end if
-            exit repeat
-         end if
-      end repeat
-      put itemArray ["menu"] into mArray
-   end repeat
-   -- 
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchTextPick
-
-command menu_DispatchPick mItem
-   local paramValue
-   set the itemdelimiter to "|"
-   put item -1 of mItem into hkeyController
-   if word 1 of hkeyController = "param" then
-      put word 2 to -1 of hkeyController into paramValue
-      put item -2 of mItem into hkeyController 
+   _RecursionCheck recursionArray, tObject, mController, mTitle
+   if the result is false then return false
+   
+   if exists (mController) is false then
+      display_DebugHistory mTitle
+      return false
    end if
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchPick
+   
+   /*
+   put the menu_CheckTarget [mTarget] of mController into targetOK
+   if targetOk is false then
+      return false
+   end if
+   */
+   
+   put LocalArray ["MenuControllerInit"][mController]["mInitialised"] is true into mInitialised
+   --
+   if mInitialised is not true then
+      -- this is the only place where messages are dispatched during menu drawing
+      dispatch "menu_Init" to mController with tObject -- works also for submenu
+      _SetMenuControllerInit mController, true, mTitle, tObject, mTarget
+   end if
+   --
+   put the script_MenuHandlers [mTitle] of mController into scriptHandlers
+   repeat for each line hName in scriptHandlers       
+      if hName = "_" then
+         _AddDivider mArray
+         next repeat
+      end if
+      
+      put mArray_GetDisabled (hName, mController, mTarget) into isDisabled
+      switch isDisabled
+         case "delete"
+            next repeat
+         case true -- we can delete it as right now there is no graying out
+         case false
+         default
+            _SetMenuItem mArray, hName, mController, tObject, mTarget, recursionArray
+            _SetDisabled mArray, isDisabled
+      end switch
+   end repeat
+   return true
+end mArray_AddScriptMenu
 
+
+--> Working on
+-
+function mArray_FromTitleTable mTitleTable, tObject
+   local mArray, recursionArray
+   --
+   replace comma with tab in mTitleTable
+   set the itemdelimiter to tab
+   repeat for each line mTitleLine in mTitleTable
+      put item 1 of mTitleLine into mTitle
+      put item 2 of mTitleLine into mType
+      --
+      if mTitle = "-" then
+         _AddDivider mArray
+         next repeat
+      end if
+      --
+      put the mArray_FoundController [mTitle] of tObject into topMenuController
+      if exists (topMenuController) is false then
+         display_DebugHistory mTitle
+         next repeat
+      end if
+      --
+      switch mType
+         case "insert"
+            breakpoint
+            break
+         case "submenu"
+            put mTitle_ConstructText (mTitle) into prettyTitle
+            _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, tObject, topMenuController, recursionArray
+            break
+         default
+            mArray_AddScriptMenu mArray, mTitle, tObject, topMenuController, recursionArray
+      end switch
+   end repeat
+   return mArray
+end mArray_FromTitleTable
+
+getprop mArray_FoundController [mTitle]
+   put the long id of the target into tObject
+   --
+   put menu_GetGlobalController (mTitle) into gMenuController
+   if exists (gMenuController) is true then return gMenuController
+   
+   -- check the local context (assumes global default can return empty)
+   put the menu_Controller [mTitle] of tObject into mController
+   if exists (mController) is true then return mController
+   
+   -- use card as a default controller
+   put the card_Object of tObject into cMenuController      
+   return cMenuController
+end mArray_FoundController
+
+private command _RecursionCheck @recursionArray, tObject, mController, mTitle
+   put recursionArray [mController][mTitle] into testObject
+   if testObject is not empty then
+      -- already indexed. Don't allow a menu to be there twice.
+      return false
+   else
+      put tObject into recursionArray [mController][mTitle]
+      return true
+   end if
+end _RecursionCheck
+
+private command _AddSubmenu @mArray, mName, mLabel, mTitle, tObject, mController, @recursionArray
+   put mArray_FromScript (mTitle, tObject, mController, recursionArray) into subMenuArray
+   if subMenuArray is not an array then return false
+   --
+   put _NextIndexNum (mArray) into indexNum
+   --
+   put subMenuArray into mArray [indexNum]["menu"]
+   put mName into mArray [indexNum]["name"]
+   put mLabel into mArray [indexNum]["label"]
+   return true
+end _AddSubmenu
+
+function mArray_FromScript mTitle, tObject, mController, @recursionArray
+   local mArray
+   mArray_AddScriptMenu mArray, mTitle, tObject, mController, recursionArray
+   return mArray
+end mArray_FromScript
+
+
+--> Remove
+-
+private command _SetMenuControllerInit mController, someBoolean, mTitle, tObject, mTarget
+   put someBoolean into LocalArray ["MenuControllerInit"][mController]["mInitialised"] -- check recursion
+   put mTitle into LocalArray ["MenuControllerInit"][mController]["mTitle"] -- to find mController from mTitle
+   
+   -- needed?
+   put tObject into LocalArray ["MenuControllerInit"][mController]["tObject"]
+   put mTarget into LocalArray ["MenuControllerInit"][mController]["mTarget"]
+end _SetMenuControllerInit
+
+
+--> mArray | Props
+-
+getprop menu_Button
+   put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
+   return mButton
+end menu_Button
+
+getprop menu_Style
+   put LocalArray ["menu_Style"] into mStyle
+   if mStyle is empty then return "array"
+   return mStyle
+end menu_Style
+
+setprop menu_Style mStyle
+   put mStyle into LocalArray ["menu_Style"]
+end menu_Style
 
 --> Script | MenuArray
 -
@@ -227,161 +462,89 @@ getprop script_MenuHandlers [mTitle]
    return hNames
 end script_MenuHandlers
 
-
---> Menu | Props
--
-getprop menu_Style
-   put LocalArray ["menu_Style"] into mStyle
-   if mStyle is empty then return "old"
-   return mStyle
-end menu_Style
-
-setprop menu_Style mStyle
-   put mStyle into LocalArray ["menu_Style"]
-end menu_Style
-
-getprop menu_Text [mTitle]
-   put the script_MenuArray [mTitle] of the target into mArray
-   put mArray_ToText (mArray) into mText
-   return mText
-end menu_Text
-
-getprop menu_Array [pMenuTitle]
-   -- default target is the target whic we assume is a menu_Button
-   put the long id of the target into tObject
+function menu_GetChecked theParams
+   handler_DeconstructParams theParams, hNameToFind, mTarget, hParamValue
    
-   -- check cache
-   put the cached_MenuArray of tObject into mArray
-   if mArray is not an array then
-      -- calculate from script
-      if pMenuTitle is empty then put the cached_MenuTitle of tObject into pMenuTitle
-      put mArray_FromTitleTable (pMenuTitle, tObject) into mArray -- dispatches "menu_Init"
-   end if
-   return mArray
-end menu_Array
-
-setprop menu_Array [pMenuTitle] mArray
-   -- same as "cached_MenuArray"
-   set the cached_MenuArray [pMenuTitle] of the target to mArray
-end menu_Array
-
-
---> Active | Menus
--
-getprop active_MenuArray
-   return LocalArray ["active_MenuArray"]
-end active_MenuArray
-
-setprop active_MenuArray [mTitle] mArray
-   -- set by "mArray_MouseDown"
-   put mArray into LocalArray ["active_MenuArray"]
-   if mTitle is not empty then
-      set the active_MenuTitle of me to mTitle
-   end if
-end active_MenuArray
-
-getprop active_MenuTitle
-   return LocalArray ["active_MenuTitle"]
-end active_MenuTitle
-
-setprop active_MenuTitle mTitle
-   put mTitle into LocalArray ["active_MenuTitle"]
-end active_MenuTitle
-
-
---> Cached | Menus
--
-getprop cached_MenuArray
-   put the uLCW ["menu_Array"] of the target into mArray
-   return mArray
-end cached_MenuArray
-
-setprop cached_MenuArray [pMenuTitle] mArray
-   put the long id of the target into tObject
-   set the uLCW ["menu_Array"] of tObject to mArray
-   if pMenuTitle is not empty then
-      -- lazy shortcut
-      set the cached_MenuTitle of tObject to pMenuTitle
-   end if
-end cached_MenuArray
-
-getprop cached_MenuTitle
-   put the uLCW ["menu_Title"] of the target into mTitle
-   return mTitle
-end cached_MenuTitle
-
-setprop cached_MenuTitle mTitle
-   set the uLCW ["menu_Title"] of the target to mTitle
-end cached_MenuTitle
-
-
---> Menu | Objects
--
-command menu_SetController @mController, tObject, pMenuTitle
-   -- global first
-   put menu_GetGlobalController (pMenuTitle) into mController
-   if exists (mController) is true then return mController
-   
-   -- check the local context (assumes global default can return empty)
-   put the menu_Controller [pMenuTitle] of tObject into mController
-   if exists (mController) is true then return mController
-   
-   -- use card as a default controller
-   put the card_Object of tObject into mController   
-   return tObject
-end menu_SetController
-
-command menu_SetTarget @mTarget, mController, tObject
-   -- different from "menu_SetTargetObject" which just set global
-   -- controller, view, target logic
-   put the menu_Target [tObject] of mController into mTarget
-   if mTarget is empty then
-      put the menu_Target of tObject into mTarget
-      if mTarget is empty then
-         put tObject into mTarget
+   put mArray_GetActiveArray() into mArray
+   put keys (mArray) into indexNums
+   sort numeric indexNums
+   repeat for each line indexNum in indexNums
+      put mArray [indexNum] into itemArray
+      put itemArray ["name"] into hKeyLine
+      hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
+      
+      if hName = hNameToFind then
+         put itemArray ["menu"] into subMenuArray
+         repeat for each key itemNum in subMenuArray
+            put subMenuArray [itemNum]["label"] into foundParamValue
+            if hParamValue = foundParamValue then
+               put subMenuArray [itemNum]["checked"] into someBoolean
+               return someBoolean
+            end if
+         end repeat
       end if
-   end if
-end menu_SetTarget
+   end repeat
+   return false
+end menu_GetChecked
 
 
---> mTitle
+--> Menu | Dispatch
 -
-function mTitle_IsGlobal mTitle
-   -- could do better check
-   return word 1 of mTitle = "Global"
-end mTitle_IsGlobal
+on menu_Dispatch mItem
+   -- "menu_Dispatch mItem" placed in the mButton target
+   put the long id of the target into tObject
+   switch word 1 of tObject
+      case "widget"
+         menu_DispatchPick mItem
+         break
+      default
+         menu_DispatchTextPick mItem
+   end switch
+end menu_Dispatch
 
-command mTitle_Normalize @gMenuTitle
-   replace "_" with " | " in gMenuTitle
-end mTitle_Normalize
+command menu_DispatchTextPick mItem
+   -- put the long id of the target into mButton
+   -- put mButton into tObject
+   mArray_FindActiveItem mItem, hkeyController, paramValue   
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchTextPick
 
-function mTitle_ConstructText mTitle
+command menu_DispatchPick mItem
+   local paramValue
    set the itemdelimiter to "|"
-   delete item - 1 of mTitle
-   if word 1 to -1 of item 1 of mTitle = "Global" then delete item 1 of mTitle
-   
-   replace " | " with " " in mTitle
-   return word 1 to -1 of mTitle
-end mTitle_ConstructText
+   put item -1 of mItem into hkeyController
+   if word 1 of hkeyController = "param" then
+      put word 2 to -1 of hkeyController into paramValue
+      put item -2 of mItem into hkeyController 
+   end if
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchPick
 
 
 --> mArray | Mouse
 -
-command mArray_MouseDown mTitle, pMenuButton
-   put the long id of the target into tObject
+command mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   if pTargetObject is empty then
+      put the long id of the target into pTargetObject
+   end if
    if pMenuButton is empty then
       -- defaults to the target rather than the global menu_Button
-      put tObject into pMenuButton
+      put pTargetObject into pMenuButton
    end if
+   --
+   _ClearActiveMenuArray
+   menu_SetTargetObject pTargetObject
    --
    switch word 1 of pMenuButton
       case "button"
-         -- put the menu_Array [mTitle] of tObject into mArray
-         put mArray_FromTitleTable (mTitle, tObject) into mArray -- dispatches "menu_Init"
+         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
          put mArray_ToText (mArray) into mText
          --
          set the text of pMenuButton to mText
-         set the active_MenuArray [mTitle] of pMenuButton to mArray
+         --
+         mArray_SetActive mArray, mText, mTitle
          return mArray
       case "widget"
          break
@@ -390,31 +553,34 @@ command mArray_MouseDown mTitle, pMenuButton
    end switch
 end mArray_MouseDown
 
-command mArray_PullDown mTitle, pMenuButton
+command mArray_PullDown mTitle, pMenuButton, pTargetObject
    if pMenuButton is empty then
       -- defaults to the target rather than the global menu_Button
       put the long id of the target into pMenuButton
    end if
    --
-   mArray_MouseDown mTitle, pMenuButton
+   mArray_MouseDown mTitle, pMenuButton, pTargetObject
    put the result into mArray
    --
    put the bottomleft of pMenuButton into popLoc
    add 3 to item 2 of popLoc
+   --
    popup pMenuButton at popLoc
+   return mArray
 end mArray_PullDown
 
-command mArray_PopUp mTitle, pMenuButton
+command mArray_PopUp mTitle, pMenuButton, pTargetObject
    if pMenuButton is empty then
       -- defaults to the target rather than the global menu_Button
       put the long id of the target into pMenuButton
    end if
    --
-   mArray_MouseDown mTitle, pMenuButton
+   mArray_MouseDown mTitle, pMenuButton, pTargetObject
    put the result into mArray
    --
-   popup pMenuButton
-end mArray_PopUp
+   popup pMenuButton -- target changes
+   return mArray
+end mArray_PopUp   
 
 
 --> mArray
@@ -442,71 +608,6 @@ function mArray_ListHandlerNames mArray, pNoDividers
    return hNames
 end mArray_ListHandlerNames
 
-function mArray_FromTitleTable mTitleTable, tObject
-   local mArray, recursionArray
-   --
-   replace comma with tab in mTitleTable
-   set the itemdelimiter to tab
-   repeat for each line mTitleLine in mTitleTable
-      put item 1 of mTitleLine into mTitle
-      put item 2 of mTitleLine into mType
-      --
-      if mTitle = "-" then
-         _AddDivider mArray
-         next repeat
-      end if
-      --
-      menu_SetController mController, tObject, mTitle
-      menu_SetTarget mTarget, mController, tObject
-      --
-      switch mType
-         case "submenu"
-            put mTitle_ConstructText (mTitle) into prettyTitle
-            _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, mController, tObject, mTarget, recursionArray
-            break
-         default
-            -- _AddMenu mArray, mTitle, mController, tObject, mTarget, recursionArray
-            dispatch "menu_Init" to mController with tObject,mTarget
-            mArray_AddScriptMenu mArray, mTitle, mController, tObject, mTarget, recursionArray
-      end switch
-   end repeat
-   return mArray
-end mArray_FromTitleTable
-
-
---> Menu | Array
--
-function mArray_FromScript mTitle, mController, tObject, mTarget, @recursionArray
-   local mArray
-   mArray_AddScriptMenu mArray, mTitle, mController, tObject, mTarget, recursionArray
-   return mArray
-end mArray_FromScript
-
-command mArray_AddScriptMenu @mArray, mTitle, mController, tObject, mTarget, @recursionArray
-   _RecursionCheck recursionArray, tObject, mController, mTitle
-   if the result is false then return false
-   
-   put the script_MenuHandlers [mTitle] of mController into scriptHandlers
-   repeat for each line hName in scriptHandlers       
-      if hName = "_" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put mArray_GetDisabled (hName, mController, mTarget) into isDisabled
-      switch isDisabled
-         case "delete"
-            next repeat
-         case true -- we can delete it as right now there is no graying out
-         case false
-         default
-            _SetMenuItem mArray, hName, mController, tObject, mTarget, recursionArray
-            _SetDisabled mArray, isDisabled
-      end switch
-   end repeat
-   return true
-end mArray_AddScriptMenu
-
 
 --> mArray
 -
@@ -532,8 +633,8 @@ command mArray_TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
          put itemArray ["checked"] into isChecked
          put itemArray ["disabled"] into isDisabled
       else
-         -- check live
-         put mArray_GetChecked (hName, pController, pMenuTarget) into isDisabled
+         -- check live (not sure if this is ever used?)
+         -- put mArray_GetObjectCheckStatus (hName, pController, pMenuTarget) into isDisabled
          put mArray_GetDisabled (hName, pController, pMenuTarget) into isDisabled
       end if
       --
@@ -561,14 +662,6 @@ function mArray_GetDisabled hName, mController, mTarget
    return isDisabled
 end mArray_GetDisabled
 
-function mArray_GetChecked hName, mController, mTarget
-   set the itemdelimiter to "_"
-   put item 2 of hName into hText
-   put "check_" & hText & "[" & mTarget & "]" into mProperty
-   put the mProperty of mController into isChecked
-   return isChecked
-end mArray_GetChecked
-
 function mArray_GetParamValues propLabel, mController, mTarget
    put propLabel & "_Params" & "[" & mTarget & "]" into mProperty
    put the mProperty of mController into paramValues
@@ -584,7 +677,73 @@ end mArray_GetCheckParams
 
 --> mArray | Bits
 -
-command mArray_SetParamMenuItem @mArray, propLabel, hName, mController, paramValues, checkParams
+function mArray_ConstructHkey hName, mController
+   put hkey_Construct (hName, "M", mController) into hkeyController
+   mArray_Marshal hkeyController
+   return hkeyController
+end mArray_ConstructHkey
+
+command mArray_Marshal @hkeyController
+   replace "|" with "\" in hkeyController
+end mArray_Marshal
+
+command mArray_UnMarshal @hkeyController
+   replace "\" with "|" in hkeyController
+end mArray_UnMarshal
+
+
+--> Private
+-
+private command _ClearActiveMenuArray
+   delete variable LocalArray ["MenuControllerInit"]
+end _ClearActiveMenuArray
+
+private command handler_DeconstructParams theParams, @hName, @firstParam, @secondParam
+   get item 1 of theParams
+   put word 1 of it into hName
+   put char 2 to -2 of word 2 to -1 of it into firstParam
+   put char 2 to -2 of word 1 of item 2 of theParams into secondParam
+end handler_DeconstructParams
+
+
+--> Private | Construct | MenuItem
+-
+private command _AddMenuItem @mArray, hName, mController, mTarget
+   set the itemdelimiter to "_"
+   put item 2 of hName into propLabel
+   --
+   put mArray_GetParamValues (propLabel, mController, mTarget) into paramValues
+   put mArray_GetCheckParams (propLabel, mController, mTarget) into checkParams
+   --
+   if paramValues is empty then
+      put checkParams into itemChecked
+      mArray_SetPlainMenuItem mArray, hName, mController, checkParams
+   else
+      mArray_SetParamMenuItem mArray, propLabel, hName, mController, paramValues, checkParams
+   end if
+   return true
+end _AddMenuItem
+
+private command mArray_SetPlainMenuItem @mArray, hName, mController, itemChecked   
+   put _NextIndexNum (mArray) into indexNum
+   put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
+   put menu_CommandToText (hName) into mArray [indexNum]["label"]
+   
+   -- bizarre bug in Livecode widget being strict on boolean type an text type
+   -- put true into mArray [indexNum]["disabled"] does not seem possible
+   -- put itemChecked into mArray [indexNum]["checked"] -- does nto work!
+   
+   put item 2 of the extents of mArray into indexNum
+   number_PadLeft indexNum, 2
+   
+   if itemChecked is true then
+      put true into mArray [indexNum]["checked"]
+   else
+      put false into mArray [indexNum]["checked"]
+   end if
+end mArray_SetPlainMenuItem
+
+private command mArray_SetParamMenuItem @mArray, propLabel, hName, mController, paramValues, checkParams
    put _NextIndexNum (mArray) into indexNum
    replace comma with CR in paramValues
    replace comma with CR in checkParams
@@ -613,32 +772,6 @@ command mArray_SetParamMenuItem @mArray, propLabel, hName, mController, paramVal
    put text_SplitCaps (propLabel) into mArray [indexNum]["label"]
 end mArray_SetParamMenuItem
 
-command mArray_SetPlainMenuItem @mArray, hName, mController
-   put _NextIndexNum (mArray) into indexNum
-   --
-   put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
-   put menu_CommandToText (hName) into mArray [indexNum]["label"]
-   
-   _SetChecked mArray, hName, mController
-end mArray_SetPlainMenuItem
-
-function mArray_ConstructHkey hName, mController
-   put hkey_Construct (hName, "M", mController) into hkeyController
-   mArray_Marshal hkeyController
-   return hkeyController
-end mArray_ConstructHkey
-
-command mArray_Marshal @hkeyController
-   replace "|" with "\" in hkeyController
-end mArray_Marshal
-
-command mArray_UnMarshal @hkeyController
-   replace "\" with "|" in hkeyController
-end mArray_UnMarshal
-
-
---> Private
--
 private command _SetDisabled @mArray, isDisabled
    if isDisabled is not empty then
       put item 2 of the extents of mArray into indexNum
@@ -647,22 +780,9 @@ private command _SetDisabled @mArray, isDisabled
    end if
 end _SetDisabled
 
-private command _SetChecked @mArray, hName, mController 
-   put item 2 of the extents of mArray into indexNum
-   number_PadLeft indexNum, 2
-   put mArray_GetChecked (hName, mController, mTarget) into itemChecked
-   
-   -- bizarre bug in Livecode widget being strict on boolean type an text type
-   -- put true into mArray [indexNum]["disabled"] does not seem possible
-   -- put itemChecked into mArray [indexNum]["checked"] -- does nto work!
-   
-   if itemChecked is true then
-      put true into mArray [indexNum]["checked"]
-   else
-      put false into mArray [indexNum]["checked"]
-   end if
-end _SetChecked
 
+--> Private | Next
+-
 private function _NextIndexNum mArray
    -- padding added due to ordering issue with widget
    if mArray is an array then
@@ -678,7 +798,7 @@ end _NextIndexNum
 private command _SetMenuItem @mArray, hName, mController, tObject, mTarget, @recursionArray
    switch
       case hName begins with "submenu_"
-         _SubmenuBit mArray, hName, mController, tObject, mTarget, recursionArray
+         _SubmenuBit mArray, hName, mController, tObject, recursionArray
          break
       case hName begins with "insert_"
          _InsertBit mArray, hName, mController, tObject, mTarget, recursionArray
@@ -687,59 +807,6 @@ private command _SetMenuItem @mArray, hName, mController, tObject, mTarget, @rec
          _AddMenuItem mArray, hName, mController, mTarget
    end switch
 end _SetMenuItem
-
-private command _AddMenuItem @mArray, hName, mController, mTarget
-   set the itemdelimiter to "_"
-   put item 2 of hName into propLabel
-   --
-   put mArray_GetParamValues (propLabel, mController, mTarget) into paramValues
-   put mArray_GetCheckParams (propLabel, mController, mTarget) into checkParams
-   --
-   if paramValues is empty then            
-      mArray_SetPlainMenuItem mArray, hName, mController
-   else
-      mArray_SetParamMenuItem mArray, propLabel, hName, mController, paramValues, checkParams
-   end if
-   return true
-end _AddMenuItem
-
-private command _SubmenuBit @mArray, hName, mController, tObject, mTarget, @recursionArray
-   dispatch hName to mController
-   put the result into subMenuTitle
-   switch
-      case subMenuTitle is empty
-         return false
-      case mTitle_IsGlobal (subMenuTitle)
-         menu_SetController subMenuController, tObject, subMenuTitle
-         break
-      default
-         -- assume it is a non-global menu in the same mController
-         put mController into subMenuController
-   end switch
-   put menu_CommandToText (hName) into mLabel
-   --
-   _AddSubmenu mArray, hName, mLabel, subMenuTitle, subMenuController, tObject, mTarget, recursionArray
-   --
-   return true
-end _SubmenuBit
-
-private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recursionArray
-   dispatch hName to mController
-   put the result into insertMenuTitle
-   switch
-      case insertMenuTitle is empty
-         return false
-      case mTitle_IsGlobal (insertMenuTitle)
-         menu_SetController insertController, tObject, insertMenuTitle
-         break
-      default
-         -- assume it is a non-global menu in the same mController
-         put mController into insertController
-   end switch
-   
-   _AddMenu mArray, insertMenuTitle, insertController, tObject, mTarget, recursionArray
-   return the result
-end _InsertBit
 
 
 --> Private | Basic
@@ -753,7 +820,7 @@ command _AddDivider @mArray
 end _AddDivider
 
 private command _AddMenu @mArray, mTitle, mController, tObject, mTarget, @recursionArray
-   put mArray_FromScript (mTitle, mController, tObject, mTarget, recursionArray) into addMenuArray
+   put mArray_FromScript (mTitle, tObject, mController, recursionArray) into addMenuArray
    if addMenuArray is not an array then return false
    --
    put keys (addMenuArray) into insertNum
@@ -764,26 +831,3 @@ private command _AddMenu @mArray, mTitle, mController, tObject, mTarget, @recurs
    end repeat
    return true
 end _AddMenu
-
-private command _AddSubmenu @mArray, mName, mLabel, mTitle, mController, tObject, mTarget, @recursionArray
-   put mArray_FromScript (mTitle, mController, tObject, mTarget, recursionArray) into subMenuArray
-   if subMenuArray is not an array then return false
-   --
-   put _NextIndexNum (mArray) into indexNum
-   --
-   put subMenuArray into mArray [indexNum]["menu"]
-   put mName into mArray [indexNum]["name"]
-   put mLabel into mArray [indexNum]["label"]
-   return true
-end _AddSubmenu
-
-private command _RecursionCheck @recursionArray, tObject, mController, mTitle
-   put recursionArray [mController][mTitle] into testObject
-   if testObject is not empty then
-      -- already indexed. Don't allow a menu to be there twice.
-      return false
-   else
-      put tObject into recursionArray [mController][mTitle]
-      return true
-   end if
-end _RecursionCheck

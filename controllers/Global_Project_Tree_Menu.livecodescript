@@ -1,8 +1,8 @@
-﻿script "Global_Project_Tree_Menu"
+﻿script "Global | Project | Tree | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_Project_Tree_Menu
+name: Global | Project | Tree | Menu
 type: controller
 version: 0.2
 
@@ -45,6 +45,15 @@ on menu_Init tObject
    put gitIsInitialised into LocalArray ["gitIsInitialised"]
 end menu_Init
 
+getprop startProject_Param [projectName]
+   put project_IsActive (projectName) is true into someBoolean
+   return someBoolean
+end startProject_Param
+
+getprop startProject_Params
+   return "true,false"
+end startProject_Params
+
 getprop disabled_GitStatus [projectName]
    if LocalArray ["gitIsInitialised"] then
       return false
@@ -61,32 +70,6 @@ getprop disabled_InitialiseGit [projectName]
       return false
    end if
 end disabled_InitialiseGit
-
-
---> Git | Menu
--
-on menu_InitialiseGit projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   --
-   git_InitFolder projectFolder
-   --
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   display_GitFolderStatus gitCheckoutFolder
-end menu_InitialiseGit
-
-on menu_GitStatus projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   --
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   --
-   display_GitFolderStatus gitCheckoutFolder
-end menu_GitStatus
-
-on menu_LaunchGithub projectName
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   github_Launch repoName
-end menu_LaunchGithub
 
 
 --> Global | Project | Tree | Menu
@@ -127,31 +110,27 @@ on menu_Refresh projectName
 end menu_Refresh
 
 
---> Global | Project | Tree | Menu | Props
+--> Git | Menu
 -
-getprop start_Project [projectName]
-   put project_IsActive (projectName) is true into someBoolean
-   return someBoolean
-end start_Project
+on menu_InitialiseGit projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   --
+   git_InitFolder projectFolder
+   --
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   display_GitFolderStatus gitCheckoutFolder
+end menu_InitialiseGit
 
-getprop home_IsScriptOnly [projectName]
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   put the scriptonly of stack homeStackPath into someBoolean
-   return someBoolean
-end home_IsScriptOnly
+on menu_GitStatus projectName
+   put library_FetchProjectFolder (projectName) into projectFolder
+   --
+   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
+   --
+   display_GitFolderStatus gitCheckoutFolder
+end menu_GitStatus
 
-getprop project_Choice [indexView]
-   put menu_GettargetObject() into tObject
-   put the index_View of tObject into indexView
-   
-   put the title_Text of indexView into displayedProjectName
-   return displayedProjectName
-end project_Choice
-
-getprop project_Choices
-   return library_ListProjectNames()
-end project_Choices
-
-
---> Global | Project | Tree | Menu | Disabled
--
+on menu_LaunchGithub projectName
+   put LocalArray ["remoteAddress"] into remoteAddress
+   put github_FindRepoName (remoteAddress) into repoName
+   github_Launch repoName
+end menu_LaunchGithub

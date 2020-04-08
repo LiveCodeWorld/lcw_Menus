@@ -18,7 +18,7 @@ constant LcwSubStackName = "LCW Stack Menus" -- was "OPN Stack Menus"
 
 --> Working on
 -
-getprop menu_FindController [mTitle]
+getprop menu_FoundController [mTitle]
    -- optional utility to do clever searchigng when updating menus using menu_Update
    put the long id of the target into tObject
    
@@ -36,7 +36,7 @@ getprop menu_FindController [mTitle]
       end if
    end repeat
    return empty
-end menu_FindController
+end menu_FoundController
 
 
 --> Menu | Sub Stacks
@@ -49,7 +49,7 @@ These are used by "menu_TableLineFromScript"
 */
 
 getprop menu_SubStackCard [mTitle]
-   -- used by menu_FindController 
+   -- used by menu_FoundController 
    -- which is an optional dependnecy of "menu_Update" via "menu_GetDefaultController"
    
    put the stack_SubName [LcwSubStackName] of the target into subStackName
