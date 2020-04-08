@@ -102,8 +102,18 @@ on menu_ExportAndIndexProject projectName
    display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
 end menu_ExportAndIndexProject
 
+on menu_DisplayGitStatus projectName
+   display_GitProjectStatus projectName
+end menu_DisplayGitStatus
+
 on _
 end _
+
+on menu_DisplayProjectArray projectName
+   put the project_Array of stack projectName into projectArray
+   --
+   display_Array projectArray
+end menu_DisplayProjectArray
 
 on menu_Refresh projectName
    display_RefreshProjectLibs projectName

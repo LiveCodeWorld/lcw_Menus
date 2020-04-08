@@ -4,7 +4,7 @@
 license: GPLv3
 name: lib_MenuArray
 type: library
-version: 0.2
+version: 0.3
 
 /*
 This library is for the set of handlers that deal with new menu array format used by widgets.
@@ -23,36 +23,34 @@ local LocalArray
 These handlers are being slowly ported from the older lib_Menu code
 */
 
-command mArray_SetMenuController @mController, tObject, mTitle
+function mArray_GetNewMenuController tObject, mTitle, mController
    switch
       case word 1 of mTitle is "Global"
          put menu_GetGlobalController (mTitle) into gMenuController
          if exists (gMenuController) is true then
-            put gMenuController into mController
+            put gMenuController into newMenuController
          else
-            display_DebugHistory mTitle
+            put empty into newMenuController
          end if
          break
       case exists (mController)
          -- we can override also with a getprop in the controller
-         get the menu_Controller [tObject] of mController
-         if it is not empty then
-            put it into mController
-         end if
+         put the menu_Controller [tObject] of mController into newMenuController
          break
       default
-         breakpoint
+         -- mController does not exist and it's not global
+         put empty into newMenuController
    end switch
-end mArray_SetMenuController
+   --
+   return newMenuController
+end mArray_GetNewMenuController
 
 function mArray_FindMenuTarget mController, tObject
    -- logic: controller, target
    -- called for every nested menu - but not menu items (I think)
    -- could optimise by only calling the menu_Target when not already done
    
-   if exists (mController) is false then
-      display_DebugHistory
-   else
+   if exists (mController) is true then
       put the menu_Target [tObject] of mController into mTarget
       if mTarget is not empty then return mTarget
    end if
@@ -70,11 +68,10 @@ private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArra
    put the result into subMenuTitle
    if subMenuTitle is empty then return false
    --
-   mArray_SetMenuController mController, tObject, subMenuTitle
+   put mArray_GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
    --
    put menu_CommandToText (hName) into mLabel
-   --
-   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, mController, recursionArray
+   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
    --
    return true
 end _SubmenuBit
@@ -86,7 +83,7 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
       case insertMenuTitle is empty
          return false
       case mTitle_IsGlobal (insertMenuTitle)
-         mArray_SetMenuController mController, tObject, insertMenuTitle
+         put mArray_GetNewMenuController (tObject, insertMenuTitle, mController) into insertController
          break
       default
          -- assume it is a non-global menu in the same mController
@@ -100,6 +97,15 @@ end _InsertBit
 
 --> mArray | Active
 -
+function menu_GetTargetObject
+   put LocalArray ["active_TopTargetObject"] into tObject
+   return tObject
+end menu_GetTargetObject
+
+command menu_SetTargetObject tObject
+   put tObject into LocalArray ["active_TopTargetObject"]
+end menu_SetTargetObject
+
 function mArray_GetTopTitle
    return LocalArray ["active_TopMenuTitle"]
    
@@ -144,15 +150,6 @@ command mArray_SetActive mArray, mText, mTitle
    put mText into LocalArray ["active_MenuText"]
    put mTitle into LocalArray ["active_TopMenuTitle"]
 end mArray_SetActive
-
-function menu_GetTargetObject
-   put LocalArray ["active_menuTarget"] into tObject
-   return tObject
-end menu_GetTargetObject
-
-command menu_SetTargetObject tObject
-   put tObject into LocalArray ["active_menuTarget"]
-end menu_SetTargetObject
 
 function mArray_ActiveControllerExists mTitle
    put mArray_GetActiveMenuController (mTitle) into mController
@@ -262,14 +259,13 @@ private command mArray_AddScriptMenu @mArray, mTitle, tObject, mController, @rec
    -- this is the one place where menu drawing happens that dispatches a message
    -- consider changing dispatch to call?
    
-   mArray_SetMenuController mController, tObject, mTitle
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   put mArray_GetNewMenuController (tObject, mTitle, mController) into newMenuController
+   put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
    --
-   _RecursionCheck recursionArray, tObject, mController, mTitle
+   _RecursionCheck recursionArray, tObject, newMenuController, mTitle
    if the result is false then return false
    
-   if exists (mController) is false then
-      display_DebugHistory mTitle
+   if exists (newMenuController) is false then
       return false
    end if
    
@@ -280,29 +276,29 @@ private command mArray_AddScriptMenu @mArray, mTitle, tObject, mController, @rec
    end if
    */
    
-   put LocalArray ["MenuControllerInit"][mController]["mInitialised"] is true into mInitialised
+   put LocalArray ["MenuControllerInit"][newMenuController]["mInitialised"] is true into mInitialised
    --
    if mInitialised is not true then
       -- this is the only place where messages are dispatched during menu drawing
-      dispatch "menu_Init" to mController with tObject -- works also for submenu
-      _SetMenuControllerInit mController, true, mTitle, tObject, mTarget
+      dispatch "menu_Init" to newMenuController with tObject -- works also for submenu
+      _SetMenuControllerInit newMenuController, true, mTitle, tObject, mTarget
    end if
    --
-   put the script_MenuHandlers [mTitle] of mController into scriptHandlers
+   put the script_MenuHandlers [mTitle] of newMenuController into scriptHandlers
    repeat for each line hName in scriptHandlers       
       if hName = "_" then
          _AddDivider mArray
          next repeat
       end if
       
-      put mArray_GetDisabled (hName, mController, mTarget) into isDisabled
+      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
       switch isDisabled
          case "delete"
             next repeat
          case true -- we can delete it as right now there is no graying out
          case false
          default
-            _SetMenuItem mArray, hName, mController, tObject, mTarget, recursionArray
+            _SetMenuItem mArray, hName, newMenuController, tObject, mTarget, recursionArray
             _SetDisabled mArray, isDisabled
       end switch
    end repeat
@@ -328,7 +324,6 @@ function mArray_FromTitleTable mTitleTable, tObject
       --
       put the mArray_FoundController [mTitle] of tObject into topMenuController
       if exists (topMenuController) is false then
-         display_DebugHistory mTitle
          next repeat
       end if
       --
@@ -580,7 +575,7 @@ command mArray_PopUp mTitle, pMenuButton, pTargetObject
    --
    popup pMenuButton -- target changes
    return mArray
-end mArray_PopUp   
+end mArray_PopUp
 
 
 --> mArray

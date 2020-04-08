@@ -34,15 +34,29 @@ on menu_FixBadController gMenuTitle
    put menu_GetTargetObject() into tObject
    put the display_View of tObject into displayView
    --
-   put the selected_Value of displayView into sValue
-   -- put the selected_Array of displayView into sArray
+   -- put the selected_Value of displayView into sValue
+   put the displayed_Array of displayView into dArray
    put the top_Array of displayView into tArray
    put tArray ["mController"] into badMenuController
    --
-   put file_ChooseStack() into newStackPath
-   put revRuggedId (stack newStackPath)
+   put file_Choose() into newStackPath
+   put the long id of stack newStackPath into mController
+   -- 
+   put the script_MenuTitleTableArray of mController into mTitleTableArray
+   menu_UpdateGlobalArray mController, mTitleTableArray
+   put the result into menuTitleArray
+   put menu_GetGlobalArray() into gMenuArray
    --
-   -- display_Array tArray
+   put revRuggedId (mController) into ruggedController
+   put ruggedController into dArray [gMenuTitle]["mController"]
+   --
+   set the displayed_Array of displayView to dArray
+   put display_FindView ("Global Menus", "From Disk") into gDisplayView
+   if exists (gDisplayView) then
+      set the displayed_Array of gDisplayView to gMenuArray
+   end if
+   --
+   lcw_AnswerWarning "Updated gMenuArray and diplay views"
 end menu_FixBadController
 
 on _

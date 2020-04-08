@@ -195,6 +195,9 @@ on menu_DisplayProject indexView
    display_ProjectLibs projectName
 end menu_DisplayProject
 
+on _
+end _
+
 on menu_StoreProjectFolder indexView
    put the selected_Index of indexView into projectName
    --

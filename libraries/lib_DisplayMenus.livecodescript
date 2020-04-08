@@ -37,10 +37,10 @@ command display_Menus
    --
    put "mDoubleUp_EditMenuScript" into mDoubleUp
    put empty into iCommand
-   put "Global | Menu | Global | Line | Menu" into lineMenu
    put "Global | Menu | Global | Menu" into titleMenu
-   --
-   display_Array globalMenuArray, "From Disk,Global Menus", lineMenu, lineMenu, iCommand, mDoubleUp
+   put "Global | Menu | Global | Line | Menu" into lineMenu
+   
+   display_Array globalMenuArray, "From Disk,Global Menus", titleMenu, lineMenu, iCommand, mDoubleUp
    --
    return the result
 end display_Menus
@@ -51,7 +51,7 @@ command display_BadMenuArray badMenuArray
    put "Global | Menu | Global | Line | Menu" into lineMenu
    put "Global | Menu | Global | Menu" into titleMenu
    --
-   display_Array badMenuArray, "Bad Menu Controllers,Global Menus", lineMenu, lineMenu, iCommand, mDoubleUp
+   display_Array badMenuArray, "Bad Menu Controllers,Global Menus", titleMenu, lineMenu, iCommand, mDoubleUp
    --
    return the result
 end display_BadMenuArray

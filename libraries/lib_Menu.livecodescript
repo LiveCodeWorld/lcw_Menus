@@ -31,6 +31,28 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 */
 
 
+--> Working on
+-
+function menu_GetGlobalArray
+   global gLCW
+   put gLCW ["Global Menus"] into menuGlobalArray
+   return menuGlobalArray
+end menu_GetGlobalArray
+
+function menu_GetGlobalController gMenuTitle
+   -- was "menu_GlobalController"
+   put menu_GetGlobalArray() into gMenuArray
+   put gMenuArray [gMenuTitle]["mController"] into mController
+   return mController
+end menu_GetGlobalController
+
+function menu_GetGlobalTitleArray gMenuTitle
+   put menu_GetGlobalArray() into menuGlobalArray
+   put menuGlobalArray [gMenuTitle] into gMenuTitleArray
+   return gMenuTitleArray
+end menu_GetGlobalTitleArray
+
+
 --> Hack | mArray
 -
 private function _HackGetBooleanMenu paramProp, mController, topMenuTarget
@@ -900,25 +922,6 @@ command menu_FetchCustomMenuItems @mText, mLine, submenuProp, mController, param
       -- error_LogCustomMenuItems mController, submenuProperty, someError
    end try
 end menu_FetchCustomMenuItems
-
-function menu_GetGlobalArray
-   global gLCW
-   put gLCW ["Global Menus"] into menuGlobalArray
-   return menuGlobalArray
-end menu_GetGlobalArray
-
-function menu_GetGlobalController gMenuTitle
-   -- was "menu_GlobalController"
-   put menu_GetGlobalArray() into gMenuArray
-   put gMenuArray [gMenuTitle]["mController"] into mController
-   return mController
-end menu_GetGlobalController
-
-function menu_GetGlobalTitleArray gMenuTitle
-   put menu_GetGlobalArray() into menuGlobalArray
-   put menuGlobalArray [gMenuTitle] into gMenuTitleArray
-   return gMenuTitleArray
-end menu_GetGlobalTitleArray
 
 function menu_GetLineNum someMenuItem, someMenu
    set the itemdelimiter to tab
