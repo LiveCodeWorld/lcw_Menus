@@ -3,7 +3,7 @@
 -
 license: GPLv3
 name: Global | Index | Simple | Menu
-type: menu
+type: controller
 version: 0.3
 
 
@@ -79,34 +79,30 @@ getprop setMenuTitle_Param [indexView]
    end switch
 end setMenuTitle_Param
 
+getprop stackStyle_Param [displayView]
+   put the stack_Style of displayView into sStyle
+   return sStyle
+end stackStyle_Param
+
+getprop stackStyle_Params
+   return "toplevel,palette,system"
+end stackStyle_Params
+
+getprop disabled_FindDropCommand [indexView]
+   put the drop_Command of indexView into dropCommand
+   if dropCommand is empty then
+      return true
+   else
+      return false
+   end if
+end disabled_FindDropCommand
+   
 
 --> Global | Index | Simple | Menu
 -
-on menu_MenuStyle indexView, mStyle
-   set the menu_Style of indexView to mStyle
-end menu_MenuStyle
-
-on menu_DisplayMenuArray indexView
-   put the script_MenuArray ["Global | Index | Simple | Menu"] of indexView into mArray
-   display_Array mArray
-end menu_DisplayMenuArray
-   
-on _
-end _
-
-on menu_PaletteStyle indexView, someBoolean
-   put the stack_Name of indexView into stackName
-   if someBoolean is false then
-      set the style of stack stackName to "toplevel"
-   else
-      set the style of stack stackName to "palette"
-   end if
-end menu_PaletteStyle
-
-on menu_SystemWindow indexView, someBoolean
-   put the stack_Name of indexView into stackName
-   set the systemwindow of stack stackName to someBoolean
-end menu_SystemWindow
+on menu_StackStyle displayView, someStyle
+   set the stack_Style of displayView to someStyle
+end menu_StackStyle
 
 on _
 end _
@@ -226,13 +222,7 @@ end menu_ReverseTitleColour
 on _
 end _
 
-on menu_SetTitleMenus indexView
-   put the title_Menu of indexView into mTitle   
-   put lcw_Ask ("Set the menu_Title to...", mTitle) into mTitle
-   set the title_Menu of indexView to mTitle   
-end menu_SetTitleMenus
-
-on menu_EditTitleMenus indexView
+on menu_EditTitleMenu indexView
    put the title_Menu of indexView into mTitles     
    set the itemdelimiter to tab
    repeat for each line titleLine in mTitles
@@ -240,12 +230,83 @@ on menu_EditTitleMenus indexView
       put item 1 of titleLine into mTitle
       menu_Edit mTitle
    end repeat
-end menu_EditTitleMenus
+end menu_EditTitleMenu
+
+on menu_ChangeTitleMenu indexView
+   put the title_Menu of indexView into mTitle   
+   put lcw_Ask ("Set the title_Menu to...", mTitle) into mTitle
+   set the title_Menu of indexView to mTitle   
+end menu_ChangeTitleMenu
+
+on _
+end _
 
 on menu_EditLineMenu indexView
    put the line_Menu of indexView into mTitle
    menu_Edit mTitle
 end menu_EditLineMenu
+
+on menu_ChangeLineMenu indexView
+   put the line_Menu of indexView into mTitle   
+   put lcw_Ask ("Set the line_Menu to...", mTitle) into mTitle
+   set the line_Menu of indexView to mTitle   
+end menu_ChangeLineMenu
+
+on _
+end _
+
+on menu_ChangeDoubleClickHandler indexView
+   put the mouse_DoubleUp of indexView into mDoubleUp
+   put lcw_Ask ("Edit the mouse_DoubleUp of indexView", mDoubleUp) into mDoubleUp
+   --
+   set the mouse_DoubleUp of indexView to mDoubleUp
+end menu_ChangeDoubleClickHandler
+
+on menu_FindDoubleClickHandler indexView
+   put the mouse_DoubleUp of indexView into mDoubleUp
+   put "M" && mDoubleUp into shortHkey
+   --
+   put the mouse_Target of indexView into mTarget
+   if exists (mTarget) then
+      put the found_Hkey [shortHkey] of mTarget into hKey
+      -- put the handler_Key [shortHkey] of mTarget into hKey
+      hkey_Edit hKey
+   else
+      lcw_AnswerWarning "Cannot locate [[shortHkey]]", indexView, shortHkey
+   end if
+end menu_FindDoubleClickHandler
+
+on menu_EditMouseTarget indexView
+   put the mouse_Target of indexView into mTarget
+   if exists (mTarget) then
+      edit the script of mTarget
+   else
+      lcw_AnswerWarning "The mouse_Target has not been set for this view", indexView
+   end if
+end menu_EditMouseTarget
+
+on _
+end _
+
+on menu_FindDropCommand indexView
+   put the drop_Command of indexView into dropCommand
+   put "M" && dropCommand into shortHkey
+   --
+   put the mouse_Target of indexView into mTarget
+   if exists (mTarget) then
+      put the found_Hkey [shortHkey] of mTarget into hKey
+      hkey_Edit hKey
+   else
+      lcw_AnswerWarning "Cannot locate [[shortHkey]]", indexView, shortHkey
+   end if
+end menu_FindDropCommand
+
+on menu_SetDropCommand displayView
+   put the drop_Command of displayView into dropCommand
+   if dropCommand is empty then put "drop_Wiki" into dropCommand
+   put lcw_Ask ("What drop_Command would you like for this view?", dropCommand, displayView) into dCommand
+   set the drop_Command of displayView to dCommand
+end menu_SetDropCommand
 
 on _
 end _
@@ -255,71 +316,22 @@ on submenu_Dev
 end submenu_Dev
 
 
---> Menu | Props | old
--
-getprop m_Styles
-   return "Array,Old"
-end m_Styles
-
-getprop m_Style
-   return the menu_Style of me
-end m_Style
-
-getprop which_Title [indexView]
-   put the menu_Controller of indexView into someObject
-   switch someObject
-      case the card_Object of indexView
-         return "Card"
-      case the menu_Button of indexView
-         return "Button"
-      case menu_GetGlobalController ("Global | Index | Simple | Menu")
-         return "Tools"
-      default
-         return "Ask"
-   end switch
-end which_Title
-
-getprop palette_Style [indexView]
-   put the stack_Name of indexView into stackName
-   put the style of stack stackName is "palette" into isPalette
-   return isPalette
-end palette_Style
-
-getprop system_Window [indexView]
-   put the stack_Name of indexView into stackName
-   put the systemwindow of stack stackName into someBoolean
-   return someBoolean
-end system_Window
-
-getprop f_Align [indexView]
-   put the field_Align of indexView into fStyle
-   return fStyle
-end f_Align
-
-getprop f_Aligns [indexView]
-   if exists (indexView) is false then return empty
-   put the field_Aligns of indexView into fStyles
-   return fStyles
-end f_Aligns
-
-getprop f_Style [indexView]
-   put the field_Style of indexView into fStyle
-   return fStyle
-end f_Style
-
-getprop f_Styles [indexView]
-   if exists (indexView) is false then return empty
-   put the field_Styles of indexView into fStyles
-   return fStyles
-end f_Styles
-
-
---> Global | Index | Simple | Menu | Disabled
--
-
-
 --> Dev | Menu
 -
+on menu_DisplayMenuArray indexView
+   put the script_MenuArray ["Global | Index | Simple | Menu"] of indexView into mArray
+   display_Array mArray
+end menu_DisplayMenuArray
+
+on menu_SystemWindow indexView, someBoolean
+   put the stack_Name of indexView into stackName
+   set the systemwindow of stack stackName to someBoolean
+end menu_SystemWindow
+
+on menu_MenuStyle indexView, mStyle
+   set the menu_Style of indexView to mStyle
+end menu_MenuStyle
+
 on menu_SetStandardBehavior
    put LocalArray ["indexView"] into indexView
    
@@ -351,3 +363,16 @@ on menu_TestMenuTarget displayedObject
    
    put the view_Name of mTarget & CR & the name of mTarget & CR & indexView
 end menu_TestMenuTarget
+
+
+--> Dev | Menu | Props
+-
+getprop systemWindow_Param [displayView]
+   put the stack_Style of displayView into sStyle
+   return sStyle = "system"
+end systemWindow_Param
+
+getprop systemWindow_Params
+   return "true,false"
+end systemWindow_Params
+

@@ -20,137 +20,203 @@ local LocalArray
 
 --> Working on
 -
+getprop displayed_Data
+   put LocalArray ["displayed_Data"] into someArray
+   return someArray
+end displayed_Data
+
+setprop displayed_Data [someTitle] someArray
+   put someArray into LocalArray ["displayed_Data"]
+   --
+   if someArray is an array then
+      put the keys of someArray into someIndex
+      sort lines of someIndex
+   else
+      put someArray into someIndex
+   end if
+   set the displayed_Index [someTitle] of me to someIndex
+end displayed_Data
+
+getprop displayed_Array
+   return the displayed_Data of me
+end displayed_Array
+
+setprop displayed_Array [someTitle] someArray
+   set the displayed_Data [someTitle] of me to someArray
+end displayed_Array
+
+
+--> Drag
+-
+on dragDrop
+   put the drop_Command of me into dCommand
+   if dCommand is empty then pass dragDrop
+   
+   put the long id of me into displayView
+   put the dragdata ["text"] into dData ["text"]
+   put the dragdata ["files"] into dData ["files"]
+   put the dragdata ["html"] into dData ["html"]
+   put the dragdata ["image"] into dData ["image"]
+   put displayView into dData ["displayView"]
+   --
+   put the drop_Target of me into dTarget
+   --
+   dispatch dCommand to dTarget with displayView,dData
+   switch it
+      case "handled"
+         break
+      case "unhandled"
+         put the dragdata ["text"] into someURL
+         put someURL
+         break
+      case "passed"
+         break
+   end switch
+end dragDrop
+
+on dragEnter
+   put the drop_Command of me into dCommand
+   if dCommand is empty then pass dragEnter
+   
+   set the dragAction to "link"
+end dragEnter
+
+getprop drop_Command
+   put LocalArray ["event"]["dragCommand"] into dragCommand
+   return dragCommand
+end drop_Command
+
+setprop drop_Command dragCommand
+   put dragCommand into LocalArray ["event"]["dragCommand"]
+end drop_Command
+
+getprop drop_Target
+   put LocalArray ["drop_Target"] into darget
+   if darget is empty then return the long id of the target
+   return darget
+end drop_Target
+
+setprop drop_Target darget
+   put darget into LocalArray ["drop_Target"]
+end drop_Target
+
+
+--> Coloured
+-
+getprop coloured_Lines [someColour]
+   if someColour = "none" then put empty into someColour
+   colour_RgbNormalise someColour
+   
+   put _fieldObject() into fldObject
+   put the text of fldObject into displayedIndex
+   --
+   repeat with lineNum = 1 to the number of lines of displayedIndex
+      get the textcolor of line lineNum of fldObject
+      if it = someColour then
+         put line lineNum of displayedIndex into someLine
+         put someLine & CR after colouredLines
+      end if
+   end repeat
+   delete char -1 of colouredLines
+   return colouredLines
+end coloured_Lines
+
+setprop coloured_Lines [someColour] someIndex
+   if someColour = "none" then put empty into someColour
+   if someIndex is an array then
+      put the keys of someIndex into someIndex
+   end if
+   put _fieldObject() into fldObject
+   put the text of fldObject into displayedIndex
+   --
+   lock screen
+   repeat for each line someLine in someIndex
+      put lineOffset (someLine, displayedIndex) into lineNum
+      set the textcolor of line lineNum of fldObject to someColour
+   end repeat
+   unlock screen
+end coloured_Lines
+
+getprop coloured_Array [someColour]
+   put _fieldObject() into fldObject
+   
+   put the number of lines of the text of fldObject into maxNum
+   repeat with lineNum = 1 to maxNum
+      put the textcolor of line lineNum of fldObject into foundColour
+      if foundColour = empty then put "none" into foundColour
+      put the textstyle of line lineNum of fldObject into someStyle
+      put someStyle into colourArray [foundColour][lineNum]
+   end repeat
+   
+   if someColour is empty then
+      return colourArray
+   else
+      put colourArray [someColour] into lineArray
+      put keys (lineArray) into lineNums
+      sort numeric lineNums
+      return lineNums
+   end if
+end coloured_Array
+
+setprop coloured_Array colourArray
+   put _fieldObject() into fldObject
+   
+   lock screen
+   repeat for each key someColour in colourArray
+      put colourArray [someColour] into lineNumArray
+      if someColour = "none" then put empty into someColour
+      repeat for each key lineNum in lineNumArray
+         set the textcolor of line lineNum of fldObject to someColour
+      end repeat
+   end repeat
+   unlock screen
+end coloured_Array
+
+getprop line_Colour [lineNum]
+   put _fieldObject() into fldObject
+   if lineNum is empty then
+      put line 1 of the hilitedlines of fldObject into lineNum
+   end if
+   put the textcolor of line lineNum of fldObject into someColour
+   return someColour
+end line_Colour
+
+setprop line_Colour [lineNumList] someColour
+   -- could change to using:
+   -- put the styledText of fldObject into styledArray
+   
+   put _fieldObject() into fldObject
+   if lineNumList is empty then
+      put line 1 of the hilitedlines of fldObject into lineNumList
+   end if
+   
+   lock screen
+   repeat for each item lineNum in lineNumList
+      if lineNum is not a number then next repeat
+      set the textcolor of line lineNum of fldObject to someColour
+   end repeat
+   unlock screen
+end line_Colour
+
+
+--> Migrating
+-
 getprop display_View
    -- oving to this as we look to merge indexViews and arrayViews into a single view
    return the long id of me
 end display_View
 
 
---> Working on | Moving away from
--
-getprop menu_Style
-   put LocalArray ["menu_Style"] into mStyle
-   if mStyle is empty then pass menu_Style
-   return mStyle
-end menu_Style
-
-setprop menu_Style mStyle
-   put mStyle into LocalArray ["menu_Style"]
-   return LocalArray 
-end menu_Style
-
-
---> Active | Menus
--
-getprop menu_Controller [pMenuTitle]
-   put menu_GetGlobalController (pMenuTitle) into mController
-   if exists (mController) is true then return mController
-   
-   put LocalArray ["mController"] into mController
-   if exists (mController) is true then return mController
-   
-   return empty
-end menu_Controller
-
-setprop menu_Controller mController
-   if exists (mController) is false then return empty
-   --
-   put mController into LocalArray ["mController"]
-   --
-   put the script_MenuTitles of mController into mTitles
-   set the title_Menu of me to mTitles
-   return mTitles
-end menu_Controller
-
-
---> Events | Drag
--
-getprop drag_Command
-   put LocalArray ["event"]["dragCommand"] into dragCommand
-   return dragCommand
-end drag_Command
-
-setprop drag_Command dragCommand
-   put dragCommand into LocalArray ["event"]["dragCommand"]
-end drag_Command
-
-private command _doFieldDown
-   put word 2 of the clickline into cNum
-   if the controlkey is "Down" then
-      set the hilitedlines of the target to cNum
-      put the line_Menu of me into mTitle
-      --
-      if the menu_Style of me is "array" then
-         put the menu_Button of me into mButton
-         mArray_PopUp mTitle, mButton
-      else
-         menu_PopUp mTitle 
-      end if
-   else
-      put the drag_Command of me into dCommand
-      if dCommand is empty then return false
-      
-      -- this also gets triggered on simple mouseDown
-      -- consider using mouseStillDown ?
-      
-      put the selectedtext of the target into someText
-      -- set the dragImage to 3137
-      set the dragAction to "copy"
-      set the dragData ["text"] to someText
-      
-      /*
-      put the long id of me into targetControl
-      put the event_Target of me into eventTarget
-      dispatch dCommand to eventTarget with targetControl,someText
-      put the result into vName
-      set the dragData ["private"] to vName
-      */
-      return true
-   end if
-end _doFieldDown
-
-
---> Events | Menupick
+--> Events
 -
 on menuPick menuPath
    if the menu_Style of me is "array" then
-      -- mArray and mTitle set by "mArray_MouseDown"
       menu_DispatchTextPick menuPath
    else
       menu_SendMessage menuPath
    end if
 end menuPick
 
-on _doButtonMenu
-   put the menu_Button of me into mButton
-   set the menumode of mButton to "pulldown"
-   set the style of mButton to "menu"
-   --
-   put the title_Menu of me into mTitle
-   put the menu_Button of me into mButton
-   switch
-      case the controlkey is "Down"
-         put "Global | Index | Simple | Menu" into gMenuTitle
-         if the menu_Style of me is "array" then
-            mArray_PullDown gMenuTitle, mButton
-         else
-            menu_PullDown gMenuTitle
-            -- menu_MouseDown gMenuTitle -- does not work here
-         end if
-         break
-      default
-         if the menu_Style of me is "array" then
-            mArray_MouseDown mTitle, mButton
-         else
-            -- menu_PullDown will trigger also native manumode menu = two menu calls
-            menu_MouseDown mTitle, mButton
-         end if
-   end switch
-end _doButtonMenu
-
-
---> Events
--
 on mouseDown
    switch word 1 of the name of the target
       case "button"
@@ -183,12 +249,24 @@ on mouseUp
 end mouseUp
 
 on mouseDoubleUp
-   switch word 1 of the name of the target
+   put the long id of the target into tObject
+   --
+   switch word 1 of tObject
       case "button"
          break
       case "field"
-         _doFieldDoubleClick
-         break
+         put the mouse_DoubleUp of me into mDoubleClick
+         if mDoubleClick is empty then return empty
+         
+         put the mouse_Target of me into mouseTarget
+         put the clickText into someLine
+         --
+         if exists (mouseTarget) is true then
+            dispatch mDoubleClick to mouseTarget with tObject,someLine
+         else
+            dispatch mDoubleClick with tObject,someLine -- do mDoubleClick
+         end if
+         return mDoubleClick
    end switch
 end mouseDoubleUp
 
@@ -198,7 +276,43 @@ on resizeControl
 end resizeControl
 
 
---> Objects
+--> Events | Props
+-
+getprop mouse_Target
+   -- should call this mouse_Target ???
+   put LocalArray ["mouse_Target"] into mouseTarget
+   if mouseTarget is empty then
+      return the long id of the target
+   else
+      return mouseTarget
+   end if
+end mouse_Target
+
+setprop mouse_Target mouseTarget
+   put mouseTarget into LocalArray ["mouse_Target"]
+   -- put mouseTarget into LocalArray ["event"]["eventTarget"]
+end mouse_Target
+
+getprop mouse_Up
+   put LocalArray ["event"]["mouseUp"] into mouseUpEvent
+   return mouseUpEvent
+end mouse_Up
+
+setprop mouse_Up mouseUpEvent
+   put mouseUpEvent into LocalArray ["event"]["mouseUp"]
+end mouse_Up
+
+getprop mouse_DoubleUp
+   put LocalArray ["event"]["mouseDoubleUp"] into mouseDoubleUp
+   return mouseDoubleUp
+end mouse_DoubleUp
+
+setprop mouse_DoubleUp mouseDoubleUp
+   put mouseDoubleUp into LocalArray ["event"]["mouseDoubleUp"]
+end mouse_DoubleUp
+
+
+--> Menu | Props
 -
 getprop menu_Button
    return _titleView()
@@ -221,8 +335,42 @@ setprop menu_Target [mTitlePath] mTarget
    put mTarget into LocalArray ["menuTarget"]
 end menu_Target
 
+getprop menu_Controller [pMenuTitle]
+   put menu_GetGlobalController (pMenuTitle) into mController
+   if exists (mController) is true then return mController
+   
+   put LocalArray ["mController"] into mController
+   if exists (mController) is true then return mController
+   
+   return empty
+end menu_Controller
 
---> Index | menus
+setprop menu_Controller mController
+   if exists (mController) is false then return empty
+   --
+   put mController into LocalArray ["mController"]
+   --
+   put the script_MenuTitles of mController into mTitles
+   set the title_Menu of me to mTitles
+   return mTitles
+end menu_Controller
+
+
+--> Menu | Props | Old
+-
+getprop menu_Style
+   put LocalArray ["menu_Style"] into mStyle
+   if mStyle is empty then pass menu_Style
+   return mStyle
+end menu_Style
+
+setprop menu_Style mStyle
+   put mStyle into LocalArray ["menu_Style"]
+   return LocalArray 
+end menu_Style
+
+
+--> Index | Menus
 -
 getprop line_Menu
    put LocalArray ["line_Menu"] into lineMenuTitle
@@ -260,16 +408,80 @@ setprop view_MenuArray menuArray
    set the line_Menu of me to menuArray ["line"]
 end view_MenuArray
 
+private command _doFieldDown
+   put word 2 of the clickline into cNum
+   if the controlkey is "Down" then
+      set the hilitedlines of the target to cNum
+      put the line_Menu of me into mTitle
+      --
+      if the menu_Style of me is "array" then
+         put the menu_Button of me into mButton
+         mArray_PopUp mTitle, mButton
+      else
+         menu_PopUp mTitle 
+      end if
+   else
+      put the drop_Command of me into dCommand
+      if dCommand is empty then return false
+      
+      -- this also gets triggered on simple mouseDown
+      -- consider using mouseStillDown ?
+      
+      put the selectedtext of the target into someText
+      -- set the dragImage to 3137
+      set the dragAction to "copy"
+      set the dragData ["text"] to someText
+      
+      /*
+      put the long id of me into targetControl
+      put the mouse_Target of me into eventTarget
+      dispatch dCommand to eventTarget with targetControl,someText
+      put the result into vName
+      set the dragData ["private"] to vName
+      */
+      return true
+   end if
+end _doFieldDown
+
+private command _doButtonMenu
+   put the menu_Button of me into mButton
+   set the menumode of mButton to "pulldown"
+   set the style of mButton to "menu"
+   --
+   put the title_Menu of me into mTitle
+   put the menu_Button of me into mButton
+   switch
+      case the controlkey is "Down"
+         put "Global | Index | Simple | Menu" into gMenuTitle
+         if the menu_Style of me is "array" then
+            mArray_PullDown gMenuTitle, mButton
+         else
+            menu_PullDown gMenuTitle
+            -- menu_MouseDown gMenuTitle -- does not work here
+         end if
+         break
+      default
+         if the menu_Style of me is "array" then
+            mArray_MouseDown mTitle, mButton
+         else
+            -- menu_PullDown will trigger also native manumode menu = two menu calls
+            menu_MouseDown mTitle, mButton
+         end if
+   end switch
+end _doButtonMenu
+
+
+
 
 --> Events | Handlers
 -
 private command _doFieldClick
-   put the mouse_UpEvent of me into mouseUpEvent
+   put the mouse_Up of me into mouseUpEvent
    if mouseUpEvent is empty then return empty
    
    put the clickText into someLine
    put the long id of me into targetControl
-   put the event_Target of me into eventTarget
+   put the mouse_Target of me into eventTarget
    if exists (eventTarget) is true then
       dispatch mouseUpEvent to eventTarget with targetControl,someLine
    else
@@ -277,21 +489,6 @@ private command _doFieldClick
    end if
    return mouseUpEvent
 end _doFieldClick
-
-private command _doFieldDoubleClick
-   put the mouse_DoubleUpEvent of me into mouseDoubleUpEvent
-   if mouseDoubleUpEvent is empty then return empty
-   
-   put the event_Target of me into eventTarget
-   if exists (eventTarget) is true then
-      put the long id of me into targetControl
-      put the clickText into someLine
-      dispatch mouseDoubleUpEvent to eventTarget with targetControl,someLine
-   else
-      do mouseDoubleUpEvent
-   end if
-   return mouseDoubleUpEvent
-end _doFieldDoubleClick
 
 
 --> Events | Custom
@@ -320,18 +517,6 @@ end LayoutControl
 
 --> Index | Title
 -
-getprop displayed_Title
-   return the title_Text of me
-end displayed_Title
-
-setprop displayed_Title [stackLabel] someTitle
-   lock screen
-   set the title_Text of me to someTitle
-   set the stack_Label of me to stackLabel
-   unlock screen
-   return the long id of me
-end displayed_Title
-
 getprop stack_Title
    put word 1 to -1 of the title_Text of me into stackTitle
    put word 1 to -1 of the stack_Label of me into stackLabel
@@ -374,38 +559,119 @@ getprop stack_Label stackLabel
 end stack_Label
 
 
---> Data
+--> Deleted
 -
+setprop deleted_Line someLine
+   if someLine is a number then
+      put someLine into lineNum
+   else
+      put the line_Number [someLine] of me into lineNum
+   end if
+   --
+   put the short id of _fieldObject() into fldID
+   delete line lineNum of fld id fldID of me
+   return lineNum
+end deleted_Line
+
+
+--> Displayed
+-
+getprop displayed_Title
+   return the title_Text of me
+end displayed_Title
+
+setprop displayed_Title [stackLabel] someTitle
+   lock screen
+   set the title_Text of me to someTitle
+   set the stack_Label of me to stackLabel
+   unlock screen
+   return the long id of me
+end displayed_Title
+
+getprop displayed_Object
+   return the displayed_Object of me
+end displayed_Object
+
+setprop displayed_Object sObject
+   set the displayed_Object of me to sObject
+end displayed_Object
+
+getprop displayed_HtmlText
+   return the htmltext of _fieldObject()
+end displayed_HtmlText
+
+setprop displayed_HtmlText [someTitle] someHTML
+   lock screen
+   put _fieldObject() into fldObject
+   if someTitle is not empty then
+      set the title_Text of me to someTitle
+   end if
+   set the htmltext of fldObject to someHTML
+   unlock screen
+   return fldObject
+end displayed_HtmlText
+
+getprop displayed_Text
+   return the displayed_Index of me
+end displayed_Text
+
+setprop displayed_Text someText
+   set the displayed_Index of me to someText
+   return the result
+end displayed_Text
+
+getprop displayed_Line [pLineNum]
+   if pLineNum is empty then
+      put the hilitedlines of _fieldObject() into pLineNum
+      if pLineNum = 0 then return 0
+   end if
+   
+   put the text of _fieldObject() into someIndex
+   repeat for each item lineNum in pLineNum
+      put line lineNum of someIndex & CR after displayedLines
+   end repeat
+   delete char -1 of displayedLines
+   return displayedLines
+end displayed_Line
+
+setprop displayed_Line [pLineNum] someLine
+   if pLineNum is empty then
+      put the hilitedlines of _fieldObject() into pLineNum
+      if pLineNum = 0 then return 0
+   end if
+   
+   put the short id of _fieldObject() into fldID
+   repeat for each item lineNum in pLineNum
+      set the text of line lineNum of fld id fldID to someLine
+   end repeat
+   return pLineNum
+end displayed_Line
+
+getprop displayed_Lines
+   put the text of _fieldObject() into someIndex
+   return someIndex
+end displayed_Lines
+
+setprop displayed_Lines [someTitle] someIndex
+   lock screen
+   put _fieldObject() into fldObject
+   if someTitle is not empty then
+      set the title_Text of me to someTitle
+   end if
+   set the text of fldObject to someIndex
+   unlock screen
+   return fldObject
+end displayed_Lines
+
 getprop displayed_Index
-   return the view_Index of me
+   put the displayed_Lines of _fieldObject() into someIndex
+   return someIndex
 end displayed_Index
 
 setprop displayed_Index [someTitle] someIndex
-   set the view_Index [someTitle] of me to someIndex
+   set the displayed_Lines [someTitle] of _fieldObject() to someIndex
    return the result
 end displayed_Index
-
-getprop displayed_Array
-   put LocalArray ["displayed_Data"] into someArray
-   return someArray
-end displayed_Array
-
-setprop displayed_Array [someTitle] someArray
-   -- also sets the display
-   put keys (someArray) into someIndex
-   sort someIndex
-   set the view_Index [someTitle] of me to someIndex
-   put someArray into LocalArray ["displayed_Data"]
-end displayed_Array
-
-getprop displayed_Data
-   put LocalArray ["displayed_Data"] into someArray
-   return someArray
-end displayed_Data
-
-setprop displayed_Data someArray
-   put someArray into LocalArray ["displayed_Data"]
-end displayed_Data
 
 getprop meta_Data [someKey]
    put LocalArray ["meta_Data"][someKey] into someValue
@@ -426,126 +692,35 @@ end title_Lines
 
 setprop title_Lines [someColour] lineNumList
    replace CR with comma in lineNumList
-   put _fieldObject() into fieldObject
+   put _fieldObject() into fldObject
    --
    lock screen
    repeat for each item lineNum in lineNumList
       if someColour is not empty then
-         set the textcolor of line lineNum of fieldObject to someColour
+         set the textcolor of line lineNum of fldObject to someColour
       end if
-      set the textstyle of line lineNum of fieldObject to "bold"
+      set the textstyle of line lineNum of fldObject to "bold"
    end repeat
    unlock screen
    --
    put lineNumList into LocalArray ["title_Lines"]
 end title_Lines
 
-getprop hilited_Line
-   put the hilited_Lines of me into lineNumList
-   return item 1 of lineNumList
-end hilited_Line
-
-setprop hilited_Line lineNum
-   set the hilited_Lines of _fieldObject() to lineNum
-   put the result into fieldObject
-   return fieldObject
-end hilited_Line
-
-getprop hilited_Lines
-   put the hilitedlines of _fieldObject() into lineNumList
-   return lineNumList
-end hilited_Lines
-
-setprop hilited_Lines lineNumList
-   put _fieldObject() into fieldObject
-   replace CR with comma in lineNumList
-   set the hilitedlines of fieldObject to lineNumList
-   return fieldObject
-end hilited_Lines
-
-getprop line_Colours [someColour]
-   put _fieldObject() into fieldObject
-   
-   put the number of lines of the text of fieldObject into maxNum
-   repeat with lineNum = 1 to maxNum
-      put the textcolor of line lineNum of fieldObject into foundColour
-      if foundColour = empty then put "none" into foundColour
-      put the textstyle of line lineNum of fieldObject into someStyle
-      put someStyle into colourArray [foundColour][lineNum]
-   end repeat
-   
-   if someColour is empty then
-      return colourArray
-   else
-      put colourArray [someColour] into lineArray
-      put keys (lineArray) into lineNums
-      sort numeric lineNums
-      return lineNums
-   end if
-end line_Colours
-
-setprop line_Colours colourArray
-   put _fieldObject() into fieldObject
-   
-   lock screen
-   repeat for each key someColour in colourArray
-      put colourArray [someColour] into lineNumArray
-      if someColour = "none" then put empty into someColour
-      repeat for each key lineNum in lineNumArray
-         set the textcolor of line lineNum of fieldObject to someColour
-      end repeat
-   end repeat
-   unlock screen
-end line_Colours
-
-getprop line_Colour [lineNum]
-   put _fieldObject() into fieldObject
-   if lineNum is empty then
-      put line 1 of the hilitedlines of fieldObject into lineNum
-   end if
-   put the textcolor of line lineNum of fieldObject into someColour
-   return someColour
-end line_Colour
-
-setprop line_Colour [lineNumList] someColour
-   -- could change to using:
-   -- put the styledText of fieldObject into styledArray
-   
-   put _fieldObject() into fieldObject
-   if lineNumList is empty then
-      put line 1 of the hilitedlines of fieldObject into lineNumList
-   end if
-   
-   lock screen
-   repeat for each item lineNum in lineNumList
-      if lineNum is not a number then next repeat
-      set the textcolor of line lineNum of fieldObject to someColour
-   end repeat
-   unlock screen
-end line_Colour
-
 
 --> Index | Selected
 -
-setprop deleted_Line someLine
-   put the line_Number [someLine] of me into lineNum
-   put the short id of _fieldObject() into fldID
-   delete line lineNum of fld id fldID of me
-   return lineNum
-end deleted_Line
-
 getprop line_Number [someLine]
    if someLine is empty then
       return the hilited_Line of me
    end if
-   put the view_Index of _fieldObject() into someIndex
+   put the displayed_Index of _fieldObject() into someIndex
    set the wholeMatches to true
    put lineOffset (someLine, someIndex) into lineNum
    return lineNum
 end line_Number
 
 setprop line_Number [someLine] someValue
-   put the view_Index of _fieldObject() into someIndex
+   put the displayed_Index of _fieldObject() into someIndex
    set the wholeMatches to true
    put lineOffset (someLine, someIndex) into lineNum
    if lineNum is 0 then return 0
@@ -554,6 +729,17 @@ setprop line_Number [someLine] someValue
    set the text of line lineNum of fld id fldID of me to someValue
    return lineNum
 end line_Number
+
+getprop top_Line
+   -- for compatible with tree widget
+   return the selected_Line of me
+end top_Line
+
+setprop top_Line someLine
+   -- for compatible with tree widget
+   set the selected_Line of me to someLine
+   return the result
+end top_Line
 
 getprop selected_Line
    put the selected_Index of _fieldObject() into someIndex
@@ -572,7 +758,7 @@ getprop selected_Index
 end selected_Index
 
 setprop selected_Index someLines
-   put the view_Index of me into viewIndex
+   put the displayed_Index of me into viewIndex
    set the itemdelimiter to slash
    set the wholematches to true
    repeat for each line someLine in someLines
@@ -596,7 +782,7 @@ end selected_Value
 
 setprop selected_Value someValue
    put LocalArray ["displayed_Data"] into someArray
-   put the view_Index of me into viewIndex
+   put the displayed_Index of me into viewIndex
    repeat with lineNum = 1 to the number of lines of viewIndex
       put line lineNum of viewIndex into testLine
       put someArray [testLine] into testValue
@@ -608,6 +794,44 @@ setprop selected_Value someValue
    set the hilitedlines of _fieldObject() to 0
    return 0
 end selected_Value
+
+
+--> Selected | LineNumber
+
+getprop selected_LineNumber
+   put the hilitedlines of _fieldObject() into lineNumList
+   return lineNumList
+end selected_LineNumber
+
+setprop selected_LineNumber lineNumList
+   put _fieldObject() into fldObject
+   replace CR with comma in lineNumList
+   set the hilitedlines of fldObject to lineNumList
+   return fldObject
+end selected_LineNumber
+
+getprop selected_LineNum
+   return the selected_LineNumber of me
+end selected_LineNum
+
+getprop hilited_Line
+   put the selected_LineNumber of me into lineNumList
+   return item 1 of lineNumList
+end hilited_Line
+
+setprop hilited_Line lineNum
+   set the selected_LineNumber of _fieldObject() to lineNum
+   put the result into fldObject
+   return fldObject
+end hilited_Line
+
+getprop hilited_Lines
+   return the selected_LineNumber of _fieldObject()
+end hilited_Lines
+
+setprop hilited_Lines lineNumList
+   set the selected_LineNumber of me to lineNumList
+end hilited_Lines
 
 
 --> Field | Props
@@ -622,12 +846,12 @@ setprop lock_Text someBoolean
 end lock_Text
 
 getprop view_Text
-   return the view_Index of me
+   return the displayed_Index of me
 end view_Text
 
 setprop view_Text someText
    lock screen
-   set the view_Index of me to someText
+   set the displayed_Index of me to someText
    set the field_Style of me to "text"
    unlock screen
 end view_Text
@@ -672,8 +896,10 @@ setprop field_Style someStyle
          set the dontwrap of fieldView to false
          set the locktext of fieldView to false
          set the autoHilite of fieldView to true
+         set the fixedLineHeight of fieldView to false
          break
       case "click"
+         set the fixedLineHeight of fieldView to true
          set the listbehavior of fieldView to true
          set the multiple_Hilites of fieldView to false
          set the dontwrap of fieldView to true
@@ -682,6 +908,7 @@ setprop field_Style someStyle
          set the toggleHilites of fieldView to false
          break
       case "scrolling"
+         set the fixedLineHeight of fieldView to true
          set the listbehavior of fieldView to true
          set the multiple_Hilites of fieldView to false
          set the dontwrap of fieldView to true
@@ -689,6 +916,7 @@ setprop field_Style someStyle
          set the autoHilite of fieldView to true
          break
       case "multiselect"
+         set the fixedLineHeight of fieldView to true
          set the listbehavior of fieldView to true
          set the multiple_Hilites of fieldView to true
          set the dontwrap of fieldView to true
@@ -696,6 +924,7 @@ setprop field_Style someStyle
          set the autoHilite of fieldView to true
          break
       case "display selected"
+         set the fixedLineHeight of fieldView to true
          set the listbehavior of fieldView to true
          set the multiple_Hilites of fieldView to true
          set the toggle_Hilites of fieldView to false
@@ -747,51 +976,24 @@ end toggle_Hilites
 
 --> Index | Displayed
 -
-getprop displayed_Object
-   -- put LocalArray ["displayedObject"] into displayedObject
-   put the displayed_Object of me into displayedObject -- so it is stored for each view
-   if exists (displayedObject) is false then return the long id of me
-   return displayedObject
-end displayed_Object
-
-setprop displayed_Object displayedObject
-   -- put displayedObject into LocalArray ["displayedObject"]
-   set the displayed_Object of me to displayedObject -- so it is stored for each view
-end displayed_Object
-
-getprop displayed_Text
-   return the view_Index of me
-end displayed_Text
-
-setprop displayed_Text someText
-   set the view_Index of me to someText
-   return the result
-end displayed_Text
-
 getprop view_Index
-   put the text of _fieldObject() into someIndex
+   put the displayed_Index of me into someIndex
    return someIndex
 end view_Index
 
 setprop view_Index [someTitle] someIndex
-   lock screen
-   put _fieldObject() into fieldObject
-   if someTitle is not empty then
-      set the title_Text of me to someTitle
-   end if
-   set the text of fieldObject to someIndex
-   unlock screen
-   return fieldObject
+   set the displayed_Index [someTitle] of me to someIndex
+   return the result
 end view_Index
 
 
 --> EventArray
 -
 getprop view_EventArray eventArray   
-   put the event_Target of me into eventArray ["eventTarget"]
-   put the drag_Command of me into eventArray ["dragCommand"]
-   put the mouse_UpEvent of me into eventArray ["mouseUp"]
-   put the mouse_DoubleUpEvent of me into eventArray ["mouseDoubleUp"]
+   put the mouse_Target of me into eventArray ["eventTarget"]
+   put the drop_Command of me into eventArray ["dragCommand"]
+   put the mouse_Up of me into eventArray ["mouseUp"]
+   put the mouse_DoubleUp of me into eventArray ["mouseDoubleUp"]
    return eventArray
 end view_EventArray
 
@@ -801,33 +1003,6 @@ setprop view_EventArray eventArray
    put eventArray ["mouseUp"] into LocalArray ["event"]["mouseUp"]
    put eventArray ["mouseDoubleUp"] into LocalArray ["event"]["mouseDoubleUp"]
 end view_EventArray
-
-getprop event_Target
-   put LocalArray ["event"]["eventTarget"] into eventTarget
-   return eventTarget
-end event_Target
-
-setprop event_Target eventTarget
-   put eventTarget into LocalArray ["event"]["eventTarget"]
-end event_Target
-
-getprop mouse_UpEvent
-   put LocalArray ["event"]["mouseUp"] into mouseUpEvent
-   return mouseUpEvent
-end mouse_UpEvent
-
-setprop mouse_UpEvent mouseUpEvent
-   put mouseUpEvent into LocalArray ["event"]["mouseUp"]
-end mouse_UpEvent
-
-getprop mouse_DoubleUpEvent
-   put LocalArray ["event"]["mouseDoubleUp"] into mouseDoubleUp
-   return mouseDoubleUp
-end mouse_DoubleUpEvent
-
-setprop mouse_DoubleUpEvent mouseDoubleUp
-   put mouseDoubleUp into LocalArray ["event"]["mouseDoubleUp"]
-end mouse_DoubleUpEvent
 
 
 --> Names and Titles
@@ -852,6 +1027,16 @@ end group_Name
 
 --> Title | Colours
 -
+setprop title_Colours titleColour
+   set the title_Colour of me to titleColour
+   put the result into titleColour
+   --
+   put colour_GetDarkOrLight (titleColour) into titleTextColour
+   set the title_TextColour of me to titleTextColour
+   --
+   return titleColour & CR & titleTextColour
+end title_Colours
+
 getprop title_Colour
    return the backgroundcolor of _titleView()
 end title_Colour
@@ -878,17 +1063,17 @@ end title_TextColour
 getprop formatted_Rect
    -- utility function not needed for LayoutControl
    
-   put _fieldObject() into fieldObject
+   put _fieldObject() into fldObject
    put _titleView() into titleView
    put the rect of me into pRect
    
    put the effective height of titleView into titleHeight
-   put the formattedheight of fieldObject into formattedFieldHeight
+   put the formattedheight of fldObject into formattedFieldHeight
    add 45 to formattedFieldHeight
    put max (90, formattedFieldHeight) into newHeight
    
    put the formattedwidth of titleView into formattedTitleWidth
-   put the formattedwidth of fieldObject into formattedFieldWidth
+   put the formattedwidth of fldObject into formattedFieldWidth
    put max (formattedTitleWidth, formattedFieldWidth) into fWidth
    add 30 to fWidth
    put max (180, fWidth) into newWidth
@@ -920,6 +1105,10 @@ getprop view_Object
    return the long id of me
 end view_Object
 
+getprop diplay_View
+   return the long id of me
+end diplay_View
+   
 getprop index_View
    return the long id of me
 end index_View

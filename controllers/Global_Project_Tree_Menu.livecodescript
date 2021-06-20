@@ -4,6 +4,7 @@
 license: GPLv3
 name: Global | Project | Tree | Menu
 type: controller
+target: projectName
 version: 0.2
 
 
@@ -19,12 +20,20 @@ local LocalArray
 
 --> Meu | Props
 -
+getprop menu_Target [tObject]
+   put the index_View of tObject into indexView
+   put the title_Text of indexView into projectName
+   return projectName
+end menu_Target
+
 on menu_Init tObject
+   -- simplify
    put the index_View of tObject into indexView
    put indexView into LocalArray ["indexView"]
    put the title_Text of indexView into projectName
    --
-   put library_FetchProjectFolder (projectName) into projectFolder
+   put env_ConstructProjectFolder (projectName) into projectFolder
+   --
    put project_GetHomeStackPath (projectName) into homeStackPath
    if homeStackPath is empty then
       put projectFolder & projectName & ".livecode" into homeStackPath
@@ -44,6 +53,18 @@ on menu_Init tObject
    put gitCheckoutFolder into LocalArray ["gitCheckoutFolder"]
    put gitIsInitialised into LocalArray ["gitIsInitialised"]
 end menu_Init
+
+getprop editMenu_Params [projectName]
+   put project_DisplayMenuTitles (projectName) into titleMenuTable
+   set the itemdelimiter to tab
+   repeat for each line someLine in titleMenuTable
+      put item 1 of someLine into mTitle
+      put mTitle & CR after mTitles
+   end repeat
+   delete char -1 of mTitles
+   replace "|" with "-" in mTitles
+   return mTitles
+end editMenu_Params
 
 getprop startProject_Param [projectName]
    put project_IsActive (projectName) is true into someBoolean
@@ -91,9 +112,13 @@ end _
 
 on menu_ExportMenusAndStackFiles projectName
    put project_GetFolder (projectName) into projectFolder
-   project_ExportMenusAndStackFiles projectFolder
    --
-   display_RefreshProjectLibs projectName
+   project_ExportMenusAndStackFiles projectFolder
+   put the result into projectArray
+   -- display_Data projectArray, projectName, "Project Array"
+   --
+   display_ProjectLibs projectName
+   display_GitRefreshProjectName projectName
 end menu_ExportMenusAndStackFiles
 
 on menu_ExportAndIndexProject projectName
@@ -115,15 +140,26 @@ on menu_DisplayProjectArray projectName
    display_Array projectArray
 end menu_DisplayProjectArray
 
+on menu_OpenProjectHome projectName
+   go to stack projectName
+   show stack projectName
+end menu_OpenProjectHome
+
+on menu_EditMenu projectName, mTitle
+   replace "-" with "|" in mTitle
+   --
+   menu_Edit mTitle
+end menu_EditMenu
 on menu_Refresh projectName
-   display_RefreshProjectLibs projectName
+   display_ProjectLibs projectName
+   display_GitRefreshProjectName projectName
 end menu_Refresh
 
 
 --> Git | Menu
 -
 on menu_InitialiseGit projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
+   put env_ConstructProjectFolder (projectName) into projectFolder
    --
    git_InitFolder projectFolder
    --
@@ -132,7 +168,7 @@ on menu_InitialiseGit projectName
 end menu_InitialiseGit
 
 on menu_GitStatus projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
+   put env_ConstructProjectFolder (projectName) into projectFolder
    --
    put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
    --

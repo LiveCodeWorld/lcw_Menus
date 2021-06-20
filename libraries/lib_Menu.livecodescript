@@ -33,11 +33,60 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 
 --> Working on
 -
-function menu_GetGlobalArray
-   global gLCW
-   put gLCW ["Global Menus"] into menuGlobalArray
-   return menuGlobalArray
-end menu_GetGlobalArray
+getprop view_ToolMenu [pItems]
+   -- complicaated and broken?
+   put the long id of the target into tObject
+   put the view_Object of tObject into someView
+   if exists (someView) is false then put tObject into someView
+   
+   put the menu_ToolTitle of someView into mTitle
+   --
+   put menu_GetTextFromTitleTable (mTitle, someView) into mText -- not sure this is working with mArray menus
+   --
+   return mText
+end view_ToolMenu
+
+getprop menu_ToolTitle
+   put the view_MenuTitle of the target into myToolTitle
+   --
+   if exists (the owner of vObject) is false then
+      return myToolTitle
+   else
+      put the owner of vObject into ownerObject
+      put the view_Object of ownerObject into titleOwner
+      if exists (titleOwner) is false or word 1 of titleOwner = "card" then return myToolTitle
+      
+      put the menu_ToolTitle of titleOwner into ownerToolTitle
+      if ownerToolTitle is empty then return myToolTitle
+      
+      put ownerToolTitle & CR into mToolTable
+      put myToolTitle & tab & "submenu" after mToolTable
+      return mToolTable
+   end if
+end menu_ToolTitle
+
+getprop view_MenuTitle [pNotGlobal]
+   -- see also menu_DefaultTitle
+   put the view_Object of the target into vObject
+   if exists (vObject) is false then return empty
+   --
+   put the view_Name of vObject into vName
+   if vName is empty then return empty
+   --
+   put menu_TitleFromViewName (vName) into mTitle
+   if pNotGlobal is not false then put "Global | " before mTitle
+   return mTitle
+end view_MenuTitle
+
+
+--> Menu | Exists
+-
+function menu_Exists gMenuTitle
+   -- only checking for global menus
+   put menu_GetGlobalController (gMenuTitle) into mController
+   put exists (mController) into controllerExists
+   return controllerExists
+end menu_Exists
 
 function menu_GetGlobalController gMenuTitle
    -- was "menu_GlobalController"
@@ -45,6 +94,29 @@ function menu_GetGlobalController gMenuTitle
    put gMenuArray [gMenuTitle]["mController"] into mController
    return mController
 end menu_GetGlobalController
+
+function menu_GlobalTitleFromViewName vName
+   put "Global |" && menu_TitleFromViewName (vName) into globalMenuTitle
+   return globalMenuTitle
+end menu_GlobalTitleFromViewName
+
+function menu_TitleFromViewName viewName, pLevelAbove, pMakePretty
+   set the itemdelimiter to "|"
+   delete item 1 of viewName
+   if pLevelAbove is a number then delete item -1 to - pLevelAbove of viewName   
+   menu_NormalizeTitle viewName, pMakePretty
+   put viewName && "| Menu" after normalizedMenu
+   return normalizedMenu
+end menu_TitleFromViewName
+
+
+--> Menu | GlobalArray
+-
+function menu_GetGlobalArray
+   global gLCW
+   put gLCW ["Global Menus"] into menuGlobalArray
+   return menuGlobalArray
+end menu_GetGlobalArray
 
 function menu_GetGlobalTitleArray gMenuTitle
    put menu_GetGlobalArray() into menuGlobalArray
@@ -132,22 +204,27 @@ command menu_PullDown pMenuTitle, pLocation, pTargetObject
    if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
    if pMenuTitle is empty then put "Menu" into pMenuTitle
    
-   set the menu_ButtonText of pTargetObject to pMenuTitle
-   put the result into mText
-   if mText is empty then
-      return "false"
+   if the menu_Style of pTargetObject is "array" then
+      put the menu_Button of pTargetObject into mButton
+      mArray_PullDown pMenuTitle, mButton, pTargetObject
+   else
+      set the menu_ButtonText of pTargetObject to pMenuTitle
+      put the result into mText
+      if mText is empty then
+         return "false"
+      end if
+      
+      put the menu_Button of pTargetObject into mButton
+      if exists (mButton) is false then return false
+      
+      if pLocation is not a point then
+         put the bottomleft of pTargetObject into pLocation
+         add 3 to item 2 of pLocation
+      end if
+      if exists (mButton) is false then return false
+      popup mButton at pLocation
+      return true
    end if
-   
-   put the menu_Button of pTargetObject into mButton
-   if exists (mButton) is false then return false
-   
-   if pLocation is not a point then
-      put the bottomleft of pTargetObject into pLocation
-      add 3 to item 2 of pLocation
-   end if
-   if exists (mButton) is false then return false
-   popup mButton at pLocation
-   return true
 end menu_PullDown
 
 command menu_MouseDown pMenuTitleTable, pTargetObject

@@ -243,11 +243,10 @@ end _
 on menu_StartProject indexView, someBoolean
    put the selected_Index of indexView into projectName
    if someBoolean is true then
-      project_Start projectName
+      project_Start projectName, true
    else
       project_Stop projectName
    end if
-   set the selected_Index of indexView to env_ListProjects()
 end menu_StartProject
 
 on _

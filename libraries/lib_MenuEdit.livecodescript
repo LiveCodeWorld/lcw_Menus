@@ -14,20 +14,20 @@ This library enables menu editing when present.
 
 --> Working on
 -
+command menu_EditItem gMenuTitle, handlerName
+   put menu_GetGlobalController (gMenuTitle) into mController
+   put hkey_Construct (handlerName, "c", mController) into hKey
+   hkey_Edit hKey
+   return hKey
+end menu_EditItem
+   
 command menu_Edit pMenuTitle
    -- should use "script_ScrollToLine"
    
    if pMenuTitle is empty then
-      -- put debug_GetCallingObject ()
-      
-      put debug_GetCallingContextLine () into contextLine
-      debug_DeconstructContextLine contextLine, hObject, hName, lineNum, behaviorObjects      
-      --
-      put the script_MenuTitleAbove [lineNum] of hObject into pMenuTitle
-      if pMenuTitle is empty then
-         breakpoint
-         lcw_AnswerWarning "Cannot locate menu for this item!"
-      end if
+      display_DebugHistory "gMenuTitle is Empty"
+      breakpoint
+      return empty
    end if
    
    set the itemdelimiter to "|"
@@ -41,6 +41,8 @@ command menu_Edit pMenuTitle
    end if
    
    if exists (mController) is false then
+      put pMenuTitle
+      display_DebugHistory "Can't find mController"
       answer warning merge ("Cannot locate controller for menu '[[pMenuTitle]]'!")
       exit to top
    end if
@@ -59,39 +61,42 @@ end menu_Edit
 -
 command hkey_Edit hKey
    -- could be done more efficiently
-   -- not using any chachng or database (searches script hierarchy)
-   
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the result into hkeyLine
-   --
-   if exists (hObject) is true then
-      put the found_Hkey [hkeyLine] of hObject into foundHkey
+   if hKey is empty then
+      put debug_GetCallingHkey() into hkeyLine
+      hkey_Deconstruct hkeyLine, fName, fType, fObject, fNum
    else
-      put hkey_Find (hkeyLine) into foundHkey 
+      hkey_Deconstruct hKey, hName, hType, hObject, hNum
+      put the result into hkeyLine
+      --
+      if exists (hObject) is true then
+         put the found_Hkey [hkeyLine] of hObject into foundHkey
+      else
+         put hkey_Find (hKey) into foundHkey          
+      end if
+      --
+      hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
+      if exists (fObject) is false then return empty
    end if
-   --
-   hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
-   if exists (fObject) is false then return empty
    --
    put the hkey_StartLine [hkeyLine] of fObject into scriptLineNum
    scriptEditor_EditAndScroll fObject, scriptLineNum   
    --
-   return foundHkey & CR & foundLineNum
+   if hKey is empty then
+      exit to top
+   else
+      return foundHkey & CR & foundLineNum
+   end if
 end hkey_Edit
 
 
---> Menu | Edit
+--> Menu | Edit | Item
 -
 on menu_EditMenuItem pigeon, mController, sentMenuTarget
    put "What would you like to do with the script of this menu item?" into someQuestion
    
    -- answer someQuestion with "Cancel" or "Edit" as sheet
    put scriptEditor_GetTop() into stackObject
-   if exists (stackObject) then
-      dispatch "lcw_AnswerSheet" to stackObject with someQuestion,"Edit"
-   else
-      lcw_AnswerSheet someQuestion, "Edit"
-   end if
+   lcw_Answer someQuestion, stackObject
    put the result into answerResult
    
    switch answerResult
