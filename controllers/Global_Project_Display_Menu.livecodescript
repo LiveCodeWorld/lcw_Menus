@@ -107,6 +107,14 @@ end menu_ProjectViews
 on _
 end _
 
+on menu_DisplayTransporters
+   display_Transporters
+end menu_DisplayTransporters
+
+on menu_DisplayTransportLibs
+   display_TransporterLibs
+end menu_DisplayTransportLibs
+
 on menu_ProjectFolder projectName
    put the project_Folder of stack projectName into projectFolder
    --

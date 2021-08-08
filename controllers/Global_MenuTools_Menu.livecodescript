@@ -40,6 +40,7 @@ end menu_Target
 
 getprop menu_CheckTarget [mTarget]
    if mTarget is "delete" then return false
+   _Init
    
    -- this is called next
    if LocalArray ["sType"] is among the items of "menu,controller" then
@@ -49,12 +50,12 @@ getprop menu_CheckTarget [mTarget]
    end if
 end menu_CheckTarget
 
-on menu_Init tObject
+on _Init tObject
    -- only called if the menu_CheckTarget is true
    put LocalArray ["mController"] into mController
    put the menu_Name of mController into LocalArray ["mName"]
    put the script_MenuTitles of mController into LocalArray ["mTitles"]
-end menu_Init
+end _Init
 
 function scriptEditor_IsHistoryButton sObject
    put rev_HistoryButton() into historyButton
@@ -74,7 +75,7 @@ end menu_DisplayMenu
 
 on menu_CreateProjectMenu mController
    put the project_Name of mController into projectName
-   display_AskCreateMenu projectName
+   ask_CreateProjectmenu projectName
    put the result into controllerStackObject
    --
    display_ProjectControllers projectName
@@ -86,7 +87,7 @@ on _
 end _
 
 on menu_RenameController mController
-   controller_AskFixMenuName mController
+   ask_FixMenuControllerStackName mController
    put the result into newStackName
    --
    put the project_Name of stack newStackName into projectName

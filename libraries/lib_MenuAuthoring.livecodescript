@@ -28,6 +28,72 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+command module_CreateMenu moduleStackName, pGlobalMenuTitle, pControllerScript
+   put the module_Folder of stack moduleStackName into moduleFolder
+   --
+   module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerScript
+   put the result into mController
+   return mController
+end module_CreateMenu
+
+command module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerScript
+   set the itemdelimiter to slash
+   put item -1 of moduleFolder into shortFolder
+   put shortFolder into moduleStackName
+   --
+   if pGlobalMenuTitle is empty then
+      put module_ConstructGlobalMenuTitle (moduleStackName, true) into gMenuTitle
+   else
+      put pGlobalMenuTitle into gMenuTitle
+   end if
+   if pControllerScript is empty then put controller_ConstructMenuScript (gMenuTitle) into pControllerScript
+   --
+   project_CreateMenuFromFolder moduleFolder, gMenuTitle, pControllerScript
+   put the result into controllerStackObject
+   --
+   module_UpdateToolsMenu moduleStackName
+   --
+   return controllerStackObject
+end module_CreateMenuFromFolder
+
+command project_CreateMenu gMenuTitle, projectName, pControllerScript
+   # Quick check of projectFolder
+   put project_GetFolder (projectName) into projectFolder
+   if projectFolder is empty then return "Error, project folder does not exists for project:" && projectName
+   --
+   project_CreateMenuFromFolder projectFolder, gMenuTitle, pControllerScript
+   put the result into mController
+   --
+   return mController
+end project_CreateMenu
+
+command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControllerScript
+   if pControllerScript is empty then put controller_ConstructMenuScript (gMenuTitle) into pControllerScript
+   --
+   project_CreateStack moduleOrProjectFolder, gMenuTitle, "controllers", "controller", pControllerScript, false
+   put the result into controllerStackPath
+   --
+   save stack controllerStackPath 
+   put the name of stack controllerStackPath into controllerStackObject
+   --
+   -- set the menu_Update of stack controllerStackPath to true not needed for mArray
+   mArray_UpdateGlobal gMenuTitle, controllerStackPath
+   --
+   return controllerStackObject
+end project_CreateMenuFromFolder
+
+command menu_Create gMenuTitle, pStackName, pControllerScript
+   if exists (stack pStackName) is false then
+      put "lcw_Menus" into projectName
+   else
+      put the project_Name of stack pStackName into projectName
+   end if
+   --
+   project_CreateMenu gMenuTitle, projectName, pControllerScript
+   put the result into mController -- a script only stack
+   return mController
+end menu_Create
+
 function menu_CommandToText handlerName
    set the itemdelimiter to "_"
    put item 2 of handlerName into mSuffix
@@ -58,33 +124,8 @@ end param_IsBoolean
 
 --> Menu | Update
 -
-getprop menu_Handlers [mTitle]
-   put the script_MenuTitleTableArray of the target into mTitleTableArray
-   put mTitleTableArray [mTitle] into mTitleTable
-   set the itemdelimiter to tab
-   repeat for each line tLine in mTitleTable
-      menu_DeconstructTableLine tLine, mController, pigeon, mTitle, mLine, mFormatProp, mItemType, submenuProp, paramProp, mSendLine
-      -- put word 1 of item 2 of tLine into mHandler
-      put word 1 of pigeon into mHandler
-      switch
-         case tLine = "-"
-            put "-" & CR after mHandlers
-            break
-         case mItemType = "submenu"
-            put submenuProp & CR after mHandlers
-            break
-         case mHandler is empty
-            breakpoint
-            break
-         default
-            put mHandler & CR after mHandlers
-      end switch
-   end repeat
-   delete char -1 of mHandlers
-   return mHandlers
-end menu_Handlers
-
 function menu_ExtractTableFromScript mTitle, someScript, hTable, mController
+   -- not used for mArray
    -- used by "script_MenuTitleTableArray"
    local mLine, mTableLine, mFormatProp, submenuProp, paramProp, fixedSubMenu
    

@@ -79,7 +79,7 @@ command hkey_Edit hKey
    end if
    --
    put the hkey_StartLine [hkeyLine] of fObject into scriptLineNum
-   scriptEditor_EditAndScroll fObject, scriptLineNum   
+   scriptEditor_EditAndScroll fObject, scriptLineNum, fName  
    --
    if hKey is empty then
       exit to top
@@ -150,17 +150,20 @@ command script_ScrollToLine suiteTitle, someScript
    field_ScrollToLine lineNum, someField
 end script_ScrollToLine
 
-command scriptEditor_EditAndScroll hObject, scriptLineNum
+command scriptEditor_EditAndScroll hObject, scriptLineNum, hName
    edit the script of hObject
    put rev_HandlerTreeField() into handlerTreeField
    put rev_ScriptEditorField() into scriptEditorField
-   
+   --
    put the text of handlerTreeField into hIndex
-   put lineOffset (hName, hIndex) into hLineNum
    --
    try
       lock screen
-      set the hilitedLine of handlerTreeField to hLineNum
+      if hName is not empty then
+         put lineOffset (hName, hIndex) into hLineNum
+         set the hilitedLine of handlerTreeField to hLineNum
+      end if
+      --
       field_ScrollToLine scriptLineNum, scriptEditorField, true
       dispatch "closeAccept" to handlerTreeField
       unlock screen

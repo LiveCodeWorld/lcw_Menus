@@ -20,6 +20,80 @@ local LocalArray
 
 --> Working on
 -
+setprop tool_Menus [projectName] menuBit
+   dispatch "ask_CreateToolMenus" with menuBit,projectName
+   --
+   put "Global |" && menuBit && "| Menu" into titleMenu
+   put "Global |" && menuBit && "| Line | Menu" into lineMenu
+   --
+   replace "|" with empty in menuBit
+   replace space with empty in menuBit
+   put "mDoubleUp_" && menuBit into pDoubleUp
+   --
+   set the title_Menu of me to titleMenu
+   set the line_Menu of me to lineMenu
+   set the mouse_DoubleUp of me to pDoubleUp   
+end tool_Menus
+
+on menuPick menuPath
+   if the menu_Style of me is "array" then
+      menu_DispatchTextPick menuPath
+   else
+      menu_SendMessage menuPath
+   end if
+end menuPick
+
+on mouseDown
+   switch word 1 of the name of the target
+      case "button"
+         _doButtonMenu
+         break
+      case "field"
+         _doFieldDown
+         break
+   end switch
+end mouseDown
+
+private command _doButtonMenu
+   put the menu_Button of me into mButton
+   set the menumode of mButton to "pulldown"
+   set the style of mButton to "menu"
+   --
+   put the title_Menu of me into mTitle
+   put the menu_Button of me into mButton
+   switch
+      case the controlkey is "Down"
+         put "Global | Index | Simple | Menu" into gMenuTitle
+         mArray_PullDown gMenuTitle, mButton
+         break
+      default
+         mArray_MouseDown mTitle, mButton
+   end switch
+end _doButtonMenu
+
+private command _doFieldDown
+   put word 2 of the clickline into cNum
+   if the controlkey is "Down" then
+      set the hilitedlines of the target to cNum
+      put the line_Menu of me into mTitle
+      --
+      put the menu_Button of me into mButton
+      mArray_PopUp mTitle, mButton
+   else
+      put the drop_Command of me into dCommand
+      if dCommand is empty then return false
+      
+      put the selectedtext of the target into someText
+      -- set the dragImage to 3137
+      set the dragAction to "copy"
+      set the dragData ["text"] to someText
+      return true
+   end if
+end _doFieldDown
+
+
+--> Displayed
+-
 getprop displayed_Data
    put LocalArray ["displayed_Data"] into someArray
    return someArray
@@ -202,32 +276,13 @@ end line_Colour
 --> Migrating
 -
 getprop display_View
-   -- oving to this as we look to merge indexViews and arrayViews into a single view
+   -- owing to this as we look to merge indexViews and arrayViews into a single view
    return the long id of me
 end display_View
 
 
 --> Events
 -
-on menuPick menuPath
-   if the menu_Style of me is "array" then
-      menu_DispatchTextPick menuPath
-   else
-      menu_SendMessage menuPath
-   end if
-end menuPick
-
-on mouseDown
-   switch word 1 of the name of the target
-      case "button"
-         _doButtonMenu
-         break
-      case "field"
-         _doFieldDown
-         break
-   end switch
-end mouseDown
-
 on preOpenControl
    local headerHeight
    _setDefaultHeight headerHeight
@@ -261,10 +316,11 @@ on mouseDoubleUp
          put the mouse_Target of me into mouseTarget
          put the clickText into someLine
          --
+         put the long id of me into displayView
          if exists (mouseTarget) is true then
-            dispatch mDoubleClick to mouseTarget with tObject,someLine
+            dispatch mDoubleClick to mouseTarget with displayView,someLine
          else
-            dispatch mDoubleClick with tObject,someLine -- do mDoubleClick
+            dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
          end if
          return mDoubleClick
    end switch
@@ -279,7 +335,6 @@ end resizeControl
 --> Events | Props
 -
 getprop mouse_Target
-   -- should call this mouse_Target ???
    put LocalArray ["mouse_Target"] into mouseTarget
    if mouseTarget is empty then
       return the long id of the target
@@ -290,7 +345,6 @@ end mouse_Target
 
 setprop mouse_Target mouseTarget
    put mouseTarget into LocalArray ["mouse_Target"]
-   -- put mouseTarget into LocalArray ["event"]["eventTarget"]
 end mouse_Target
 
 getprop mouse_Up
@@ -299,6 +353,7 @@ getprop mouse_Up
 end mouse_Up
 
 setprop mouse_Up mouseUpEvent
+   _SetMouseTarget mTarget
    put mouseUpEvent into LocalArray ["event"]["mouseUp"]
 end mouse_Up
 
@@ -307,9 +362,21 @@ getprop mouse_DoubleUp
    return mouseDoubleUp
 end mouse_DoubleUp
 
-setprop mouse_DoubleUp mouseDoubleUp
+setprop mouse_DoubleUp [mTarget] mouseDoubleUp
+   _SetMouseTarget mTarget
    put mouseDoubleUp into LocalArray ["event"]["mouseDoubleUp"]
 end mouse_DoubleUp
+
+private command _SetMouseTarget mTarget
+   switch
+      case mTarget = "me"
+         put debug_GetCallingObject(3) into mTarget
+         set the mouse_Target of me to mTarget
+         break
+      case exists (mTarget)
+         set the mouse_Target of me to mTarget
+   end switch
+end _SetMouseTarget
 
 
 --> Menu | Props
@@ -407,70 +474,6 @@ setprop view_MenuArray menuArray
    set the title_Menu of me to menuArray ["title"]
    set the line_Menu of me to menuArray ["line"]
 end view_MenuArray
-
-private command _doFieldDown
-   put word 2 of the clickline into cNum
-   if the controlkey is "Down" then
-      set the hilitedlines of the target to cNum
-      put the line_Menu of me into mTitle
-      --
-      if the menu_Style of me is "array" then
-         put the menu_Button of me into mButton
-         mArray_PopUp mTitle, mButton
-      else
-         menu_PopUp mTitle 
-      end if
-   else
-      put the drop_Command of me into dCommand
-      if dCommand is empty then return false
-      
-      -- this also gets triggered on simple mouseDown
-      -- consider using mouseStillDown ?
-      
-      put the selectedtext of the target into someText
-      -- set the dragImage to 3137
-      set the dragAction to "copy"
-      set the dragData ["text"] to someText
-      
-      /*
-      put the long id of me into targetControl
-      put the mouse_Target of me into eventTarget
-      dispatch dCommand to eventTarget with targetControl,someText
-      put the result into vName
-      set the dragData ["private"] to vName
-      */
-      return true
-   end if
-end _doFieldDown
-
-private command _doButtonMenu
-   put the menu_Button of me into mButton
-   set the menumode of mButton to "pulldown"
-   set the style of mButton to "menu"
-   --
-   put the title_Menu of me into mTitle
-   put the menu_Button of me into mButton
-   switch
-      case the controlkey is "Down"
-         put "Global | Index | Simple | Menu" into gMenuTitle
-         if the menu_Style of me is "array" then
-            mArray_PullDown gMenuTitle, mButton
-         else
-            menu_PullDown gMenuTitle
-            -- menu_MouseDown gMenuTitle -- does not work here
-         end if
-         break
-      default
-         if the menu_Style of me is "array" then
-            mArray_MouseDown mTitle, mButton
-         else
-            -- menu_PullDown will trigger also native manumode menu = two menu calls
-            menu_MouseDown mTitle, mButton
-         end if
-   end switch
-end _doButtonMenu
-
-
 
 
 --> Events | Handlers

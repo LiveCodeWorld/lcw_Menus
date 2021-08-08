@@ -12,9 +12,9 @@ version: 0.2
 local LocalArray
 
 on menu_Init tObject
-   put the index_View of tObject into indexView
+   put the display_View of tObject into displayView
    
-   put the title_Text of indexView into projectName
+   put the title_Text of displayView into projectName
    if projectName = "List of projects" then
       put "LCW" into projectName
    end if
@@ -43,8 +43,8 @@ end menu_Init
 
 --> Menu | Props
 -
-getprop convertToModule_Param [indexView]
-   put the selected_Index of indexView into stackName
+getprop convertToModule_Param [displayView]
+   put the selected_Index of displayView into stackName
    put the project_Name of stack stackName into projectName
    return projectName
 end convertToModule_Param
@@ -53,17 +53,18 @@ getprop convertToModule_Params
    return library_ListProjectNames()
 end convertToModule_Params
 
-getprop startProject_Param [indexView]
-   put the selected_Index of indexView into projectName
-   return project_IsActive (projectName) is true
+getprop startProject_Param [displayView]
+   put the selected_Index of displayView into projectName
+   put env_ProjectIsActive (projectName) into isActive
+   return isActive
 end startProject_Param
 
 getprop startProject_Params
    return "true,false"
 end startProject_Params
 
-getprop disabled_ConvertToModule [indexView]
-   put the title_Text of indexView into displayedTitle
+getprop disabled_ConvertToModule [displayView]
+   put the title_Text of displayView into displayedTitle
    switch displayedTitle
       case "Active Views"
          return false
@@ -72,8 +73,8 @@ getprop disabled_ConvertToModule [indexView]
    end switch
 end disabled_ConvertToModule
 
-getprop disabled_MoveUsed [indexView]
-   put the title_Text of indexView into displayedTitle
+getprop disabled_MoveUsed [displayView]
+   put the title_Text of displayView into displayedTitle
    switch displayedTitle
       case "Active Libraries"
          return false
@@ -82,7 +83,7 @@ getprop disabled_MoveUsed [indexView]
    end switch
 end disabled_MoveUsed
 
-getprop disabled_GitStatus [indexView]
+getprop disabled_GitStatus [displayView]
    if LocalArray ["gitIsInitialised"] then
       return false
    else
@@ -91,7 +92,7 @@ getprop disabled_GitStatus [indexView]
    end if
 end disabled_GitStatus
 
-getprop disabled_InitialiseGit [indexView]
+getprop disabled_InitialiseGit [displayView]
    if LocalArray ["gitIsInitialised"] then
       return "delete"
    else
@@ -99,7 +100,7 @@ getprop disabled_InitialiseGit [indexView]
    end if
 end disabled_InitialiseGit
 
-getprop disabled_AddEverythingToGit [indexView]
+getprop disabled_AddEverythingToGit [displayView]
    if LocalArray ["gitIsInitialised"] then
       return false
    else
@@ -108,7 +109,7 @@ getprop disabled_AddEverythingToGit [indexView]
    end if
 end disabled_AddEverythingToGit
 
-getprop disabled_LaunchGithub [indexView]
+getprop disabled_LaunchGithub [displayView]
    if LocalArray ["remoteAddress"] is empty then
       return true
       return "delete"
@@ -117,7 +118,7 @@ getprop disabled_LaunchGithub [indexView]
    end if
 end disabled_LaunchGithub
    
-getprop disabled_DisplayGithubInfo [indexView]
+getprop disabled_DisplayGithubInfo [displayView]
    if LocalArray ["remoteAddress"] is empty then
       return true
       return "delete"
@@ -126,7 +127,7 @@ getprop disabled_DisplayGithubInfo [indexView]
    end if
 end disabled_DisplayGithubInfo
 
-getprop disabled_FixRemote [indexView]
+getprop disabled_FixRemote [displayView]
    if LocalArray ["gitIsInitialised"] then
       return false
    else
@@ -135,8 +136,8 @@ getprop disabled_FixRemote [indexView]
    end if
 end disabled_FixRemote
 
-getprop disabled_StartProject [indexView]
-   put the title_Text of indexView into listType
+getprop disabled_StartProject [displayView]
+   put the title_Text of displayView into listType
    if listType contains "Projects" then
       return false
    else
@@ -147,7 +148,7 @@ end disabled_StartProject
 
 --> Git | Menu
 -
-on menu_InitialiseGit indexView
+on menu_InitialiseGit displayView
    put LocalArray ["projectFolder"] into projectFolder
    git_InitFolder projectFolder
    
@@ -155,8 +156,8 @@ on menu_InitialiseGit indexView
    display_GitFolderStatus gitCheckoutFolder
 end menu_InitialiseGit
 
-on menu_GitStatus indexView
-   put the selected_Index of indexView into projectName
+on menu_GitStatus displayView
+   put the selected_Index of displayView into projectName
    put library_FetchProjectFolder (projectName) into projectFolder
    put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
    
@@ -169,8 +170,8 @@ on menu_LaunchGithub
    github_Launch repoName
 end menu_LaunchGithub
 
-on menu_GithubReadme indexView
-   put the selected_Index of indexView into projectName
+on menu_GithubReadme displayView
+   put the selected_Index of displayView into projectName
    --
    put github_FetchReadmeMD (projectName) into readmeMarkdown
    put "Project" && projectName into pageTitle
@@ -187,19 +188,18 @@ on menu_DisplayGithubInfo
 end menu_DisplayGithubInfo
 
 
-
 --> Global | Project | Tree | Line | Menu
 -
-on menu_DisplayProject indexView
-   put the selected_Index of indexView into projectName
+on menu_DisplayProject displayView
+   put the selected_Index of displayView into projectName
    display_ProjectLibs projectName
 end menu_DisplayProject
 
 on _
 end _
 
-on menu_StoreProjectFolder indexView
-   put the selected_Index of indexView into projectName
+on menu_StoreProjectFolder displayView
+   put the selected_Index of displayView into projectName
    --
    put merge ("Choose the project folder that contains the stack [[projectName]]...") into someQuestion
    put the env_RepoFolder of stack "LCW" into repoFolder
@@ -209,28 +209,28 @@ on menu_StoreProjectFolder indexView
    library_StoreProjectFolder projectName, projectFolder
 end menu_StoreProjectFolder
 
-on menu_RevealProjectFolder indexView
-   put the selected_Index of indexView into projectName
+on menu_RevealProjectFolder displayView
+   put the selected_Index of displayView into projectName
    put project_GetFolder (projectName) into projectFolder
    finder_Reveal projectFolder
 end menu_RevealProjectFolder
 
-on menu_RemoveProjectFromLibrary indexView
-   put the selected_Index of indexView into projectName
+on menu_RemoveProjectFromLibrary displayView
+   put the selected_Index of displayView into projectName
    answer warning merge ("Are you sure you want to remove the project '[[projectName]]' from the project library?") with "Cancel" or "OK"
    if it is "Cancel" then exit to top
    
    library_DeleteProjectArray projectName
    
    put library_ListProjectNames() into projectNames
-   set the view_Index ["List of Projects"] of indexView to projectNames
+   set the view_Index ["List of Projects"] of displayView to projectNames
 end menu_RemoveProjectFromLibrary
 
 on _
 end _
 
-on menu_TrashProject indexView
-   put the selected_Index of indexView into projectName
+on menu_TrashProject displayView
+   put the selected_Index of displayView into projectName
    answer warning merge ("Are you sure you want to close project '[[projectName]]' and move all files to the trash?") with "Cancel" or "OK"
    if it is "Cancel" then exit to top
    
@@ -240,8 +240,8 @@ end menu_TrashProject
 on _
 end _
 
-on menu_StartProject indexView, someBoolean
-   put the selected_Index of indexView into projectName
+on menu_StartProject displayView, someBoolean
+   put the selected_Index of displayView into projectName
    if someBoolean is true then
       project_Start projectName, true
    else
@@ -252,16 +252,16 @@ end menu_StartProject
 on _
 end _
 
-on menu_ExportMenusAndStackFiles indexView
-   put the selected_Index of indexView into projectName
+on menu_ExportMenusAndStackFiles displayView
+   put the selected_Index of displayView into projectName
    put library_FetchProjectFolder (projectName) into projectFolder
    -- put project_GetFolder (projectName) into projectFolder
    
    project_ExportMenusAndStackFiles projectFolder
 end menu_ExportMenusAndStackFiles
 
-on menu_ExportAndIndexProject indexView
-   put the selected_Index of indexView into projectName
+on menu_ExportAndIndexProject displayView
+   put the selected_Index of displayView into projectName
    -- put library_FetchProjectFolder (projectName) into projectFolder
    -- put project_GetFolder (projectName) into projectFolder
    
@@ -284,8 +284,8 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_MoveUsed indexView, newProjectName
-   put the selected_Index of indexView into stackName
+on menu_MoveUsed displayView, newProjectName
+   put the selected_Index of displayView into stackName
    put the name of stack stackName into stackObject
    
    put the project_Name of stackObject into oProjectName
@@ -301,11 +301,11 @@ on menu_MoveUsed indexView, newProjectName
    
    breakpoint
    -- refreshDisplay newProjectName
-   menu_DoGlobal "menu_DisplayActive", "Global | Project | Line | Menu", indexView, "libraries"
+   menu_DoGlobal "menu_DisplayActive", "Global | Project | Line | Menu", displayView, "libraries"
 end menu_MoveUsed
 
-on menu_ConvertToModule indexView, newProjectName
-   put the selected_Index of indexView into moduleStackName
+on menu_ConvertToModule displayView, newProjectName
+   put the selected_Index of displayView into moduleStackName
    if exists (stack moduleStackName) is false then
       breakpoint
       exit to top
@@ -314,21 +314,21 @@ on menu_ConvertToModule indexView, newProjectName
    put the filename of stack moduleStackName into oStackPath
    -- put the module_Folder [newProjectName] of stack moduleStackName into moduleFolder
    put project_GetFolder (newProjectName) into projectFolder
-   put project_ConstructFolder ("modules", projectFolder) into rootModuleFolder
+   put folder_AddShort (projectFolder, "modules") into rootModuleFolder
    
    project_CreateModule moduleStackName, rootModuleFolder, oStackPath
 end menu_ConvertToModule
 
-on menu_GoToHomeStack indexView
-   put the selected_Index of indexView into projectName
+on menu_GoToHomeStack displayView
+   put the selected_Index of displayView into projectName
    put library_FetchProjectHomeStackPath (projectName) into homeStackPath
    if exists (stack homeStackPath) is false then breakpoint
    
    go to stack homeStackPath
 end menu_GoToHomeStack
 
-on menu_EditStackScript indexView
-   put the selected_Index of indexView into projectName
+on menu_EditStackScript displayView
+   put the selected_Index of displayView into projectName
    put library_FetchProjectHomeStackPath (projectName) into homeStackPath
    if exists (stack homeStackPath) is false then breakpoint
    
@@ -338,15 +338,15 @@ end menu_EditStackScript
 on _
 end _
 
-on menu_FixRemote indexView
+on menu_FixRemote displayView
    put LocalArray ["remoteAddress"] into projectFolder
    put lcw_Ask ("Enter git remote address...", "git@github.com:LiveCodeWorld/lcw.git")into gitRemoteAddress
    git_SetRemoteOrigin gitRemoteAddress, projectFolder
    put the result
 end menu_FixRemote
 
-on menu_AddEverythingToGit indexView
-   put the selected_Index of indexView into gitProjectName
+on menu_AddEverythingToGit displayView
+   put the selected_Index of displayView into gitProjectName
    put library_FetchProjectFolder (gitProjectName) into projectFolder
    put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
    
@@ -362,9 +362,9 @@ end menu_AddEverythingToGit
 -
 private command refreshDisplay projectName
    lock screen
-   put LocalArray ["indexView"] into indexView   
+   put LocalArray ["displayView"] into displayView   
    put project_ListUsedStackNames (projectName) into usedStackNames
-   set the view_Index of indexView to usedStackNames
-   set the title_Text of indexView to projectName
+   set the view_Index of displayView to usedStackNames
+   set the title_Text of displayView to projectName
    unlock screen
 end refreshDisplay

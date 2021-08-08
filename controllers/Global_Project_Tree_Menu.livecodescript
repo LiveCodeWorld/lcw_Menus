@@ -11,7 +11,7 @@ version: 0.2
 --> Menu | Props
 -
 /* 
-mTarget should already be set by set the menu_Target of indexView to projectName 
+mTarget should already be set by set the menu_Target of displayView to projectName 
 
 The menu is created using a menu_Table
 */
@@ -21,76 +21,33 @@ local LocalArray
 --> Meu | Props
 -
 getprop menu_Target [tObject]
-   put the index_View of tObject into indexView
-   put the title_Text of indexView into projectName
+   put the display_View of tObject into displayView
+   put the title_Text of displayView into projectName
    return projectName
 end menu_Target
 
-on menu_Init tObject
-   -- simplify
-   put the index_View of tObject into indexView
-   put indexView into LocalArray ["indexView"]
-   put the title_Text of indexView into projectName
-   --
-   put env_ConstructProjectFolder (projectName) into projectFolder
-   --
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   if homeStackPath is empty then
-      put projectFolder & projectName & ".livecode" into homeStackPath
-      if exists (stack homeStackPath) is false then
-         breakpoint
-      end if
-   end if
-   
-   put git_GetCheckoutFolder (homeStackPath) into gitCheckoutFolder
-   put there is a folder gitCheckoutFolder into gitIsInitialised
-   put git_GetRemoteAddress (projectFolder) into remoteAddress
-   
-   put projectName into LocalArray ["projectName"]
-   put projectFolder into LocalArray ["projectFolder"]
-   put remoteAddress into LocalArray ["remoteAddress"]
-   put homeStackPath into LocalArray ["homeStackPath"]
-   put gitCheckoutFolder into LocalArray ["gitCheckoutFolder"]
-   put gitIsInitialised into LocalArray ["gitIsInitialised"]
-end menu_Init
-
-getprop editMenu_Params [projectName]
-   put project_DisplayMenuTitles (projectName) into titleMenuTable
-   set the itemdelimiter to tab
-   repeat for each line someLine in titleMenuTable
-      put item 1 of someLine into mTitle
-      put mTitle & CR after mTitles
-   end repeat
-   delete char -1 of mTitles
-   replace "|" with "-" in mTitles
-   return mTitles
-end editMenu_Params
-
-getprop startProject_Param [projectName]
-   put project_IsActive (projectName) is true into someBoolean
+getprop checked_StartProject [projectName]
+   put env_ProjectIsActive (projectName) is true into someBoolean
    return someBoolean
-end startProject_Param
+end checked_StartProject
 
-getprop startProject_Params
-   return "true,false"
-end startProject_Params
+getprop checked_StartProject [projectName]
+   put env_ProjectIsActive (projectName) is true into isActive
+   return isActive
+end checked_StartProject
 
-getprop disabled_GitStatus [projectName]
-   if LocalArray ["gitIsInitialised"] then
+getprop checked_ScriptOnly [projectName]
+   put the scriptonly of stack projectName into isScriptOnly
+   return isScriptOnly
+end checked_ScriptOnly
+
+getprop disabled_DisplayGitStatus
+   if env_ProjectIsActive ("lcw_GIT") is true then
       return false
    else
       return true
-      return "delete"
    end if
-end disabled_GitStatus
-
-getprop disabled_InitialiseGit [projectName]
-   if LocalArray ["gitIsInitialised"] then
-      return "delete"
-   else
-      return false
-   end if
-end disabled_InitialiseGit
+end disabled_DisplayGitStatus
 
 
 --> Global | Project | Tree | Menu
@@ -103,80 +60,62 @@ on menu_StartProject projectName, someBoolean
    end if
 end menu_StartProject
 
-on insert_Git
-   return "Git | Menu"
-end insert_Git
-
 on _
 end _
+
+on menu_ScriptOnly projectName
+   put the scriptonly of stack projectName into isScriptOnly
+   set the scriptonly of stack projectName to isScriptOnly is false
+end menu_ScriptOnly
+
+on submenu_Git
+   return "Global | GIT | Simple | Menu"
+end submenu_Git
+
+on menu_DisplayGitStatus projectName
+   display_GitProjectStatus projectName
+end menu_DisplayGitStatus
+
+on menu_RevealProjectFolder projectName
+   put the project_Folder of stack projectName into projectFolder
+   finder_Reveal projectFolder
+end menu_RevealProjectFolder
 
 on menu_ExportMenusAndStackFiles projectName
    put project_GetFolder (projectName) into projectFolder
    --
    project_ExportMenusAndStackFiles projectFolder
    put the result into projectArray
-   -- display_Data projectArray, projectName, "Project Array"
    --
-   display_ProjectLibs projectName
+   display_ProjectLibs projectName, true
    display_GitRefreshProjectName projectName
 end menu_ExportMenusAndStackFiles
 
-on menu_ExportAndIndexProject projectName
-   env_ExportAndIndexProject projectName
-   put the result into hkeyPlaceArray
-   display_Array hkeyPlaceArray, "env_ExportAndIndexProject"
-end menu_ExportAndIndexProject
+on submenu_Dev
+   return "Dev | Menu"
+end submenu_Dev
 
-on menu_DisplayGitStatus projectName
-   display_GitProjectStatus projectName
-end menu_DisplayGitStatus
+
+--> Dev | Menu
+-
+on menu_Refresh projectName
+   display_Project projectName
+   dispatch "display_GitRefreshProjectName" with projectName
+end menu_Refresh
 
 on _
 end _
 
-on menu_DisplayProjectArray projectName
-   put the project_Array of stack projectName into projectArray
+on _EditProjectHome projectName
+   put project_GetHomeStackPath (projectName) into homeStackPath
+   go to stack homeStackPath
    --
-   display_Array projectArray
-end menu_DisplayProjectArray
+   edit the script of cd 1 of stack homeStackPath
+end _EditProjectHome
 
-on menu_OpenProjectHome projectName
-   go to stack projectName
-   show stack projectName
-end menu_OpenProjectHome
-
-on menu_EditMenu projectName, mTitle
-   replace "-" with "|" in mTitle
+on _ReLoadHome projectName
+   put project_GetHomeStackPath (projectName) into homeStackPath
    --
-   menu_Edit mTitle
-end menu_EditMenu
-on menu_Refresh projectName
-   display_ProjectLibs projectName
-   display_GitRefreshProjectName projectName
-end menu_Refresh
-
-
---> Git | Menu
--
-on menu_InitialiseGit projectName
-   put env_ConstructProjectFolder (projectName) into projectFolder
-   --
-   git_InitFolder projectFolder
-   --
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   display_GitFolderStatus gitCheckoutFolder
-end menu_InitialiseGit
-
-on menu_GitStatus projectName
-   put env_ConstructProjectFolder (projectName) into projectFolder
-   --
-   put git_GetCheckoutFolder (projectFolder) into gitCheckoutFolder
-   --
-   display_GitFolderStatus gitCheckoutFolder
-end menu_GitStatus
-
-on menu_LaunchGithub projectName
-   put LocalArray ["remoteAddress"] into remoteAddress
-   put github_FindRepoName (remoteAddress) into repoName
-   github_Launch repoName
-end menu_LaunchGithub
+   delete stack homeStackPath
+   go to stack homeStackPath
+end _ReLoadHome 

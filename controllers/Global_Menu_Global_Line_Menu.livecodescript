@@ -18,35 +18,32 @@ local LocalArray
 
 --> Menu | Init
 -
+getprop menu_IsSimple
+   return true
+end menu_IsSimple
+
 getprop menu_Target [tObject]
-   put tObject into LocalArray ["tObject"]
-   --
-   put the selected_Path of tObject into pathItems
+   put the display_View of tObject into displayView
+   return displayView
+end menu_Target
+
+private function _GetGlobalMenuTitle displayView
+   put the selected_Path of displayView into pathItems
    if pathItems is empty then
-      put the selected_Line of tObject into gMenuTitle
+      put the selected_Line of displayView into gMenuTitle
    else
       put item 1 of pathItems into gMenuTitle
    end if
    return gMenuTitle
-end menu_Target
+end _GetGlobalMenuTitle
 
-getprop menu_CheckTarget [mTarget]
-   return _WithinGlobalMenusTree()
+getprop menu_CheckTarget [displayView]
+   return _WithinGlobalMenusTree (displayView)
 end menu_CheckTarget
 
-private function _SelectedMenuController
-   put LocalArray ["tObject"] into tObject
-   --
-   put the top_Array of tObject into tArray
-   put line 1 of the keys of tArray into tGlobalMenu
-   put tArray [tGlobalMenu]["mController"] into mController
-   return mController
-end _SelectedMenuController
-
-private function _WithinGlobalMenusTree
-   put LocalArray ["tObject"] into tObject
+private function _WithinGlobalMenusTree displayView
    put display_FindView ("Global Menus", "From Disk") into gDisplayView
-   put the stack_Name of tObject into tName
+   put the stack_Name of displayView into tName
    put the stack_Name of gDisplayView into gName 
    if tName = gName then
       return true
@@ -55,28 +52,55 @@ private function _WithinGlobalMenusTree
    end if
 end _WithinGlobalMenusTree
 
+private function _SelectedMenuController displayView
+   put the top_Array of displayView into tArray
+   put line 1 of the keys of tArray into tGlobalMenu
+   put tArray [tGlobalMenu]["mController"] into mController
+   return mController
+end _SelectedMenuController
+
+getprop moveController_Param [displayView]
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   put the project_Name of stack gMenuTitle into projectName
+   return projectName
+end moveController_Param
+
+getprop moveController_Params
+   return library_ListProjectNames()
+end moveController_Params
+
+
 
 --> Global | Menu | Global | Line | Menu
 -
-on menu_EditMenu gMenuTitle
+on menu_MoveController displayView, newProjectName
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   --
+   put menu_GetGlobalController (gMenuTitle) into mController
+   --
+   ask_MoveMenu mController, gMenuTitle, newProjectName, displayView 
+end menu_MoveController
+
+on menu_EditMenu displayView
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   --
    menu_Edit gMenuTitle
 end menu_EditMenu
 
-on _
-end _
-
-on menu_FixMenuName gMenuTitle
-   --  put menu_GetGlobalController (gMenuTitle) into mController
-   put _SelectedMenuController() into mController
+on menu_FixMenuName displayView
+   put _SelectedMenuController (displayView) into mController
    --
-   controller_AskFixMenuName mController
+   ask_FixMenuControllerStackName mController
    put the result into newStackName
    --
    display_GlobalMenus
 end menu_FixMenuName
 
-on menu_DisplayProjectMenus gMenuTitle
-   put _SelectedMenuController() into mController
+on _
+end _
+
+on menu_DisplayProjectMenus displayView
+   put _SelectedMenuController (displayView) into mController
    put the project_Name of mController into projectName
    --
    display_ProjectControllers projectName
@@ -96,9 +120,8 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_FixBadController gMenuTitle
-   put LocalArray [tObject] into tObject
-   put the display_View of tObject into displayView
+on _FixBadController displayView
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
    --
    lcw_Answer "Do you want to update gMenuArray for global menu '[[gMenuTitle]]'?", displayView, gMenuTitle
    --
@@ -128,6 +151,4 @@ on menu_FixBadController gMenuTitle
    end if
    --
    lcw_AnswerWarning "Updated gMenuArray and diplay views"
-end menu_FixBadController
-
-
+end _FixBadController

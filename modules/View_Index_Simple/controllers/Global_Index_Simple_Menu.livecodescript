@@ -97,6 +97,15 @@ getprop disabled_FindDropCommand [indexView]
    end if
 end disabled_FindDropCommand
    
+getprop systemWindow_Param [displayView]
+   put the stack_Style of displayView into sStyle
+   return sStyle = "system"
+end systemWindow_Param
+
+getprop systemWindow_Params
+   return "true,false"
+end systemWindow_Params
+
 
 --> Global | Index | Simple | Menu
 -
@@ -104,123 +113,18 @@ on menu_StackStyle displayView, someStyle
    set the stack_Style of displayView to someStyle
 end menu_StackStyle
 
-on _
-end _
+on submenu_Colour
+   return "Global | Index | Simple | Colour | Menu"
+end submenu_Colour
 
-on menu_EditViewScript indexView
-   edit the script of indexView
-end menu_EditViewScript
+on submenu_Style
+   return "Global | Index | Simple | Style | Menu"
+end submenu_Style
 
 on menu_EditViewBehavior indexView
    put the behavior of indexView into bObject
    edit the script of bObject
 end menu_EditViewBehavior
-
-on _
-end _
-
-on menu_FieldStyle indexView, fStyle
-   set the field_Style of indexView to fStyle
-end menu_FieldStyle
-
-on menu_FieldAlign indexView, fAlign
-   set the field_Align of indexView to fAlign
-end menu_FieldAlign
-
-on menu_DontWrap indexView, someBoolean
-   set the dont_Wrap of indexView to someBoolean
-end menu_DontWrap
-
-on menu_InspectField indexView
-   put the index_Field of indexView into indexField
-   object_Inspect indexField
-end menu_InspectField
-
-on _
-end _
-
-on menu_SetMyName indexView
-   put the group_Name of indexView into oldName
-   put lcw_Ask ("Give this group and title a name...", oldName) into someName
-   --
-   put the title_Colour of indexView into tColour
-   if tColour is empty then put "random" into tColour
-   set the group_Name [tColour] of indexView to someName
-end menu_SetMyName
-
-on menu_SetMenuTitle indexView, whichTitle
-   switch whichTitle
-      case "Card"
-         put the card_Object of indexView into cardObject
-         set the menu_Controller of indexView to cardObject
-         break
-      case "Button"
-         put the menu_Button of indexView into mButton
-         set the menu_Controller of indexView to mButton
-         break
-      case "Tools"
-         put menu_GetGlobalController ("Global | Index | Simple | Menu") into mController
-         set the menu_Controller of indexView to mController
-         break
-      case "-"
-      case "Ask"
-         put the title_Menu of indexView into mTitle
-         put lcw_Ask ("Set the menu_Title of this indexView to...", mTitle) into gMenuTitle
-         put menu_GetGlobalController (gMenuTitle) into mController
-         set the menu_Controller of indexView to mButton
-         break
-   end switch
-end menu_SetMenuTitle
-
-on _
-end _
-
-on menu_SetTitleColour indexView   
-   answer color
-   if it is empty then exit to top
-   
-   put it into someColour
-   set the title_Colour of indexView to someColour
-   put the result into titleColour
-   
-   put colour_GetDarkOrLight (titleColour) into titleTextColour
-   set the title_TextColour of indexView to titleTextColour
-   
-   put colour_RgbToHSV (titleColour) into someHSV
-   put titleTextColour & CR & CR & someHSV & CR & titleColour
-end menu_SetTitleColour
-
-on menu_SetTitleTextColour indexView   
-   answer color
-   if it is empty then exit to top
-   
-   put it into someColour
-   set the title_TextColour of indexView to someColour
-end menu_SetTitleTextColour
-
-on _
-end _
-
-on menu_BlackAndWhiteTitle indexView   
-   put the title_Colour of indexView into titleColour
-   put colour_GetDarkOrLight (titleColour) into titleTextColour
-   set the title_TextColour of indexView to titleTextColour
-   
-   put colour_RgbToHSV (titleColour) into someHSV
-   put titleTextColour & CR & CR & someHSV & CR & titleColour
-end menu_BlackAndWhiteTitle
-
-on menu_ReverseTitleColour indexView   
-   put the title_Colour of indexView into titleColour
-   put colour_GetReverse (titleColour) into titleTextColour
-   set the title_TextColour of indexView to titleTextColour
-   
-   put colour_RgbToHSV (titleColour) into someHSV
-   put titleTextColour & CR & CR & someHSV & CR & titleColour
-end menu_ReverseTitleColour
-
-on _
-end _
 
 on menu_EditTitleMenu indexView
    put the title_Menu of indexView into mTitles     
@@ -232,19 +136,16 @@ on menu_EditTitleMenu indexView
    end repeat
 end menu_EditTitleMenu
 
+on menu_EditLineMenu indexView
+   put the line_Menu of indexView into mTitle
+   menu_Edit mTitle
+end menu_EditLineMenu
+
 on menu_ChangeTitleMenu indexView
    put the title_Menu of indexView into mTitle   
    put lcw_Ask ("Set the title_Menu to...", mTitle) into mTitle
    set the title_Menu of indexView to mTitle   
 end menu_ChangeTitleMenu
-
-on _
-end _
-
-on menu_EditLineMenu indexView
-   put the line_Menu of indexView into mTitle
-   menu_Edit mTitle
-end menu_EditLineMenu
 
 on menu_ChangeLineMenu indexView
    put the line_Menu of indexView into mTitle   
@@ -254,13 +155,6 @@ end menu_ChangeLineMenu
 
 on _
 end _
-
-on menu_ChangeDoubleClickHandler indexView
-   put the mouse_DoubleUp of indexView into mDoubleUp
-   put lcw_Ask ("Edit the mouse_DoubleUp of indexView", mDoubleUp) into mDoubleUp
-   --
-   set the mouse_DoubleUp of indexView to mDoubleUp
-end menu_ChangeDoubleClickHandler
 
 on menu_FindDoubleClickHandler indexView
    put the mouse_DoubleUp of indexView into mDoubleUp
@@ -275,6 +169,13 @@ on menu_FindDoubleClickHandler indexView
       lcw_AnswerWarning "Cannot locate [[shortHkey]]", indexView, shortHkey
    end if
 end menu_FindDoubleClickHandler
+
+on menu_ChangeDoubleClickHandler indexView
+   put the mouse_DoubleUp of indexView into mDoubleUp
+   put lcw_Ask ("Edit the mouse_DoubleUp of indexView", mDoubleUp) into mDoubleUp
+   --
+   set the mouse_DoubleUp of indexView to mDoubleUp
+end menu_ChangeDoubleClickHandler
 
 on menu_EditMouseTarget indexView
    put the mouse_Target of indexView into mTarget
@@ -318,61 +219,35 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_DisplayMenuArray indexView
+on _DisplayMenuArray indexView
    put the script_MenuArray ["Global | Index | Simple | Menu"] of indexView into mArray
    display_Array mArray
-end menu_DisplayMenuArray
+end _DisplayMenuArray
 
-on menu_SystemWindow indexView, someBoolean
+on _SystemWindow indexView, someBoolean
    put the stack_Name of indexView into stackName
    set the systemwindow of stack stackName to someBoolean
-end menu_SystemWindow
+end _SystemWindow
 
-on menu_MenuStyle indexView, mStyle
+on _MenuStyle indexView, mStyle
    set the menu_Style of indexView to mStyle
-end menu_MenuStyle
+end _MenuStyle
 
-on menu_SetStandardBehavior
+on _SetStandardBehavior
    put LocalArray ["indexView"] into indexView
    
    put the view_BehaviorStackName of indexView into stackName
    put the name of stack stackName into bObject
    set the behavior of indexView to bObject
-end menu_SetStandardBehavior
+end _SetStandardBehavior
 
 on _
 end _
 
-on menu_ShowIndexTemplate
+on _ShowIndexTemplate
    put LocalArray ["indexView"] into indexView
    
    put the view_Name of indexView into viewName
    put view_GetTemplateObject (viewName) into templateObject
    object_GoTo templateObject
-end menu_ShowIndexTemplate
-
-on menu_EditThisMenu
-   menu_Edit "Global | Index | Simple | Menu"
-end menu_EditThisMenu
-
-on _
-end _
-
-on menu_TestMenuTarget displayedObject
-   put LocalArray ["indexView"] into indexView
-   
-   put the view_Name of mTarget & CR & the name of mTarget & CR & indexView
-end menu_TestMenuTarget
-
-
---> Dev | Menu | Props
--
-getprop systemWindow_Param [displayView]
-   put the stack_Style of displayView into sStyle
-   return sStyle = "system"
-end systemWindow_Param
-
-getprop systemWindow_Params
-   return "true,false"
-end systemWindow_Params
-
+end _ShowIndexTemplate

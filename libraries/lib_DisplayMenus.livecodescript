@@ -18,6 +18,8 @@ function menu_GetGlobalData pFilterText
    --
    set the itemdelimiter to "|"
    repeat for each key gMenuTitle in mGlobalArray
+      set the cursor to busy
+      --
       if pFilterText is not empty then
          put item 2 to -2 of gMenuTitle into mBit
          put mBit contains pFilterText into isGood
@@ -31,6 +33,7 @@ function menu_GetGlobalData pFilterText
       if exists (mController) is false then
          put empty into mData [gMenuTitle]["stack name"]
       else
+         put the project_Name of mController into mData [gMenuTitle]["project_Name"]
          put the short name of mController into mData [gMenuTitle]["stack name"]
       end if
    end repeat
@@ -108,23 +111,16 @@ command display_MenuItems mController
 end display_MenuItems
 
 command display_BadProjectArray badArray
-   local lineMenu, iCpmmand
-   
-   put "mDoubleUp_DisplayProject" into mDoubleClick
-   put "Global | ProjectArray | Tree | Bad" into titleMenu
-   --
-   display_Array badArray, "Bad Project Array,LCW Projects", titleMenu, lineMenu, iCpmmand, mDoubleClick
+   display_Array badArray, "Bad Project Array", "LCW Projects"
+   display_SetInteractions the result, "ProjectArray | Tree | Bad", "mDoubleUp_DisplayProject"
 end display_BadProjectArray
 
 command display_BadMenuArray badMenuArray
-   put "mDoubleUp_EditMenuScript" into mDoubleClick
-   put empty into iCommand
-   put "Global | Menu | Global | Line | Menu" into lineMenu
-   put "Global | Menu | Global | Menu" into titleMenu
+   display_Array badMenuArray, "Bad Menu Controllers", "Global Menus"
+   put the result into displayView
+   display_SetInteractions displayView, "Menu | Global", "mDoubleUp_EditMenuScript"
    --
-   display_Array badMenuArray, "Bad Menu Controllers,Global Menus", titleMenu, lineMenu, iCommand, mDoubleClick
-   --
-   return the result
+   return displayView
 end display_BadMenuArray
 
 command display_OldMenus

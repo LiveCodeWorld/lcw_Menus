@@ -43,7 +43,7 @@ on _
 end _
 
 on menu_TestControllers projectName
-   put project_IsActive (projectName) into isActive
+   put env_ProjectIsActive (projectName) into isActive
    if isActive is false then
       lcw_AnswerWarning "Project is not active!"
    end if

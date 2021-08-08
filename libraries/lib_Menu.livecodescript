@@ -66,7 +66,6 @@ getprop menu_ToolTitle
 end menu_ToolTitle
 
 getprop view_MenuTitle [pNotGlobal]
-   -- see also menu_DefaultTitle
    put the view_Object of the target into vObject
    if exists (vObject) is false then return empty
    --
@@ -88,13 +87,6 @@ function menu_Exists gMenuTitle
    return controllerExists
 end menu_Exists
 
-function menu_GetGlobalController gMenuTitle
-   -- was "menu_GlobalController"
-   put menu_GetGlobalArray() into gMenuArray
-   put gMenuArray [gMenuTitle]["mController"] into mController
-   return mController
-end menu_GetGlobalController
-
 function menu_GlobalTitleFromViewName vName
    put "Global |" && menu_TitleFromViewName (vName) into globalMenuTitle
    return globalMenuTitle
@@ -102,21 +94,14 @@ end menu_GlobalTitleFromViewName
 
 function menu_TitleFromViewName viewName, pLevelAbove, pMakePretty
    set the itemdelimiter to "|"
-   delete item 1 of viewName
+   if word 1 to -1 of item 1 of viewName = "View" then
+      delete item 1 of viewName
+   end if
    if pLevelAbove is a number then delete item -1 to - pLevelAbove of viewName   
    menu_NormalizeTitle viewName, pMakePretty
    put viewName && "| Menu" after normalizedMenu
    return normalizedMenu
 end menu_TitleFromViewName
-
-
---> Menu | GlobalArray
--
-function menu_GetGlobalArray
-   global gLCW
-   put gLCW ["Global Menus"] into menuGlobalArray
-   return menuGlobalArray
-end menu_GetGlobalArray
 
 function menu_GetGlobalTitleArray gMenuTitle
    put menu_GetGlobalArray() into menuGlobalArray
@@ -479,7 +464,7 @@ setprop menu_ButtonText [pMenuTarget] mTitleTable
    put mArray_FindMenuTarget (mTopController, tObject) into mTarget
    --
    menu_DeleteActiveArray
-   menu_SetTargetObject tObject
+   menu_SetTopTargetObject tObject
    menu_SetTopController mTopController
    
    put menu_GetTextFromTitleTable (mTitleTable, tObject, pMenuTarget) into mText
@@ -790,7 +775,7 @@ function menu_TargetFromGlobal mPath
    end if
    
    -- so go get a default!
-   put menu_GetTargetObject() into targetObject
+   put menu_GetTopTargetObject() into targetObject
    put _GetDefaultMenuTarget (mPath, mTitlePath, targetObject) into mTarget
    put mTarget into gLCW ["activeMenuArray"]["top"]["mTarget"]
    return mTarget
@@ -1031,12 +1016,6 @@ function menu_GetLineNum someMenuItem, someMenu
    return 0
 end menu_GetLineNum
 
-function menu_GetTargetObject
-   global gLCW
-   put gLCW ["activeMenuArray"]["top"]["targetObject"] into targetObject
-   return targetObject
-end menu_GetTargetObject
-
 function menu_GetTopController
    -- could probably work out from mTitlePath (by getting first items mController)
    global gLCW
@@ -1154,12 +1133,6 @@ command menu_SetSentPath mPath
    global gLCW
    put mPath into gLCW ["activeMenuArray"]["sent"]["mPath"]
 end menu_SetSentPath
-
-command menu_SetTargetObject targetObject
-   -- the target clicked on by the user
-   global gLCW
-   put targetObject into gLCW ["activeMenuArray"]["top"]["targetObject"]
-end menu_SetTargetObject
 
 command menu_SetTitlePath mTitlePath
    -- could be called "menu_SetSentTitlePath"

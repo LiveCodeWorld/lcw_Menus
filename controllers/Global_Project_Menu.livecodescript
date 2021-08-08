@@ -133,7 +133,8 @@ end submenu_Dev
 -
 getprop start_Project [indexView]
    put LocalArray ["projectName"] into projectName
-   return project_IsActive (projectName) is true
+   put env_ProjectIsActive (projectName) into isActive
+   return isActive
 end start_Project
 
 getprop project_Choice [indexView]
