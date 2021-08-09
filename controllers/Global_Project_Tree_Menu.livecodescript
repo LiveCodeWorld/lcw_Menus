@@ -60,26 +60,17 @@ on menu_StartProject projectName, someBoolean
    end if
 end menu_StartProject
 
-on _
-end _
-
 on menu_ScriptOnly projectName
    put the scriptonly of stack projectName into isScriptOnly
    set the scriptonly of stack projectName to isScriptOnly is false
 end menu_ScriptOnly
 
-on submenu_Git
-   return "Global | GIT | Simple | Menu"
-end submenu_Git
+on _
+end _
 
-on menu_DisplayGitStatus projectName
-   display_GitProjectStatus projectName
-end menu_DisplayGitStatus
-
-on menu_RevealProjectFolder projectName
-   put the project_Folder of stack projectName into projectFolder
-   finder_Reveal projectFolder
-end menu_RevealProjectFolder
+on menu_ProjectHelp projectName
+   launch_OrCreateProject projectName
+end menu_ProjectHelp
 
 on menu_ExportMenusAndStackFiles projectName
    put project_GetFolder (projectName) into projectFolder
@@ -91,6 +82,20 @@ on menu_ExportMenusAndStackFiles projectName
    display_GitRefreshProjectName projectName
 end menu_ExportMenusAndStackFiles
 
+on menu_RevealProjectFolder projectName
+   put the project_Folder of stack projectName into projectFolder
+   finder_Reveal projectFolder
+end menu_RevealProjectFolder
+
+on menu_Refresh projectName
+   display_Project projectName
+   dispatch "display_GitRefreshProjectName" with projectName
+end menu_Refresh
+
+on submenu_Git
+   return "Global | GIT | Simple | Menu"
+end submenu_Git
+
 on submenu_Dev
    return "Dev | Menu"
 end submenu_Dev
@@ -98,14 +103,6 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_Refresh projectName
-   display_Project projectName
-   dispatch "display_GitRefreshProjectName" with projectName
-end menu_Refresh
-
-on _
-end _
-
 on _EditProjectHome projectName
    put project_GetHomeStackPath (projectName) into homeStackPath
    go to stack homeStackPath

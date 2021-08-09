@@ -76,7 +76,6 @@ command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControl
    save stack controllerStackPath 
    put the name of stack controllerStackPath into controllerStackObject
    --
-   -- set the menu_Update of stack controllerStackPath to true not needed for mArray
    mArray_UpdateGlobal gMenuTitle, controllerStackPath
    --
    return controllerStackObject
