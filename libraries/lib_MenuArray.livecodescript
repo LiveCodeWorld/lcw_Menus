@@ -19,78 +19,10 @@ local LocalArray
 
 --> Working on
 -
-
---> Menu | TargetObject
--
-function menu_GetTarget mTitle
-   put LocalArray ["menuTarget"][mTitle] into menuTarget
-   return menuTarget
-end menu_GetTarget
-
-command menu_SetTarget mTitle, mTarget
-   put mTarget into LocalArray ["menuTarget"][mTitle]
-end menu_SetTarget
-
-function menu_GetTopTargetObject
-   return LocalArray ["active_TopTargetObject"]
-   -- global gLCW
-   -- put gLCW ["activeMenuArray"]["top"]["targetObject"] into targetObject
-end menu_GetTopTargetObject
-
-command menu_SetTopTargetObject tObject
-   put tObject into LocalArray ["active_TopTargetObject"]
-   -- global gLCW
-   -- put targetObject into gLCW ["activeMenuArray"]["top"]["targetObject"]
-end menu_SetTopTargetObject
-
 private command _ClearActiveMenuArray
    delete variable LocalArray
    -- delete variable LocalArray ["MenuControllerInit"]
 end _ClearActiveMenuArray
-
-
---> Menu | Simple
--
-getprop menu_IsSimple
-   return menu_GetSimple()
-end menu_IsSimple
-
-function menu_GetSimple
-   -- a guess at the default property for a menu
-   -- as simple menu can only have one divider
-   -- we assume that if it does not have a "M submenu_Dev" handler it is simple
-   
-   if the shiftKey is "Down" then return false
-   put mArray_GetSimple() into isSimple
-   if isSimple is not empty then return isSimple
-   --
-   put the script_HandlerExists ["M submenu_Dev"] of the target into devExists
-   if devExists then
-      return false
-   else
-      return true
-   end if
-end menu_GetSimple
-
-getprop menu_Handlers [pFast]
-   put the long id of the target into mController
-   switch pFast
-      case empty
-      case true
-         put _FastMenuHandlers (mController) into hNames -- latest fastest
-         break
-      case false
-         put line 1 of the script_MenuTitles of mController into mTitle
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-         break
-      default
-         put pFast into mTitle
-         put the script_MenuArray [mTitle] of mController into scriptMenuArray -- the way mArray works
-         -- put _GetMenuHandlers (mTitle, mController) into hNames -- old and thorough
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-   end switch
-   return hNames
-end menu_Handlers
 
 private function _SlowMenuHandlers mController, mTitle
    put the script of mController into someScript
@@ -133,29 +65,6 @@ private function _FastMenuHandlers mController
    delete char -1 of hNames
    return hNames
 end _FastMenuHandlers
-
-function mArray_GetSimple
-   global gLCW
-   return gLCW ["menu_IsSimple"] is not false
-end mArray_GetSimple
-
-command mArray_SetSimple sBoolean
-   global gLCW
-   put sBoolean is not false into gLCW ["menu_IsSimple"]
-end mArray_SetSimple
-
-getprop script_MenuHandlers [mTitle]
-   put the long id of the target into mController
-   switch
-      case mTitle is empty
-      case the menu_IsSimple of mController is true
-         put _FastMenuHandlers (mController) into hNames
-         break
-      default
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-   end switch
-   return hNames
-end script_MenuHandlers
 
 private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
    -- this is the one place where menu drawing happens that dispatches a message
@@ -217,10 +126,7 @@ private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursion
    return true
 end _AddScriptMenu
 
-
---> mArray | Find
--
-private command mArray_FindActiveItem mItemPath, @hkeyController, @paramValue
+private command _FindActiveItem mItemPath, @hkeyController, @paramValue
    put mArray_GetActiveArray() into mArray
    --
    set the itemdelimiter to "|"
@@ -255,7 +161,7 @@ private command mArray_FindActiveItem mItemPath, @hkeyController, @paramValue
       put itemName into hkeyController
       put subItemPath into paramValue -- should be empty unless parramm contains "|"
    end if
-end mArray_FindActiveItem
+end _FindActiveItem
 
 private function _FindItemArray mArray, itemText
    -- forgot why this is indexed with "01" rather thaan "1"
@@ -272,30 +178,98 @@ private function _FindItemArray mArray, itemText
    return empty
 end _FindItemArray
 
-command mArray_Marshal @hkeyController
-   replace "|" with "\" in hkeyController
-end mArray_Marshal
+private command _SetMenuObjectDefaults @tObject, @mButton
+   if exists (tObject) is false then
+      put the long id of the target into tObject
+   end if
+   if exists (mButton) is false then
+      -- defaults to the target rather than the global menu_Button
+      put the long id of the target into mButton
+   end if
+end _SetMenuObjectDefaults
 
-command mArray_UnMarshal @hkeyController
-   replace "\" with "|" in hkeyController
-end mArray_UnMarshal
 
-function view_GetMenuButton
-   put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
-   return mButton
-end view_GetMenuButton
+--> Menu | Dispatch | Working on
+-
+command hKey_Do hKey, pTarget, pValue, pQuestion
+   if the optionKey is "Down" then
+      put scriptEditor_GetTop() into stackObject
+      if pQuestion is empty then
+         put "Edit script for this handler?" into pQuestion
+      end if
+      lcw_Answer pQuestion, stackObject
+      --
+      hkey_Edit hKey
+      return empty
+   end if
+   
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   handler_Do hName, hObject, pTarget, pValue
+   return the result
+end hKey_Do
 
-function menu_GetCaseParams theParams, pController
-   if pController is empty then put debug_GetCallingObject(2) into pController
+command handler_Do hName, hObject, pTarget, pValue
+   put hName && "pTarget,pValue" into callCommand
    --
-   put word 1 of theParams into hName
-   set the itemdelimiter to "_"
-   delete item 2 of hName
-   put toUpper (Char 1 of hName) into char 1 of hName
-   put "M" && "menu_" & hName into shortHkey
-   put the hkey_CaseConditions [shortHkey] of pController into cMenuParams
-   return cMenuParams
-end menu_GetCaseParams
+   call callCommand of hObject
+   return the result
+end handler_Do
+
+on menu_Dispatch mItem
+   -- "menu_Dispatch mItem" placed in the mButton target
+   mArray_SetActiveItem mItem
+   put the long id of the target into tObject
+   switch word 1 of tObject
+      case "widget"
+         menu_DispatchPick mItem
+         break
+      default
+         menu_DispatchTextPick mItem
+   end switch
+end menu_Dispatch
+
+command menu_DispatchTextPick mItem
+   mArray_SetActiveItem mItem
+   _FindActiveItem mItem, hkeyController, paramValue   
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchTextPick
+
+command menu_DispatchPick mItem
+   local paramValue
+   
+   mArray_SetActiveItem mItem
+   set the itemdelimiter to "|"
+   put item -1 of mItem into hkeyController
+   if word 1 of hkeyController = "param" then
+      put word 2 to -1 of hkeyController into paramValue
+      put item -2 of mItem into hkeyController 
+   end if
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchPick
+
+
+--> Related | Props
+-
+getprop script_MenuHandlers [mTitle]
+   put the long id of the target into mController
+   switch
+      case mTitle is empty
+      case the menu_IsSimple of mController is true
+         put _FastMenuHandlers (mController) into hNames
+         break
+      default
+         put _SlowMenuHandlers (mController, mTitle) into hNames
+   end switch
+   return hNames
+end script_MenuHandlers
+
+getprop script_MenuArray [mTitleTable]
+   put the long id of the target into tObject
+   put mArray_FromTitleTable (mTitleTable, tObject) into mArray -- dispatches "menu_Init"
+   return mArray
+end script_MenuArray
 
 getprop mArray_Controller [mTitle]
    -- useful for testing?
@@ -306,35 +280,46 @@ getprop mArray_Controller [mTitle]
 end mArray_Controller
 
 
---> Script | Props | MenuArray
--
-getprop script_MenuArray [mTitleTable]
-   put the long id of the target into tObject
-   put mArray_FromTitleTable (mTitleTable, tObject) into mArray -- dispatches "menu_Init"
-   return mArray
-end script_MenuArray
-
-
---> mArray | Props
+--> Menu | Props
 -
 getprop menu_Button
-   put view_GetMenuButton() into mButton
+   put menu_GetGlobalButton() into mButton
    return mButton
 end menu_Button
 
-getprop menu_Style
-   put LocalArray ["menu_Style"] into mStyle
-   if mStyle is empty then return "array"
-   return mStyle
-end menu_Style
+getprop menu_IsSimple
+   return menu_GetSimple()
+end menu_IsSimple
 
-setprop menu_Style mStyle
-   put mStyle into LocalArray ["menu_Style"]
-end menu_Style
+getprop menu_Handlers [pFast]
+   put the long id of the target into mController
+   switch pFast
+      case empty
+      case true
+         put _FastMenuHandlers (mController) into hNames -- latest fastest
+         break
+      case false
+         put line 1 of the script_MenuTitles of mController into mTitle
+         put _SlowMenuHandlers (mController, mTitle) into hNames
+         break
+      default
+         put pFast into mTitle
+         put the script_MenuArray [mTitle] of mController into scriptMenuArray -- the way mArray works
+         -- put _GetMenuHandlers (mTitle, mController) into hNames -- old and thorough
+         put _SlowMenuHandlers (mController, mTitle) into hNames
+   end switch
+   return hNames
+end menu_Handlers
 
 
 --> Menu | Utils
 -
+function menu_GetGlobalButton
+   -- a button that is always available to the LCW environment
+   put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
+   return mButton
+end menu_GetGlobalButton
+
 function menu_IsGlobal mTitle
    -- could do better check
    return word 1 of mTitle = "Global"
@@ -399,6 +384,83 @@ function menu_GetChecked theParams
 end menu_GetChecked
 
 
+--> Menu | TargetObject
+-
+function menu_GetTarget mTitle
+   put LocalArray ["menuTarget"][mTitle] into menuTarget
+   return menuTarget
+end menu_GetTarget
+
+command menu_SetTarget mTitle, mTarget
+   put mTarget into LocalArray ["menuTarget"][mTitle]
+end menu_SetTarget
+
+function menu_GetTopTargetObject
+   return LocalArray ["active_TopTargetObject"]
+   -- global gLCW
+   -- put gLCW ["activeMenuArray"]["top"]["targetObject"] into targetObject
+end menu_GetTopTargetObject
+
+command menu_SetTopTargetObject tObject
+   put tObject into LocalArray ["active_TopTargetObject"]
+   -- global gLCW
+   -- put targetObject into gLCW ["activeMenuArray"]["top"]["targetObject"]
+end menu_SetTopTargetObject
+
+
+--> Menu | Simple
+-
+function menu_GetSimple
+   -- a guess at the default property for a menu
+   -- as simple menu can only have one divider
+   -- we assume that if it does not have a "M submenu_Dev" handler it is simple
+   
+   if the shiftKey is "Down" then return false
+   put mArray_GetSimple() into isSimple
+   if isSimple is not empty then return isSimple
+   --
+   put the script_HandlerExists ["M submenu_Dev"] of the target into devExists
+   if devExists then
+      return false
+   else
+      return true
+   end if
+end menu_GetSimple
+
+function mArray_GetSimple
+   global gLCW
+   return gLCW ["menu_IsSimple"] is not false
+end mArray_GetSimple
+
+command mArray_SetSimple sBoolean
+   global gLCW
+   put sBoolean is not false into gLCW ["menu_IsSimple"]
+end mArray_SetSimple
+
+
+--> mArray | Find
+-
+command mArray_Marshal @hkeyController
+   replace "|" with "\" in hkeyController
+end mArray_Marshal
+
+command mArray_UnMarshal @hkeyController
+   replace "\" with "|" in hkeyController
+end mArray_UnMarshal
+
+function menu_GetCaseParams theParams, pController
+   if pController is empty then put debug_GetCallingObject(2) into pController
+   --
+   put word 1 of theParams into hName
+   set the itemdelimiter to "_"
+   delete item 2 of hName
+   put toUpper (Char 1 of hName) into char 1 of hName
+   put "M" && "menu_" & hName into shortHkey
+   put the hkey_CaseConditions [shortHkey] of pController into cMenuParams
+   return cMenuParams
+end menu_GetCaseParams
+
+
 --> mArray | Mouse
 -
 command mArray_MouseDown mTitle, pMenuButton, pTargetObject
@@ -430,7 +492,7 @@ command mArray_MouseDown mTitle, pMenuButton, pTargetObject
 end mArray_MouseDown
 
 command mArray_PullDown mTitle, pMenuButton, pTargetObject
-   mArray_SetObjectDefaults pTargetObject, pMenuButton
+   _SetMenuObjectDefaults pTargetObject, pMenuButton
    --
    mArray_MouseDown mTitle, pMenuButton, pTargetObject
    put the result into mArray
@@ -442,18 +504,8 @@ command mArray_PullDown mTitle, pMenuButton, pTargetObject
    return mArray
 end mArray_PullDown
 
-command mArray_SetObjectDefaults @tObject, @mButton
-   if exists (tObject) is false then
-      put the long id of the target into tObject
-   end if
-   if exists (mButton) is false then
-      -- defaults to the target rather than the global menu_Button
-      put the long id of the target into mButton
-   end if
-end mArray_SetObjectDefaults
-
 command mArray_PopUp mTitle, pMenuButton, pTargetObject
-   mArray_SetObjectDefaults pTargetObject, pMenuButton
+   _SetMenuObjectDefaults pTargetObject, pMenuButton
    --
    mArray_MouseDown mTitle, pMenuButton, pTargetObject
    put the result into mArray
@@ -461,43 +513,6 @@ command mArray_PopUp mTitle, pMenuButton, pTargetObject
    popup pMenuButton -- target changes
    return mArray
 end mArray_PopUp
-
-
---> Menu | Dispatch
--
-on menu_Dispatch mItem
-   -- "menu_Dispatch mItem" placed in the mButton target
-   mArray_SetActiveItem mItem
-   put the long id of the target into tObject
-   switch word 1 of tObject
-      case "widget"
-         menu_DispatchPick mItem
-         break
-      default
-         menu_DispatchTextPick mItem
-   end switch
-end menu_Dispatch
-
-command menu_DispatchTextPick mItem
-   mArray_SetActiveItem mItem
-   mArray_FindActiveItem mItem, hkeyController, paramValue   
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchTextPick
-
-command menu_DispatchPick mItem
-   local paramValue
-   
-   mArray_SetActiveItem mItem
-   set the itemdelimiter to "|"
-   put item -1 of mItem into hkeyController
-   if word 1 of hkeyController = "param" then
-      put word 2 to -1 of hkeyController into paramValue
-      put item -2 of mItem into hkeyController 
-   end if
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchPick
 
 
 --> mArray | Dispatch
@@ -508,31 +523,6 @@ These handlers all take the form of "controller messaging".
 In the receiving hName handler "the target" is changed to = mController, which is useless as it is where the handler is.
 This is because we use "dispatch". If we use call we may get around this and try to preserve the target?
 */
-
-command hKey_Do hKey, pTarget, pValue, pQuestion
-   if the optionKey is "Down" then
-      put scriptEditor_GetTop() into stackObject
-      if pQuestion is empty then
-         put "Edit script for this handler?" into pQuestion
-      end if
-      lcw_Answer pQuestion, stackObject
-      --
-      hkey_Edit hKey
-      return empty
-   end if
-   
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   handler_Do hName, hObject, pTarget, pValue
-   return the result
-end hKey_Do
-
-command handler_Do hName, hObject, pTarget, pValue
-   put hName && "pTarget,pValue" into callCommand
-   --
-   call callCommand of hObject
-   return the result
-end handler_Do
-
 command mArray_DoController mKey, pValue
    -- changed "dispatch" to "call" which keeps the context of the target
    

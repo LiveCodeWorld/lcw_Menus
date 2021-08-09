@@ -56,6 +56,18 @@ command module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerS
    return controllerStackObject
 end module_CreateMenuFromFolder
 
+command menu_Create gMenuTitle, pStackName, pControllerScript
+   if exists (stack pStackName) is false then
+      put "lcw_Menus" into projectName
+   else
+      put the project_Name of stack pStackName into projectName
+   end if
+   --
+   project_CreateMenu gMenuTitle, projectName, pControllerScript
+   put the result into mController -- a script only stack
+   return mController
+end menu_Create
+
 command project_CreateMenu gMenuTitle, projectName, pControllerScript
    # Quick check of projectFolder
    put project_GetFolder (projectName) into projectFolder
@@ -80,18 +92,6 @@ command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControl
    --
    return controllerStackObject
 end project_CreateMenuFromFolder
-
-command menu_Create gMenuTitle, pStackName, pControllerScript
-   if exists (stack pStackName) is false then
-      put "lcw_Menus" into projectName
-   else
-      put the project_Name of stack pStackName into projectName
-   end if
-   --
-   project_CreateMenu gMenuTitle, projectName, pControllerScript
-   put the result into mController -- a script only stack
-   return mController
-end menu_Create
 
 function menu_CommandToText handlerName
    set the itemdelimiter to "_"

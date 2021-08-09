@@ -103,12 +103,6 @@ function menu_TitleFromViewName viewName, pLevelAbove, pMakePretty
    return normalizedMenu
 end menu_TitleFromViewName
 
-function menu_GetGlobalTitleArray gMenuTitle
-   put menu_GetGlobalArray() into menuGlobalArray
-   put menuGlobalArray [gMenuTitle] into gMenuTitleArray
-   return gMenuTitleArray
-end menu_GetGlobalTitleArray
-
 
 --> Hack | mArray
 -
@@ -1104,25 +1098,12 @@ function menu_SetCheckedLine lineNum, someMenuText, someBoolean
    return someMenuText
 end menu_SetCheckedLine
 
-command menu_SetGlobalArray menuGlobalArray
-   global gLCW
-   put menuGlobalArray into gLCW ["Global Menus"]
-   return gLCW ["Global Menus"]
-end menu_SetGlobalArray
-
 command menu_SetGlobalTable gMenuTitle, gMenuTable
    put menu_GetGlobalTitleArray (gMenuTitle) into gMenuTitleArray
    put gMenuTable into gMenuTitleArray ["gMenuTable"]
    menu_SetGlobalTitleArray gMenuTitle, gMenuTitleArray
    return mTitleTable
 end menu_SetGlobalTable
-
-command menu_SetGlobalTitleArray gMenuTitle, gMenuTitleArray
-   put menu_GetGlobalArray() into menuGlobalArray
-   put gMenuTitleArray into menuGlobalArray [gMenuTitle]
-   menu_SetGlobalArray menuGlobalArray
-   return gLCW
-end menu_SetGlobalTitleArray
 
 command menu_SetItemTargetOveride mItemToMatch, mTarget
    global gLCW

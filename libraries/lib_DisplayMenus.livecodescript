@@ -11,37 +11,6 @@ See also lib_DisplayController
 */
 
 
---> Working on
--
-function menu_GetGlobalData pFilterText
-   put menu_GetGlobalArray() into mGlobalArray
-   --
-   set the itemdelimiter to "|"
-   repeat for each key gMenuTitle in mGlobalArray
-      set the cursor to busy
-      --
-      if pFilterText is not empty then
-         put item 2 to -2 of gMenuTitle into mBit
-         put mBit contains pFilterText into isGood
-         if isGood is false then
-            next repeat
-         end if
-      end if
-      
-      put mGlobalArray [gMenuTitle] into mData [gMenuTitle]
-      put mData [gMenuTitle]["mController"] into mController
-      if exists (mController) is false then
-         put empty into mData [gMenuTitle]["stack name"]
-      else
-         put the project_Name of mController into mData [gMenuTitle]["project_Name"]
-         put the short name of mController into mData [gMenuTitle]["stack name"]
-      end if
-   end repeat
-   --
-   return mData
-end menu_GetGlobalData
-
-
 --> Display | Events
 -
 on mDoubleUp_DisplayProject arrayView, projectName
