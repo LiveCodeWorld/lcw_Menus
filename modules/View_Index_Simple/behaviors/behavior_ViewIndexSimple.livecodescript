@@ -20,19 +20,17 @@ local LocalArray
 
 --> Working on
 -
+getprop tool_Menus
+   -- return the tool_Menus name = menuBit
+   get the title_Menu of me
+   set the itemdelimiter to "|"
+   put word 1 to -1 of item 2 to -2 of it into menuBit
+   return menuBit
+end tool_Menus
+
 setprop tool_Menus [projectName] menuBit
-   dispatch "ask_CreateToolMenus" with menuBit,projectName
-   --
-   put "Global |" && menuBit && "| Menu" into titleMenu
-   put "Global |" && menuBit && "| Line | Menu" into lineMenu
-   --
-   replace "|" with empty in menuBit
-   replace space with empty in menuBit
-   put "mDoubleUp_" && menuBit into pDoubleUp
-   --
-   set the title_Menu of me to titleMenu
-   set the line_Menu of me to lineMenu
-   set the mouse_DoubleUp of me to pDoubleUp   
+   put the long id of me into displayView
+   display_SetToolMenus menuBit, displayView, projectName
 end tool_Menus
 
 on menuPick menuPath

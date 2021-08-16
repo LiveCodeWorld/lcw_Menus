@@ -9,19 +9,6 @@ version: 0.6
 
 --> Menu | Props
 -
-getprop menu_Target [tObject]
-   pass menu_Target
-end menu_Target
-
-getprop menu_CheckTarget [mTarget]
-   return true
-end menu_CheckTarget
-
-on menu_Init tObject
-   -- not needed any more
-   -- use "menu_CheckTarget" to any initialisation
-end menu_Init
-
 command lcw_LoadCustomUserProject
    -- initialises non-version controlled private project
    put lcw_UserProjectFolder() into lcwUserProjectFolder
@@ -54,6 +41,10 @@ end menu_Filter
 
 on _
 end _
+
+on menu_Help displayView
+   launch_MenuHelp "Global | Menu | Global | Menu"
+end menu_Help
 
 on menu_Refresh
    display_EnvironmentMenus

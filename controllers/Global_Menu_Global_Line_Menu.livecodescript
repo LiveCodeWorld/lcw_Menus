@@ -18,10 +18,6 @@ local LocalArray
 
 --> Menu | Init
 -
-getprop menu_IsSimple
-   return true
-end menu_IsSimple
-
 getprop menu_Target [tObject]
    put the display_View of tObject into displayView
    return displayView
@@ -54,13 +50,13 @@ end _WithinGlobalMenusTree
 
 private function _SelectedMenuController displayView
    put the top_Array of displayView into tArray
-   put line 1 of the keys of tArray into tGlobalMenu
-   put tArray [tGlobalMenu]["mController"] into mController
+   put tArray ["mController"] into mController
    return mController
 end _SelectedMenuController
 
 getprop moveController_Param [displayView]
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   if exists (stack gMenuTitle) is false then return empty
    put the project_Name of stack gMenuTitle into projectName
    return projectName
 end moveController_Param
@@ -93,7 +89,7 @@ on menu_FixMenuName displayView
    ask_FixMenuControllerStackName mController
    put the result into newStackName
    --
-   display_GlobalMenus
+   display_EnvironmentMenus
 end menu_FixMenuName
 
 on _
@@ -110,7 +106,7 @@ on _
 end _
 
 on menu_Refresh
-   display_GlobalMenus
+   display_EnvironmentMenus
 end menu_Refresh
 
 on submenu_Dev

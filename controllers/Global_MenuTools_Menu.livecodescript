@@ -40,7 +40,7 @@ end menu_Target
 
 getprop menu_CheckTarget [mTarget]
    if mTarget is "delete" then return false
-   _Init
+   _Init mTarget
    
    -- this is called next
    if LocalArray ["sType"] is among the items of "menu,controller" then
@@ -50,11 +50,13 @@ getprop menu_CheckTarget [mTarget]
    end if
 end menu_CheckTarget
 
-on _Init tObject
+on _Init mTarget
    -- only called if the menu_CheckTarget is true
    put LocalArray ["mController"] into mController
-   put the menu_Name of mController into LocalArray ["mName"]
-   put the script_MenuTitles of mController into LocalArray ["mTitles"]
+   if exists (mController) then
+      put the menu_Name of mController into LocalArray ["mName"]
+      put the script_MenuTitles of mController into LocalArray ["mTitles"]
+   end if
 end _Init
 
 function scriptEditor_IsHistoryButton sObject

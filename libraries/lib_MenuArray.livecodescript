@@ -1,10 +1,21 @@
 ﻿script "lib_MenuArray"
---> MetaData
+function fetchFromUrl jsonURL
+   put url someURL into utf8JSON
+   put textDecode (jsonURL, "UTF-8") into encodedJSON
+   put json_ToArray (encodedJSON) into someArray
+   return someArray
+end fetchFromUrl
+
+command exportToUrl someArray, jsonURL
+   put json_FromArray (someArray) into encodedJSON
+   put textEncode (encodedJSON, "UTF-8") into decodedJSON
+   put decodedJSON into url someURL
+end exportToUrl--> MetaData
 -
+copyright: David Bovill
 license: GPLv3
 name: lib_MenuArray
 type: library
-version: 0.3
 
 /*
 This library is for the set of handlers that deal with new menu array format used by widgets.

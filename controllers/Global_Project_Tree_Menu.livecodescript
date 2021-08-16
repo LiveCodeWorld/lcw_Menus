@@ -96,6 +96,13 @@ on submenu_Git
    return "Global | GIT | Simple | Menu"
 end submenu_Git
 
+on menu_EditProjectHome projectName
+   put project_GetHomeStackPath (projectName) into homeStackPath
+   go to stack homeStackPath
+   --
+   edit the script of stack homeStackPath
+end menu_EditProjectHome
+
 on submenu_Dev
    return "Dev | Menu"
 end submenu_Dev
@@ -103,13 +110,6 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on _EditProjectHome projectName
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   go to stack homeStackPath
-   --
-   edit the script of cd 1 of stack homeStackPath
-end _EditProjectHome
-
 on _ReLoadHome projectName
    put project_GetHomeStackPath (projectName) into homeStackPath
    --

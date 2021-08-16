@@ -42,7 +42,7 @@ getprop disabled_ProjectLibraries [projectName]
       return false
    end if
 end disabled_ProjectLibraries
-   
+
 getprop disabled_ProjectMenus [projectName]
    put project_ListControllerPaths (projectName) into filePaths
    if filePaths is empty then
@@ -69,7 +69,7 @@ getprop disabled_ProjectViews [projectName]
       return false
    end if
 end disabled_ProjectViews
-   
+
 getprop disabled_ProjectModules [projectName]
    put project_ListModuleFolders (projectName) into filePaths
    if filePaths is empty then
@@ -111,8 +111,8 @@ on menu_DisplayTransporters
    display_Transporters
 end menu_DisplayTransporters
 
-on menu_DisplayTransportLibs
-   display_TransporterLibs
+-- on menu_DisplayTransportLibs
+display_TransporterLibs
 end menu_DisplayTransportLibs
 
 on menu_ProjectFolder projectName
