@@ -117,7 +117,7 @@ getprop m_Names
    -- should filter for only good published menus?
    -- maybe a switch for different sets?
    
-   put menu_GlobalTitles() into mNames
+   put menu_ListGlobalTitles() into mNames
    -- put line 138 to -1 of mNames
    return line 1 to 138 of mNames
    display_Lines mNames, "menu_GlobalTitles()"

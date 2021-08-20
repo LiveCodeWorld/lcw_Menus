@@ -86,11 +86,11 @@ command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControl
    put the result into controllerStackPath
    --
    save stack controllerStackPath 
-   put the name of stack controllerStackPath into controllerStackObject
+   put the name of stack controllerStackPath into mController
    --
-   mArray_UpdateGlobal gMenuTitle, controllerStackPath
+   menu_ReIndexController mController
    --
-   return controllerStackObject
+   return mController
 end project_CreateMenuFromFolder
 
 function menu_CommandToText handlerName

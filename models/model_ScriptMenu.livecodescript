@@ -15,8 +15,24 @@ Views are linked to menu_Controllers via the menu_Title and the menu_Controller 
 This combination of mTitle and mController uniquely identifies the menu model for that menu and it's associated script.
 */
 
+--> Working on
+-
+
 --> Menu | Props
 -
+getprop menu_GlobalTitle
+   put the long id of the target into mController
+   put line 1 of the script_GlobalMenuTitles of mController into gMenuTitle
+   
+   # Checks
+   if the stack_Name of mController is not gMenuTitle then return empty
+   if the script_MetaData ["name"] of mController is not gMenuTitle then return empty
+   put project_NameToShortFolder (gMenuTitle) & ".livecodescript" into goodShortFile
+   if the short_File of mController is not goodShortFile then return empty
+   
+   return gMenuTitle
+end menu_GlobalTitle
+
 getprop menu_Array [pMenuTitle]
    put the long id of the target into tObject
    if pMenuTitle is empty then
@@ -25,11 +41,6 @@ getprop menu_Array [pMenuTitle]
    put mArray_FromTitleTable (pMenuTitle, tObject) into mArray
    return mArray
 end menu_Array
-
-getprop menu_GlobalTitle
-   put the script_GlobalTitles ["Menu"] of the target into globalMenuTitles
-   return globalMenuTitles
-end menu_GlobalTitle
 
 
 --> Menu | Props | Name
@@ -188,20 +199,3 @@ function script_ExtractGlobalMenu scriptLine
       return empty
    end if
 end script_ExtractGlobalMenu
-
-function menu_ListGlobalNames
-   global gLCW
-   put gLCW ["Global Menus"] into menuArray
-   return keys (menuArray)
-end menu_ListGlobalNames
-
-function menu_ListGlobalObjects
-   global gLCW
-   put gLCW ["Global Menus"] into menuArray
-   repeat for each key mTitle in menuArray
-      put menuArray [mTitle]["mController"] into mController
-      put mController & CR after mControllers
-   end repeat
-   delete char -1 of mControllers
-   return mControllers
-end menu_ListGlobalObjects

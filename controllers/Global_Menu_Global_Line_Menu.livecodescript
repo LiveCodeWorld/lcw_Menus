@@ -24,6 +24,7 @@ getprop menu_Target [tObject]
 end menu_Target
 
 private function _GetGlobalMenuTitle displayView
+   -- bug: can be empty
    put the selected_Path of displayView into pathItems
    if pathItems is empty then
       put the selected_Line of displayView into gMenuTitle
@@ -65,13 +66,18 @@ getprop moveController_Params
    return library_ListProjectNames()
 end moveController_Params
 
+getprop disabled_MoveController [displayView]
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   if gMenuTitle is empty then return true
+   put menu_GetGlobalController (gMenuTitle) into mController
+   return exists (mController) is false
+end disabled_MoveController
 
 
 --> Global | Menu | Global | Line | Menu
 -
 on menu_MoveController displayView, newProjectName
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
-   --
    put menu_GetGlobalController (gMenuTitle) into mController
    --
    ask_MoveMenu mController, gMenuTitle, newProjectName, displayView 
@@ -79,9 +85,24 @@ end menu_MoveController
 
 on menu_EditMenu displayView
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
-   --
-   menu_Edit gMenuTitle
+   if gMenuTitle is empty then
+      -- bug
+      put _SelectedMenuController (displayView) into mController
+      edit the script of mController
+   else
+      menu_Edit gMenuTitle
+   end if
 end menu_EditMenu
+
+on menu_ReindexMenu displayView
+   put _SelectedMenuController (displayView) into mController
+   --
+   menu_ReIndexController mController
+   put the result into projectArray
+   --
+   display_Data projectArray, "projectArray", "gMenuTitle"
+   display_EnvironmentMenus
+end menu_ReindexMenu
 
 on menu_FixMenuName displayView
    put _SelectedMenuController (displayView) into mController
@@ -104,6 +125,14 @@ end menu_DisplayProjectMenus
 
 on _
 end _
+
+on menu_RemoveGlobalMenu displayView
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   --
+   menu_RemoveGlobalController gMenuTitle
+   --
+   display_EnvironmentMenus
+end menu_RemoveGlobalMenu
 
 on menu_Refresh
    display_EnvironmentMenus
@@ -133,7 +162,7 @@ on _FixBadController displayView
    put the long id of stack newStackPath into mController
    -- 
    put the script_MenuTitleTableArray of mController into mTitleTableArray
-   menu_UpdateGlobalArray mController, mTitleTableArray
+   _UpdateGlobalArray mController, mTitleTableArray
    put the result into menuTitleArray
    put menu_GetGlobalArray() into gMenuArray
    --
@@ -148,3 +177,28 @@ on _FixBadController displayView
    --
    lcw_AnswerWarning "Updated gMenuArray and diplay views"
 end _FixBadController
+
+private command _UpdateGlobalArray mController, mTitleTableArray
+   global gLCW
+   menu_DeleteActiveArray
+   
+   put revRuggedId (mController) into mController
+   --
+   repeat for each key gMenuTile in mTitleTableArray
+      if word 1 of gMenuTile = "Global" and word 2 of gMenuTile = "|" then
+         put mTitleTableArray [gMenuTile] into gMenuTable
+         
+         -- menu_NormalizeTitle gMenuTile
+         put gMenuTable into gLCW ["Global Menus"][gMenuTile]["gMenuTable"]
+         put mController into gLCW ["Global Menus"][gMenuTile]["mController"]
+         
+         -- probably not really needed
+         put gMenuTable into menuTitleArray [gMenuTile]["gMenuTable"]
+         put mController into menuTitleArray [gMenuTile]["mController"]
+      end if
+   end repeat
+   --
+   return menuTitleArray
+end _UpdateGlobalArray
+
+
