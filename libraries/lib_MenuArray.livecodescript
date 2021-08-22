@@ -1,4 +1,16 @@
 ﻿script "lib_MenuArray"
+--> MetaData
+-
+copyright: David Bovill
+license: GPLv3
+name: lib_MenuArray
+type: library
+
+/*
+This library is for the set of handlers that deal with new menu array format used by widgets.
+
+In order to account for menus that are directed at targets that are not related to the objects clicked on we must use a local or global variable
+
 function fetchFromUrl jsonURL
    put url someURL into utf8JSON
    put textDecode (jsonURL, "UTF-8") into encodedJSON
@@ -10,17 +22,7 @@ command exportToUrl someArray, jsonURL
    put json_FromArray (someArray) into encodedJSON
    put textEncode (encodedJSON, "UTF-8") into decodedJSON
    put decodedJSON into url someURL
-end exportToUrl--> MetaData
--
-copyright: David Bovill
-license: GPLv3
-name: lib_MenuArray
-type: library
-
-/*
-This library is for the set of handlers that deal with new menu array format used by widgets.
-
-In order to account for menus that are directed at targets that are not related to the objects clicked on we must use a local or global variable
+end exportToUrl
 */
 
 --> Variables
@@ -29,6 +31,25 @@ local LocalArray
 
 
 --> Working on
+-
+function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target (called for every nested menu)
+   
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   
+   put the menu_Target of tObject into mTarget
+   if mTarget is empty then
+      return tObject
+   else
+      return mTarget
+   end if
+end mArray_FindMenuTarget
+
+
+--> Private
 -
 private command _ClearActiveMenuArray
    delete variable LocalArray
@@ -315,7 +336,7 @@ getprop menu_Handlers [pFast]
          break
       default
          put pFast into mTitle
-         put the script_MenuArray [mTitle] of mController into scriptMenuArray -- the way mArray works
+         -- put the script_MenuArray [mTitle] of mController into scriptMenuArray -- the way mArray works
          -- put _GetMenuHandlers (mTitle, mController) into hNames -- old and thorough
          put _SlowMenuHandlers (mController, mTitle) into hNames
    end switch
@@ -460,7 +481,7 @@ command mArray_UnMarshal @hkeyController
 end mArray_UnMarshal
 
 function menu_GetCaseParams theParams, pController
-   if pController is empty then put debug_GetCallingObject(2) into pController
+   if pController is empty then put debug_CallingObject() into pController
    --
    put word 1 of theParams into hName
    set the itemdelimiter to "_"
@@ -562,27 +583,6 @@ command mArray_Do mCommand, mTitle, pMenuTarget, pValue
    handler_Do mCommand, mController, pMenuTarget, pValue
    return the result
 end mArray_Do
-
-
---> mArray
--
-function mArray_FindMenuTarget mController, tObject
-   -- logic: controller, target
-   -- called for every nested menu - but not menu items (I think)
-   -- could optimise by only calling the menu_Target when not already done
-   
-   if exists (mController) is true then
-      put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
-   end if
-   
-   put the menu_Target of tObject into mTarget
-   if mTarget is not empty then
-      return mTarget
-   else
-      return tObject
-   end if
-end mArray_FindMenuTarget
 
 
 --> mArray | Active | Set

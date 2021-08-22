@@ -368,7 +368,7 @@ end mouse_DoubleUp
 private command _SetMouseTarget mTarget
    switch
       case mTarget = "me"
-         put debug_GetCallingObject(3) into mTarget
+         put debug_CallingObject(3) into mTarget
          set the mouse_Target of me to mTarget
          break
       case exists (mTarget)

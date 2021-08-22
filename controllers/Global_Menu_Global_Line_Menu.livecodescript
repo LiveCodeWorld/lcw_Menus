@@ -76,12 +76,23 @@ end disabled_MoveController
 
 --> Global | Menu | Global | Line | Menu
 -
-on menu_MoveController displayView, newProjectName
+on menu_Help displayView
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
    put menu_GetGlobalController (gMenuTitle) into mController
    --
-   ask_MoveMenu mController, gMenuTitle, newProjectName, displayView 
-end menu_MoveController
+   launch_ObjectHelp mController
+   if the result is empty then
+      help_CreateMenuPage gMenuTitle
+      launch_ObjectHelp mController
+   end if
+end menu_Help
+
+on menu_DisplayProjectMenus displayView
+   put _SelectedMenuController (displayView) into mController
+   put the project_Name of mController into projectName
+   --
+   display_ProjectControllers projectName
+end menu_DisplayProjectMenus
 
 on menu_EditMenu displayView
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
@@ -94,6 +105,16 @@ on menu_EditMenu displayView
    end if
 end menu_EditMenu
 
+on _
+end _
+
+on menu_FixMenuName displayView
+   put _SelectedMenuController (displayView) into mController
+   --
+   ask_FixMenuControllerStackName mController
+   put the result into newStackName
+end menu_FixMenuName
+
 on menu_ReindexMenu displayView
    put _SelectedMenuController (displayView) into mController
    --
@@ -104,28 +125,6 @@ on menu_ReindexMenu displayView
    display_EnvironmentMenus
 end menu_ReindexMenu
 
-on menu_FixMenuName displayView
-   put _SelectedMenuController (displayView) into mController
-   --
-   ask_FixMenuControllerStackName mController
-   put the result into newStackName
-   --
-   display_EnvironmentMenus
-end menu_FixMenuName
-
-on _
-end _
-
-on menu_DisplayProjectMenus displayView
-   put _SelectedMenuController (displayView) into mController
-   put the project_Name of mController into projectName
-   --
-   display_ProjectControllers projectName
-end menu_DisplayProjectMenus
-
-on _
-end _
-
 on menu_RemoveGlobalMenu displayView
    put _GetGlobalMenuTitle (displayView) into gMenuTitle
    --
@@ -133,6 +132,16 @@ on menu_RemoveGlobalMenu displayView
    --
    display_EnvironmentMenus
 end menu_RemoveGlobalMenu
+
+on _
+end _
+
+on menu_MoveController displayView, newProjectName
+   put _GetGlobalMenuTitle (displayView) into gMenuTitle
+   put menu_GetGlobalController (gMenuTitle) into mController
+   --
+   ask_MoveMenu mController, gMenuTitle, newProjectName, displayView 
+end menu_MoveController
 
 on menu_Refresh
    display_EnvironmentMenus
