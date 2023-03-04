@@ -39,7 +39,9 @@ getprop menu_CheckTarget [displayView]
 end menu_CheckTarget
 
 private function _WithinGlobalMenusTree displayView
-   put display_FindView ("Global Menus", "From Disk") into gDisplayView
+   put display_FindArrayView ("Global Menus") into gDisplayView
+   if exists (gDisplayView) is false then return false
+   --
    put the stack_Name of displayView into tName
    put the stack_Name of gDisplayView into gName 
    if tName = gName then

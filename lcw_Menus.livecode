@@ -17,7 +17,15 @@ end project_Deps
 --> Custom
 -
 command project_CustomInit
-   go invisible stack "View|Index|Simple"
+   put the filename of me into modulePath
+   set the itemdelimiter to slash
+   put "modules/View_Index_Simple/View_Index_Simple.livecode" into item -1 of modulePath
+   --
+   if the shiftkey is "Down" then
+      go stack modulePath
+   else
+      go invisible stack modulePath
+   end if
 end project_CustomInit
 
 
@@ -40,7 +48,10 @@ command lcw_Init
    set the itemdelimiter to slash
    put the effective filename of the defaultstack into lcwHomePath
    put "lcw/lcw.livecode" into item -2 to -1 of lcwHomePath
+   
    if there is a stack lcwHomePath then
       dispatch "lcw_Init" to stack lcwHomePath
+   else
+      breakpoint
    end if
 end lcw_Init

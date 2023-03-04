@@ -28,6 +28,38 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+setprop custom_Delete [pSetName] propName
+   put the long id of the target into tObject
+   custom_DeleteProperty propName, tObject, pSetName
+   put the result into propValue
+   return propValue
+end custom_Delete
+
+command custom_DeleteProperty propName, targetObject, pSetName
+   put the custompropertyset of targetObject into oSetName
+   set the custompropertyset of targetObject to pSetName
+   put the customproperties of targetObject into propArray
+   put propArray [propName] into propValue
+   put the customkeys of targetObject into cKeys
+   line_Delete propName, cKeys
+   set the customkeys of targetObject to cKeys
+   if cKeys is empty then
+      custom_DeleteSet pSetName, targetObject
+   end if
+   set the custompropertyset of targetObject to oSetName
+   return propValue
+end custom_DeleteProperty
+
+command custom_DeleteSet setName, someObject
+   put the custompropertysets of someObject into setNames
+   line_Delete setName, setNames
+   set the custompropertysets of someObject to setNames
+   return setNames
+end custom_DeleteSet
+
+
+--> Menu | Create
+-
 command module_CreateMenu moduleStackName, pGlobalMenuTitle, pControllerScript
    put the module_Folder of stack moduleStackName into moduleFolder
    --
@@ -423,28 +455,6 @@ end menu_TitleIsGlobal
 
 --> Deps
 -
-command custom_DeleteProperty propName, targetObject, pSetName
-   put the custompropertyset of targetObject into oSetName
-   set the custompropertyset of targetObject to pSetName
-   put the customproperties of targetObject into propArray
-   put propArray [propName] into propValue
-   put the customkeys of targetObject into cKeys
-   line_Delete propName, cKeys
-   set the customkeys of targetObject to cKeys
-   if cKeys is empty then
-      custom_DeleteSet pSetName, targetObject
-   end if
-   set the custompropertyset of targetObject to oSetName
-   return propValue
-end custom_DeleteProperty
-
-command custom_DeleteSet setName, someObject
-   put the custompropertysets of someObject into setNames
-   line_Delete setName, setNames
-   set the custompropertysets of someObject to setNames
-   return setNames
-end custom_DeleteSet
-
 function script_GetSuite suiteTitle, someScript
    -- get rid of
    script_SetSuiteOffsets suiteTitle, someScript, startLineNum, endLineNum

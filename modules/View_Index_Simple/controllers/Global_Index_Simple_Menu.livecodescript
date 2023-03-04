@@ -22,14 +22,6 @@ getprop menu_Target [tObject]
    return indexView
 end menu_Target
 
-getprop menuStyle_Param [indexView]
-   return the menu_Style of indexView
-end menuStyle_Param
-
-getprop menuStyle_Params
-   return "Array,Old"
-end menuStyle_Params
-
 getprop fieldAlign_Param [indexView]
    put the field_Align of indexView into fStyle
    return fStyle
@@ -121,10 +113,8 @@ on submenu_Style
    return "Global | Index | Simple | Style | Menu"
 end submenu_Style
 
-on menu_EditViewBehavior indexView
-   put the behavior of indexView into bObject
-   edit the script of bObject
-end menu_EditViewBehavior
+private on _____
+end _____
 
 on menu_EditTitleMenu indexView
    put the title_Menu of indexView into mTitles     
@@ -153,7 +143,7 @@ on menu_ChangeLineMenu indexView
    set the line_Menu of indexView to mTitle   
 end menu_ChangeLineMenu
 
-on _
+private on _
 end _
 
 on menu_FindDoubleClickHandler indexView
@@ -190,8 +180,8 @@ on menu_EditMouseTarget indexView
    end if
 end menu_EditMouseTarget
 
-on _
-end _
+private on __
+end __
 
 on menu_FindDropCommand indexView
    put the drop_Command of indexView into dropCommand
@@ -213,45 +203,39 @@ on menu_SetDropCommand displayView
    set the drop_Command of displayView to dCommand
 end menu_SetDropCommand
 
-on _
-end _
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
-on _DisplayMenuArray indexView
-   put the script_MenuArray ["Global | Index | Simple | Menu"] of indexView into mArray
+on menu_DisplayMenuArray displayView
+   put the script_MenuArray ["Global | Index | Simple | Menu"] of displayView into mArray
    display_Array mArray
-end _DisplayMenuArray
+end menu_DisplayMenuArray
 
-on _SystemWindow indexView, someBoolean
-   put the stack_Name of indexView into stackName
-   set the systemwindow of stack stackName to someBoolean
-end _SystemWindow
+private on ___
+end ___
 
-on _MenuStyle indexView, mStyle
-   set the menu_Style of indexView to mStyle
-end _MenuStyle
+on menu_EditViewBehavior indexView
+   put the behavior of indexView into bObject
+   edit the script of bObject
+end menu_EditViewBehavior
 
-on _SetStandardBehavior
-   put LocalArray ["indexView"] into indexView
-   
-   put the view_BehaviorStackName of indexView into stackName
+on menu_SetStandardBehavior displayView   
+   put the view_BehaviorStackName of displayView into stackName
    put the name of stack stackName into bObject
-   set the behavior of indexView to bObject
-end _SetStandardBehavior
-
-on _
-end _
-
-on _ShowIndexTemplate
-   put LocalArray ["indexView"] into indexView
+   --
+   set the behavior of displayView to bObject
+   --
+   if there is a stack "behavior_ViewTemplateCard" then
+      set the behavior of cd 1 of me to the name of stack "behavior_ViewTemplateCard"
+   end if
    
-   put the view_Name of indexView into viewName
+   put the card_Object of displayView into cObject
+   put the behavior of cObject into cBehavior
+   -- put the name of stack "behavior_ViewTemplateCard" into cBehavior
+   set the behavior of cObject to cBehavior
+   --
+end menu_SetStandardBehavior
+
+on menu_ShowIndexTemplate displayView   
+   put the view_Name of displayView into viewName
    put view_GetTemplateObject (viewName) into templateObject
+   --
    object_GoTo templateObject
-end _ShowIndexTemplate
+end menu_ShowIndexTemplate

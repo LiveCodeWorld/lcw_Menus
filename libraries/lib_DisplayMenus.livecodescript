@@ -11,13 +11,39 @@ See also lib_DisplayController
 */
 
 
---> Display | Events
+--> Working on
 -
-on mDoubleUp_DisplayProject arrayView, projectName
-   put the params
-end mDoubleUp_DisplayProject
+command display_EnvironmentMenus pRefreshOnly, pFilterText
+   put display_FindArrayView ("Global Menus") into displayView
+   --
+   if pRefreshOnly is true AND displayView is empty then
+      return empty -- display is not open so do nothing
+   end if
+   --
+   put menu_GetGlobalData (pFilterText) into mData
+   --
+   if pFilterText is empty then
+      put "From Disk" into sTitle
+   else
+      put pFilterText into sTitle
+   end if
+   --
+   display_Data mData, sTitle, "Global Menus", displayView
+   --
+   put the result into displayView
+   set the tool_Menus of displayView to "Menu | Global"
+   return displayView
+end display_EnvironmentMenus
 
-on mDoubleUp_EditMenuScript displayView, someLine
+function menu_ConstructFilter gMenuTitle, pItemNum
+   if pItemNum is empty then put 2 into pItemNum
+   set the itemdelimiter to "|"
+   get word 1 to -1 of item 1 to pItemNum of gMenuTitle
+   put it && "| *"  into sFilter
+   return sFilter
+end menu_ConstructFilter
+    
+on mDoubleUp_MenuGlobal displayView, someLine
    put the parent_Array ["mController"] of displayView into mController
    put the selected_Line of displayView into someKey
    --
@@ -30,9 +56,16 @@ on mDoubleUp_EditMenuScript displayView, someLine
    end switch
    --
    edit the script of mController
-end mDoubleUp_EditMenuScript
+end mDoubleUp_MenuGlobal
 
-on mDoubleUp_MenuItem displayView, mItem
+
+--> Display | Events
+-
+on mDoubleUp_ProjectArrayTreeBad arrayView, projectName
+   breakpoint
+end mDoubleUp_ProjectArrayTreeBad
+
+on mDoubleUp_MenuTree displayView, mItem
    put the title_Text of displayView into gMenuTitle
    --
    if there is not a stack gMenuTitle then
@@ -46,21 +79,11 @@ on mDoubleUp_MenuItem displayView, mItem
    hkey_Edit hKey
    --
    return displayView
-end mDoubleUp_MenuItem
+end mDoubleUp_MenuTree
 
 
 --> Display | Menus
 -
-command display_EnvironmentMenus pFilterText
-   put menu_GetGlobalData (pFilterText) into mData
-   --
-   display_Data mData, "From Disk", "Global Menus"
-   put the result into displayView
-   display_SetInteractions displayView, "Menu | Global", "mDoubleUp_EditMenuScript"
-   --
-   return displayView
-end display_EnvironmentMenus
-
 command display_MenuItems mController
    -- put the short name of mController into mControllerStackName
    -- put the script_MenuTitles of mController into mTitles
@@ -74,14 +97,15 @@ command display_MenuItems mController
    display_Data mHandlers, gMenuTitle, "Menu"
    put the result into displayView
    --
-   display_SetInteractions displayView, "Menu | Tree", "mDoubleUp_MenuItem"
+   -- display_SetInteractions displayView, "Menu | Tree", "mDoubleUp_MenuTree"
+   set the tool_Menus of displayView to "Menu | Tree"
    --
    return displayView
 end display_MenuItems
 
 command display_BadProjectArray badArray
    display_Array badArray, "Bad Project Array", "LCW Projects"
-   display_SetInteractions the result, "ProjectArray | Tree | Bad", "mDoubleUp_DisplayProject"
+   set the toll_Menus of the result to "ProjectArray | Tree | Bad"
 end display_BadProjectArray
 
 command display_BadMenuArray badMenuArray

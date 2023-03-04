@@ -23,20 +23,12 @@ command lcw_LoadCustomUserProject
    end if
 end lcw_LoadCustomUserProject
 
-command env_LoadMenus pListAll
-   put env_ListProjects (pListAll) into projectNames
-   repeat for each line projectName in projectNames
-      put project_GetFolder (projectName) into projectFolder
-      project_LoadMenus projectFolder, true
-   end repeat
-end env_LoadMenus
-
 
 --> Global | Menu | Global | Menu
 -
 on menu_Filter displayView
    put lcw_Ask ("Display filtered list of global menus?", "Atopia", displayView) into someFilter
-   display_EnvironmentMenus someFilter
+   display_EnvironmentMenus false, someFilter
 end menu_Filter
 
 on _

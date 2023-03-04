@@ -40,13 +40,107 @@ function mArray_FindMenuTarget mController, tObject
       if mTarget is not empty then return mTarget
    end if
    
-   put the menu_Target of tObject into mTarget
+   put the menu_Target [tObject] of tObject into mTarget
    if mTarget is empty then
       return tObject
    else
       return mTarget
    end if
 end mArray_FindMenuTarget
+
+
+--> mArray | Checked
+-
+function mArray_GetChecked theParams, mTitle
+   put mArray_GetActiveMenuController (mTitle) into mController
+   put mArray_GetParams() into pArray
+   --
+   put word 1 of theParams into hName
+   put item 2 of theParams into pValue
+   delete char 1 of pValue
+   delete char -1 of pValue
+   --
+   put pArray [mController][hName]["mCheckParams"] = pValue into isChecked
+   return isChecked
+end mArray_GetChecked
+
+function menu_GetChecked theParams
+   -- this only works for first level menus
+   -- need to do a recusive search fo submenus to match hKey
+   
+   _DeconstructHandlerParams theParams, hNameToFind, mTarget, hParamValue
+   
+   put mArray_GetActiveArray() into mArray
+   put keys (mArray) into indexNums
+   sort numeric indexNums
+   repeat for each line indexNum in indexNums
+      put mArray [indexNum] into itemArray
+      put itemArray ["name"] into hKeyLine
+      
+      put itemArray ["menu"] into subMenuArray
+      if subMenuArray is an array then
+         -- here we need to recurse
+         -- breakpoint
+      end if
+      
+      hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
+      --
+      if hName = hNameToFind then
+         put itemArray ["menu"] into subMenuArray
+         repeat for each key itemNum in subMenuArray
+            put subMenuArray [itemNum]["label"] into foundParamValue
+            if hParamValue = foundParamValue then
+               put subMenuArray [itemNum]["checked"] into someBoolean
+               return someBoolean
+            end if
+         end repeat
+      end if
+   end repeat
+   return false
+end menu_GetChecked
+
+function mArray_GetParams
+   return LocalArray ["Params"]
+end mArray_GetParams
+
+--> Faulty Deps | mArray | Bits
+-
+function mArray_ConstructHkey hName, mController
+   put hkey_Construct (hName, "M", mController) into hkeyController
+   mArray_Marshal hkeyController
+   return hkeyController
+end mArray_ConstructHkey
+
+function hkey_Construct hName, hType, tObject
+   if exists (tObject) is false then
+      put "Missing" into hObject
+   end if
+   replace "C" with "M" in hType
+   put hKeyLine_Construct (hName, hType, tObject) into hKeyLine
+   return hKeyLine
+end hkey_Construct
+
+command hkeyLine_Deconstruct hKeyLine, @hName, @hType, @hObject
+   put toUpper (word 1 of hKeyLine) into hType
+   put word 2 of hKeyLine into hName
+   put word 4 to -1 of hKeyLine into hObject
+   return hType && hName
+end hkeyLine_Deconstruct
+
+function hKeyLine_Construct hName, hType, tObject
+   put hType && hName into shortHkeyLine
+   if tObject is empty then return shortHkeyLine
+   
+   put hKeyLine_AddObject (shortHkeyLine, tObject) into hkeyLine
+   return hkeyLine
+end hKeyLine_Construct
+
+function hKeyLine_AddObject hkeyLine, tObject
+   -- used quite a lot
+   put revRuggedID (tObject) into hObject
+   put word 1 to 2 of hkeyLine && "of" && hObject into hKeyLine
+   return hKeyLine
+end hKeyLine_AddObject
 
 
 --> Private
@@ -77,11 +171,14 @@ private function _FastMenuHandlers mController
    -- filter hTable with "M menu_*"
    repeat for each line hLine in hTable
       switch
-         case word 1 of hLine is no "M"
+         -- case word 1 of hLine is not "M"
          case word 1 to 2 of hLine = "M submenu_Dev"
          case word 2 of hLine = "menu_Init"
             break
-         case word 1 to 2 of hLine = "M _" -- a divider
+            -- case word 1 to 2 of hLine = "M _" -- a divider
+         case word 1 to 2 of hLine begins with "M _"
+         case word 1 to 2 of hLine begins with "PM _"
+            -- a divider is a command beginning with "_"
             put "_" & CR after hNames
             break
          case hLine begins with "M submenu_"
@@ -143,7 +240,7 @@ private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursion
          case isDisabled = "delete"
             next repeat
          case hName begins with "submenu_"
-            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray
+            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
             _SetDisabled mArray, isDisabled
             break
          case hName begins with "insert_"
@@ -380,41 +477,6 @@ function menu_ToggleChecked theParams
    return toggleBoolean
 end menu_ToggleChecked
 
-function menu_GetChecked theParams
-   -- this only works for first level menus
-   -- need to do a recusive search fo submenus to match hKey
-   
-   _DeconstructHandlerParams theParams, hNameToFind, mTarget, hParamValue
-   
-   put mArray_GetActiveArray() into mArray
-   put keys (mArray) into indexNums
-   sort numeric indexNums
-   repeat for each line indexNum in indexNums
-      put mArray [indexNum] into itemArray
-      put itemArray ["name"] into hKeyLine
-      
-      put itemArray ["menu"] into subMenuArray
-      if subMenuArray is an array then
-         -- here we need to recurse
-         -- breakpoint
-      end if
-      
-      hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
-      --
-      if hName = hNameToFind then
-         put itemArray ["menu"] into subMenuArray
-         repeat for each key itemNum in subMenuArray
-            put subMenuArray [itemNum]["label"] into foundParamValue
-            if hParamValue = foundParamValue then
-               put subMenuArray [itemNum]["checked"] into someBoolean
-               return someBoolean
-            end if
-         end repeat
-      end if
-   end repeat
-   return false
-end menu_GetChecked
-
 
 --> Menu | TargetObject
 -
@@ -557,13 +619,11 @@ This is because we use "dispatch". If we use call we may get around this and try
 */
 command mArray_DoController mKey, pValue
    -- changed "dispatch" to "call" which keeps the context of the target
-   
    -- put the long id of the target into tObject
    put menu_GetTopTargetObject() into tObject
    --
    mArray_UnMarshal mKey
-   hkey_Deconstruct mKey, hName, hType, mController, hNum
-   --
+   hkeyLine_Deconstruct mKey, hName, hType, mController
    put mArray_FindMenuTarget (mController, tObject) into mTarget
    --
    hKey_Do mKey, mTarget, pValue
@@ -666,7 +726,7 @@ function mArray_FromTitleTable mTitleTable, tObject
       
       mArray_SetTopTitle mTitle
       mArray_SetActiveTitle mTitle
-      dispatch "menu_Init" to topMenuController with tObject
+      dispatch "menu_Init" to topMenuController with tObject -- top only
       
       -- insert has not been done for tables yet
       switch mType
@@ -804,7 +864,9 @@ function mArray_ListHandlerNames mArray, pNoDividers
             put "-" & CR after hNames
             break
          default
-            hkey_Deconstruct hKey, hName, hType, hObject, hNum
+            -- hkey_Deconstruct hKey, hName, hType, hObject, hNum
+            hkeyLine_Deconstruct hKey, hName, hType, hObject
+            --
             put hName & CR after hNames
       end switch
    end repeat
@@ -884,15 +946,6 @@ function mArray_GetCheckParams propLabel, mController, mTarget
 end mArray_GetCheckParams
 
 
---> mArray | Bits
--
-function mArray_ConstructHkey hName, mController
-   put hkey_Construct (hName, "M", mController) into hkeyController
-   mArray_Marshal hkeyController
-   return hkeyController
-end mArray_ConstructHkey
-
-
 --> Private
 -
 private command _DeconstructHandlerParams theParams, @hName, @firstParam, @secondParam
@@ -902,8 +955,8 @@ private command _DeconstructHandlerParams theParams, @hName, @firstParam, @secon
    put char 2 to -2 of word 1 of item 2 of theParams into secondParam
 end _DeconstructHandlerParams
 
-private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray
-   dispatch hName to mController
+private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
+   dispatch hName to mController with mTarget
    put the result into subMenuTitle
    if subMenuTitle is empty then return false
    --
@@ -918,7 +971,7 @@ private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArra
 end _SubmenuBit
 
 private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recursionArray
-   dispatch hName to mController
+   dispatch hName to mController with mTarget
    put the result into insertMenuTitle
    --
    switch
@@ -946,12 +999,15 @@ private command _AddMenuItem @mArray, hName, mController, mTarget
    put item 2 of hName into propLabel
    --
    put mArray_GetParamValues (propLabel, mController, mTarget) into paramValues
+   put paramValues into LocalArray ["Params"][mController][hName]["mParams"]
    --
    if paramValues is empty then
       put mArray_GetCheckItem (hName, mController, mTarget) into hNameIsChecked
+      put mTarget into LocalArray ["Params"][mController][hName]["hNameIsChecked"][hNameIsChecked]
       _SetPlainMenuItem mArray, hName, mController, hNameIsChecked
    else
       put mArray_GetCheckParams (propLabel, mController, mTarget) into checkParams
+      put checkParams into LocalArray ["Params"][mController][hName]["mCheckParams"]
       --
       _SetParamMenuItem mArray, propLabel, hName, mController, paramValues, checkParams
    end if

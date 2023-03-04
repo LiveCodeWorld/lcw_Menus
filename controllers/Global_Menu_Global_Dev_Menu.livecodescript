@@ -107,8 +107,7 @@ on _
 end _
 
 on menu_DisplayDefaultStackfileArray mTarget, projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   put project_ConstructStackFileArray (projectFolder) into projectStackFileArray
+   put project_ConstructStackFileArray (projectName) into projectStackFileArray
    
    display_Array projectStackFileArray, "project_ConstructStackFileArray()"
 end menu_DisplayDefaultStackfileArray
@@ -120,8 +119,7 @@ on menu_DisplaySavedStackfileArray mTarget, projectName
 end menu_DisplaySavedStackfileArray
 
 on menu_StoreProjectStackfileArray mTarget, projectName
-   put library_FetchProjectFolder (projectName) into projectFolder
-   put project_ConstructStackFileArray (projectFolder) into projectStackFileArray
+   put project_ConstructStackFileArray (projectName) into projectStackFileArray
    project_SaveValue "stackFileArray", projectStackFileArray, projectName
    
    menu_DisplayDefaultStackfileArray mTarget, projectName

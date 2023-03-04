@@ -22,6 +22,7 @@ local LocalArray
 -
 getprop menu_Target [tObject]
    put the display_View of tObject into displayView
+   put displayView into LocalArray ["displayView"]
    put the title_Text of displayView into projectName
    return projectName
 end menu_Target
@@ -65,22 +66,35 @@ on menu_ScriptOnly projectName
    set the scriptonly of stack projectName to isScriptOnly is false
 end menu_ScriptOnly
 
-on _
+private on _
 end _
+
+on menu_FixProjectStackFiles projectName
+   project_FixStackFiles projectName
+   put the result into projectArray
+   --
+   display_Project projectName, true
+   display_EnvironmentMenus true
+   display_GitRefreshProjectName projectName
+end menu_FixProjectStackFiles
 
 on menu_ProjectHelp projectName
    launch_OrCreateProject projectName
 end menu_ProjectHelp
 
-on menu_ExportMenusAndStackFiles projectName
-   put project_GetFolder (projectName) into projectFolder
+on submenu_Git
+   return "Global | GIT | Simple | Menu"
+end submenu_Git
+
+private on __
+end __
+
+on menu_EditProjectHome projectName
+   put project_GetHomeStackPath (projectName) into homeStackPath
+   go to stack homeStackPath
    --
-   project_ExportMenusAndStackFiles projectFolder
-   put the result into projectArray
-   --
-   display_ProjectLibs projectName, true
-   display_GitRefreshProjectName projectName
-end menu_ExportMenusAndStackFiles
+   edit the script of stack homeStackPath
+end menu_EditProjectHome
 
 on menu_RevealProjectFolder projectName
    put the project_Folder of stack projectName into projectFolder
@@ -92,27 +106,35 @@ on menu_Refresh projectName
    dispatch "display_GitRefreshProjectName" with projectName
 end menu_Refresh
 
-on submenu_Git
-   return "Global | GIT | Simple | Menu"
-end submenu_Git
-
-on menu_EditProjectHome projectName
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   go to stack homeStackPath
+on _LoadProjectArray projectName
+   put the project_Folder of stack projectName into projectFolder
+   project_LoadMenusAndStackFiles projectFolder
+   put the result into projectArray
    --
-   edit the script of stack homeStackPath
-end menu_EditProjectHome
+   display_Data projectArray, "Project Array", projectName
+end _LoadProjectArray
 
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
 on _ReLoadHome projectName
    put project_GetHomeStackPath (projectName) into homeStackPath
    --
    delete stack homeStackPath
    go to stack homeStackPath
-end _ReLoadHome 
+end _ReLoadHome
+
+on _TestControllers projectName
+   put LocalArray ["displayView"] into displayView
+   put the displayed_Data of displayView into dData
+   put dData ["Controllers"] into cData
+   --
+   repeat for each key stackName in cData
+      put the menu_GlobalTitle of stack stackName into gMenuTitle
+      if gMenuTitle is empty then
+         put stackName & CR after badStackNames
+      end if
+   end repeat
+   sort badStackNames
+   --
+   display_Data badStackNames, "Bad Controllers", projectName
+   put the result into dView
+end _TestControllers
+
