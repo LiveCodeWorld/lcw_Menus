@@ -104,7 +104,7 @@ on menu_ProjectViews projectName
    return empty
 end menu_ProjectViews
 
-on _
+private command _
 end _
 
 on menu_DisplayTransporters
@@ -114,6 +114,19 @@ end menu_DisplayTransporters
 -- on menu_DisplayTransportLibs
 display_TransporterLibs
 end menu_DisplayTransportLibs
+
+private command __
+end __
+
+on menu_DisplayProjectArray projectName
+   display_ProjectArray projectName, false
+   --
+   /*
+   put the project_Array of stack projectName into projectArray
+   display_Data projectArray, projectName, "project_Array"
+   put the result into dView
+   */
+end menu_DisplayProjectArray
 
 on menu_ProjectFolder projectName
    put the project_Folder of stack projectName into projectFolder

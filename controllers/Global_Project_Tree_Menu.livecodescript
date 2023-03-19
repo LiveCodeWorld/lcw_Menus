@@ -66,6 +66,10 @@ on menu_ScriptOnly projectName
    set the scriptonly of stack projectName to isScriptOnly is false
 end menu_ScriptOnly
 
+on menu_UseProject projectName
+   project_UseStackFiles projectName
+end menu_UseProject
+
 private on _
 end _
 
