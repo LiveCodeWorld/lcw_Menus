@@ -20,6 +20,85 @@ local LocalArray
 
 --> Working on
 -
+-- on selectionChanged
+-- could use custom message
+put the selected_LineNumber of me into lineNums
+dispatch "display_SelectionChanged" to me with lineNums
+end selectionChanged
+
+
+--> Events
+-
+on menuPick menuPath
+   if the menu_Style of me is "array" then
+      menu_DispatchTextPick menuPath
+   else
+      menu_SendMessage menuPath
+   end if
+end menuPick
+
+on preOpenControl
+   local headerHeight
+   _setDefaultHeight headerHeight
+   if there is a stack "behavior_ViewIndexFiles" then
+      put the name of stack "behavior_ViewIndexFiles" into bObject
+      set the behavior of stack "behavior_ViewIndexSimple" to bObject
+   end if
+   pass preOpenControl
+end preOpenControl
+
+on mouseDown
+   switch word 1 of the name of the target
+      case "button"
+         _doButtonMenu
+         break
+      case "field"
+         _doFieldDown
+         break
+   end switch
+end mouseDown
+
+on mouseUp
+   switch word 1 of the name of the target
+      case "button"
+         break
+      case "field"
+         _doFieldClick
+         break
+   end switch
+end mouseUp
+
+on mouseDoubleUp
+   put the long id of the target into tObject
+   --
+   switch word 1 of tObject
+      case "button"
+         break
+      case "field"
+         put the mouse_DoubleUp of me into mDoubleClick
+         if mDoubleClick is empty then return empty
+         
+         put the mouse_Target of me into mouseTarget
+         put the clickText into someLine
+         --
+         put the long id of me into displayView
+         if exists (mouseTarget) is true then
+            dispatch mDoubleClick to mouseTarget with displayView,someLine
+         else
+            dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
+         end if
+         return mDoubleClick
+   end switch
+end mouseDoubleUp
+
+on resizeControl
+   put the rect of me into viewRect
+   LayoutControl viewRect
+end resizeControl
+
+
+--> Props
+-
 getprop tool_Menus
    -- return the tool_Menus name = menuBit
    get the title_Menu of me
@@ -32,25 +111,6 @@ setprop tool_Menus [projectName] menuBit
    put the long id of me into displayView
    display_SetToolMenus menuBit, displayView, projectName
 end tool_Menus
-
-on menuPick menuPath
-   if the menu_Style of me is "array" then
-      menu_DispatchTextPick menuPath
-   else
-      menu_SendMessage menuPath
-   end if
-end menuPick
-
-on mouseDown
-   switch word 1 of the name of the target
-      case "button"
-         _doButtonMenu
-         break
-      case "field"
-         _doFieldDown
-         break
-   end switch
-end mouseDown
 
 private command _doButtonMenu
    put the menu_Button of me into mButton
@@ -92,6 +152,15 @@ end _doFieldDown
 
 --> Displayed
 -
+getprop meta_Data [someKey]
+   put LocalArray ["meta_Data"][someKey] into someValue
+   return someValue
+end meta_Data
+
+setprop meta_Data [someKey] someValue
+   put someValue into LocalArray ["meta_Data"][someKey]
+end meta_Data
+
 getprop displayed_Data
    put LocalArray ["displayed_Data"] into someArray
    return someArray
@@ -175,6 +244,42 @@ end drop_Target
 
 --> Coloured
 -
+getprop selected_LineColour
+   put _fieldObject() into fldObject
+   put the hilitedlines of fldObject into lineNumList
+   repeat for each line lineNum in lineNumList
+      put the textcolor of line lineNum of fldObject & CR after sLineColours
+   end repeat
+   delete char -1 of sLineColours
+   return sLineColours
+end selected_LineColour
+
+getprop line_Colour [lineNum]
+   put _fieldObject() into fldObject
+   if lineNum is empty then
+      put line 1 of the hilitedlines of fldObject into lineNum
+   end if
+   put the effective textcolor of line lineNum of fldObject into someColour
+   return someColour
+end line_Colour
+
+setprop line_Colour [lineNumList] someColour
+   -- could change to using:
+   -- put the styledText of fldObject into styledArray
+   
+   put _fieldObject() into fldObject
+   if lineNumList is empty then
+      put line 1 of the hilitedlines of fldObject into lineNumList
+   end if
+   
+   lock screen
+   repeat for each item lineNum in lineNumList
+      if lineNum is not a number then next repeat
+      set the textcolor of line lineNum of fldObject to someColour
+   end repeat
+   unlock screen
+end line_Colour
+
 getprop coloured_Lines [someColour]
    if someColour = "none" then put empty into someColour
    colour_RgbNormalise someColour
@@ -195,17 +300,27 @@ end coloured_Lines
 
 setprop coloured_Lines [someColour] someIndex
    if someColour = "none" then put empty into someColour
-   if someIndex is an array then
-      put the keys of someIndex into someIndex
-   end if
+   
    put _fieldObject() into fldObject
    put the text of fldObject into displayedIndex
    --
    lock screen
-   repeat for each line someLine in someIndex
-      put lineOffset (someLine, displayedIndex) into lineNum
-      set the textcolor of line lineNum of fldObject to someColour
-   end repeat
+   switch
+      case someIndex is empty
+         put the number of lines of displayedIndex into maxNum
+         repeat with lineNum = 1 to maxNum
+            set the textcolor of line lineNum of fldObject to someColour
+         end repeat
+         break
+      case someIndex is an array
+         put the keys of someIndex into someIndex
+      default
+         lock screen
+         repeat for each line someLine in someIndex
+            put lineOffset (someLine, displayedIndex) into lineNum
+            set the textcolor of line lineNum of fldObject to someColour
+         end repeat
+   end switch
    unlock screen
 end coloured_Lines
 
@@ -244,32 +359,6 @@ setprop coloured_Array colourArray
    unlock screen
 end coloured_Array
 
-getprop line_Colour [lineNum]
-   put _fieldObject() into fldObject
-   if lineNum is empty then
-      put line 1 of the hilitedlines of fldObject into lineNum
-   end if
-   put the textcolor of line lineNum of fldObject into someColour
-   return someColour
-end line_Colour
-
-setprop line_Colour [lineNumList] someColour
-   -- could change to using:
-   -- put the styledText of fldObject into styledArray
-   
-   put _fieldObject() into fldObject
-   if lineNumList is empty then
-      put line 1 of the hilitedlines of fldObject into lineNumList
-   end if
-   
-   lock screen
-   repeat for each item lineNum in lineNumList
-      if lineNum is not a number then next repeat
-      set the textcolor of line lineNum of fldObject to someColour
-   end repeat
-   unlock screen
-end line_Colour
-
 
 --> Migrating
 -
@@ -277,57 +366,6 @@ getprop display_View
    -- owing to this as we look to merge indexViews and arrayViews into a single view
    return the long id of me
 end display_View
-
-
---> Events
--
-on preOpenControl
-   local headerHeight
-   _setDefaultHeight headerHeight
-   if there is a stack "behavior_ViewIndexFiles" then
-      put the name of stack "behavior_ViewIndexFiles" into bObject
-      set the behavior of stack "behavior_ViewIndexSimple" to bObject
-   end if
-   pass preOpenControl
-end preOpenControl
-
-on mouseUp
-   switch word 1 of the name of the target
-      case "button"
-         break
-      case "field"
-         _doFieldClick
-         break
-   end switch
-end mouseUp
-
-on mouseDoubleUp
-   put the long id of the target into tObject
-   --
-   switch word 1 of tObject
-      case "button"
-         break
-      case "field"
-         put the mouse_DoubleUp of me into mDoubleClick
-         if mDoubleClick is empty then return empty
-         
-         put the mouse_Target of me into mouseTarget
-         put the clickText into someLine
-         --
-         put the long id of me into displayView
-         if exists (mouseTarget) is true then
-            dispatch mDoubleClick to mouseTarget with displayView,someLine
-         else
-            dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
-         end if
-         return mDoubleClick
-   end switch
-end mouseDoubleUp
-
-on resizeControl
-   put the rect of me into viewRect
-   LayoutControl viewRect
-end resizeControl
 
 
 --> Events | Props
@@ -674,15 +712,6 @@ setprop displayed_Index [someTitle] someIndex
    return the result
 end displayed_Index
 
-getprop meta_Data [someKey]
-   put LocalArray ["meta_Data"][someKey] into someValue
-   return someValue
-end meta_Data
-
-setprop meta_Data [someKey] someValue
-   put someValue into LocalArray ["meta_Data"][someKey]
-end meta_Data
-
 
 --> Title
 -
@@ -736,6 +765,9 @@ getprop top_Line
    return the selected_Line of me
 end top_Line
 
+
+--> Selected
+-
 setprop top_Line someLine
    -- for compatible with tree widget
    set the selected_Line of me to someLine
@@ -1095,7 +1127,7 @@ end header_Height
 
 setprop header_Height headerHeight
    put headerHeight into LocalArray ["headerHeight"]
-   refreshDisplay
+   LayoutControl
    return the result
 end header_Height
 

@@ -116,12 +116,19 @@ end submenu_Style
 private on _____
 end _____
 
+on menu_SetHeaderHeight indexView
+   put the header_Height of indexView into sHeight
+   put lcw_Ask ("Set the height of the header...", sHeight) into sHeight
+   set the header_Height of indexView to sHeight
+end menu_SetHeaderHeight
+
 on menu_EditTitleMenu indexView
    put the title_Menu of indexView into mTitles     
    set the itemdelimiter to tab
    repeat for each line titleLine in mTitles
       if titleLine = "-" then next repeat
       put item 1 of titleLine into mTitle
+      breakpoint
       menu_Edit mTitle
    end repeat
 end menu_EditTitleMenu
