@@ -1207,4 +1207,3 @@ private command _NormalizeMargin @someMargin, @leftM, @topM, @rightM, @bottomM
    end if
    put leftM,topM,rightM,bottomM into someMargin
 end _NormalizeMargin
-
