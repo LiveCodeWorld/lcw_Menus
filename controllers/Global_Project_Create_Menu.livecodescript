@@ -45,6 +45,21 @@ end menu_CheckTarget
 
 --> Global | Project | Create | Menu
 -
+on menu_CreateNewProject
+   project_AskCreate
+   put the result into newProjectName
+   display_Project newProjectName
+end menu_CreateNewProject
+
+on menu_CreateModule projectName
+   put lcw_Ask ("What name would you like for this module?", "View|Something") into moduleName
+   module_CreateWithObject moduleName, projectName
+   display_Project projectName
+end menu_CreateModule
+
+private command _
+end _
+
 on menu_CreateMenu projectName
    put scriptEditor_GetSelectedText() into gMenuTitle
    --
@@ -75,14 +90,8 @@ on menu_CreateProjectBehavior projectName
    card_CreateBehavior
 end menu_CreateProjectBehavior
 
-on _
-end _
-
-on menu_CreateModule projectName
-   put lcw_Ask ("What name would you like for this module?", "View|Something") into moduleName
-   module_CreateWithObject moduleName, projectName
-   display_Project projectName
-end menu_CreateModule
+private command __
+end __
 
 on menu_ExportMenusAndStackFiles projectName
    put project_GetFolder (projectName) into projectFolder
@@ -92,67 +101,9 @@ on menu_ExportMenusAndStackFiles projectName
    display_GitRefreshProjectName projectName
 end menu_ExportMenusAndStackFiles
 
-on menu_CreateNewProject
-   project_AskCreate
-   put the result into newProjectName
-   display_Project newProjectName
-end menu_CreateNewProject
-
-on _
-end _
+private command __
+end __
 
 on submenu_Dev
-   return "Dev | Menu"
+   return menu_DevTitle ("Global | Project | Create | Menu")
 end submenu_Dev
-
-
---> Dev | Menu
--
-on _CreateProjectBehavior projectName
-   put "Choose a name for your script-only behavior stack...." into someQuestion
-   put "behavior_XXX" into suggestedAnswer
-   ask_CreateProjectStack "behaviors", projectName, someQuestion, suggestedAnswer
-end _CreateProjectBehavior
-
-on _CreateModule homeStackName
-   put "Choose a name for your new module...." into someQuestion
-   put the clipboarddata ["text"] into suggestedAnswer
-   set the itemdelimiter to "|"
-   if item 1 of suggestedAnswer is not "View" then
-      put "View|Test" into suggestedAnswer
-   end if
-   put lcw_Ask (someQuestion, suggestedAnswer) into moduleStackName
-   
-   put project_GetFolder (homeStackName) into projectFolder
-   if projectFolder is empty then
-      answer warning "Cannot locate project folder!"
-      put projectFolder
-      breakpoint
-      exit to top
-   end if
-   put folder_AddShort (projectFolder, "modules") into rootModuleFolder
-   
-   project_CreateModule moduleStackName, rootModuleFolder
-end _CreateModule
-
-on _
-end _
-
-on _CreateRecentMenu projectName
-   put lcw_Ask ("What short name do you want for the Recent menu?", projectName) into shortName
-   put ide_ConstructMenuTitle ("Recent", shortName) into gMenuTitle
-   
-   ask_CreateProjectmenu projectName, gMenuTitle
-   put the result into controllerStackObject
-   --
-   edit the script of controllerStackObject
-end _CreateRecentMenu
-
-on _CreateHandlerMenu projectName
-   put lcw_Ask ("What short name do you want for the Handler menu?", projectName) into shortName
-   put ide_ConstructMenuTitle ("List", shortName) into gMenuTitle
-   
-   ask_CreateProjectmenu projectName, gMenuTitle
-   put the result into controllerStackObject
-   edit the script of controllerStackObject
-end _CreateHandlerMenu

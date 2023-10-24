@@ -49,6 +49,311 @@ function mArray_FindMenuTarget mController, tObject
 end mArray_FindMenuTarget
 
 
+--> Menu | Introspection
+-
+private function _SlowMenuHandlers mController, mTitle
+   local hNames
+   put the script of mController into someScript
+   --
+   put script_GetSuite (mTitle, someScript) into scriptLines
+   delete line 1 of scriptLines
+   -- filter scriptLines with "on *"
+   --
+   repeat for each line scriptLine in scriptLines
+      put word 1 of scriptLine into firstWord
+      put word 2 of scriptLine into hName
+      switch
+         case firstWord = "-->"
+            exit repeat
+         case hName ends with "_"
+            ## Divider is a command ending with "_"
+            put "_" & CR after hNames
+            break
+         case firstWord is not "on"
+            next repeat
+         case hName = "submenu_Dev"
+            if the shiftKey is "Down" then
+               put hName & CR after hNames
+            end if
+            break
+         case hName begins with "submenu_"
+         case hName begins with "insert_"
+         case hName begins with "menu_"
+            put hName & CR after hNames
+            break
+         default
+            -- not a menu
+      end switch
+   end repeat
+   delete char -1 of hNames
+   return hNames
+end _SlowMenuHandlers
+
+private function _FastMenuHandlers mController
+   local hNames
+   /*
+   Assumes only one menu and all named "menu_"
+   */
+   
+   put the revAvailableHandlers of mController into hTable
+   sort numeric hTable by word 3 of each
+   -- filter hTable with "M menu_*"
+   repeat for each line hLine in hTable
+      put word 1 to 2 of hLine into shortKey
+      put word 2 of hLine into hName
+      --
+      switch
+         case shortKey = "M submenu_Dev"
+            if the shiftKey is "Down" then
+               put hName & CR after hNames
+            end if
+            break
+         case hName = "menu_Init"
+            break
+         case hName ends with "_"
+            ## Divider is a command ending with "_"
+            put "_" & CR after hNames
+            break
+         case hLine begins with "M submenu_"
+         case hLine begins with "M insert_"
+         case hLine begins with "M menu_"
+            put word 2 of hLine into hName
+            put hName & CR after hNames
+            break
+         default
+            -- not a menu
+      end switch
+   end repeat
+   delete char -1 of hNames
+   return hNames
+end _FastMenuHandlers
+
+private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
+   -- this is the one place where menu drawing happens that dispatches a message
+   -- it contains the core logic and messaging order
+   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
+   
+   -- guess controller
+   put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
+   
+   -- some checks and logging
+   switch
+      case exists (newMenuController) is false
+      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
+      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
+         return false
+      default
+         -- checks passed
+   end switch
+   
+   ## Set menu_Target
+   put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
+   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
+   if targetOk is false then return false
+   
+   ## Get Handlers slow or fast
+   if the menu_IsSimple of newMenuController then
+      put _FastMenuHandlers (newMenuController) into scriptHandlers
+   else
+      put _SlowMenuHandlers (newMenuController, mTitle) into scriptHandlers
+   end if
+   
+   repeat for each line hName in scriptHandlers       
+      if hName ends with "_" then
+         _AddDivider mArray
+         next repeat
+      end if
+      
+      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
+      switch
+         case isDisabled = true -- we can delete it as right now there is no graying out
+         case isDisabled = "delete"
+            next repeat
+         case hName begins with "submenu_"
+            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
+            _SetDisabled mArray, isDisabled
+            break
+         case hName begins with "insert_"
+            _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
+            _SetDisabled mArray, isDisabled
+            break
+         default
+            _AddMenuItem mArray, hName, newMenuController, mTarget
+            _SetDisabled mArray, isDisabled
+      end switch
+   end repeat
+   return true
+end _AddScriptMenu
+
+
+--> Menu | Simple
+-
+getprop menu_IsSimple
+   return menu_GetSimple()
+end menu_IsSimple
+
+function menu_GetSimple 
+   ## Check the script (slow)
+   -- put the script_HandlerExists ["M submenu_Dev"] of the target is false into isSimple
+   put the script_MenuTitles of the target into mTitles
+   put the number of lines of mTitles = 1 into isSimple
+   return isSimple
+end menu_GetSimple
+
+
+--> Menu | Original
+-
+command menu_PopUp pMenuTitle, pLocation, pTargetObject
+   if pTargetObject is empty then put the long id of the target into pTargetObject
+   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
+   if pMenuTitle is empty then put "Menu" into pMenuTitle
+   
+   put the menu_Button of pTargetObject into mButton
+   mArray_PopUp pMenuTitle, mButton, pTargetObject
+   
+   /*
+   if the menu_Style of pTargetObject is not "array" then
+      set the menu_ButtonText of pTargetObject to pMenuTitle
+      put the result into mText
+      if mText is empty then return "false"
+      
+      put the menu_Button of pTargetObject into mButton
+      if pLocation is not a point then
+         popup mButton
+      else
+         popup mButton at pLocation
+      end if
+   end if
+   return true
+   */
+end menu_PopUp
+
+command menu_PullDown pMenuTitle, pLocation, pTargetObject
+   if pTargetObject is empty then put the long id of the target into pTargetObject
+   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
+   if pMenuTitle is empty then put "Menu" into pMenuTitle
+   
+   put the menu_Button of pTargetObject into mButton
+   mArray_PullDown pMenuTitle, mButton, pTargetObject
+   return the result
+end menu_PullDown
+
+
+--> Menu | Dispatch | Working on
+-
+on menu_Dispatch mItem
+   -- "menu_Dispatch mItem" placed in the mButton target
+   mArray_SetActiveItem mItem
+   put the long id of the target into tObject
+   switch word 1 of tObject
+      case "widget"
+         menu_DispatchPick mItem
+         break
+      default
+         menu_DispatchTextPick mItem
+   end switch
+end menu_Dispatch
+
+command menu_DispatchTextPick mItem
+   mArray_SetActiveItem mItem
+   _FindActiveItem mItem, hkeyController, paramValue   
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchTextPick
+
+command menu_DispatchPick mItem
+   local paramValue
+   
+   mArray_SetActiveItem mItem
+   set the itemdelimiter to "|"
+   put item -1 of mItem into hkeyController
+   if word 1 of hkeyController = "param" then
+      put word 2 to -1 of hkeyController into paramValue
+      put item -2 of mItem into hkeyController 
+   end if
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchPick
+
+command hKey_Do hKey, pTarget, pValue, pQuestion
+   if the optionKey is "Down" then
+      put scriptEditor_GetTop() into stackObject
+      if pQuestion is empty then
+         put "Edit script for this handler?" into pQuestion
+      end if
+      lcw_Answer pQuestion, stackObject
+      --
+      hkey_Edit hKey
+      return empty
+   end if
+   
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   handler_Do hName, hObject, pTarget, pValue
+   return the result
+end hKey_Do
+
+command handler_Do hName, hObject, pTarget, pValue
+   put hName && "pTarget,pValue" into callCommand
+   --
+   call callCommand of hObject
+   return the result
+end handler_Do
+
+
+--> mArray | Mouse
+-
+command mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   if pTargetObject is empty then
+      put the long id of the target into pTargetObject
+   end if
+   if pMenuButton is empty then
+      -- defaults to the target rather than the global menu_Button
+      put pTargetObject into pMenuButton
+   end if
+   --
+   _ClearActiveMenuArray
+   menu_SetTopTargetObject pTargetObject
+   --
+   switch word 1 of pMenuButton
+      case "button"
+         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
+         put mArray_ToText (mArray) into mText
+         --
+         set the text of pMenuButton to mText
+         --
+         -- mArray_SetActive mArray, mText, mTitle
+         return mArray
+      case "widget"
+         break
+      default
+         exit to top
+   end switch
+end mArray_MouseDown
+
+command mArray_PullDown mTitle, pMenuButton, pTargetObject
+   _SetMenuObjectDefaults pTargetObject, pMenuButton
+   --
+   mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   put the result into mArray
+   --
+   put the bottomleft of pTargetObject into popLoc
+   add 3 to item 2 of popLoc
+   --
+   popup pMenuButton at popLoc
+   return mArray
+end mArray_PullDown
+
+command mArray_PopUp mTitle, pMenuButton, pTargetObject
+   _SetMenuObjectDefaults pTargetObject, pMenuButton
+   --
+   mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   put the result into mArray
+   --
+   popup pMenuButton -- target changes
+   return mArray
+end mArray_PopUp
+
+
 --> mArray | Checked
 -
 function mArray_GetChecked theParams, mTitle
@@ -150,111 +455,6 @@ private command _ClearActiveMenuArray
    -- delete variable LocalArray ["MenuControllerInit"]
 end _ClearActiveMenuArray
 
-private function _SlowMenuHandlers mController, mTitle
-   put the script of mController into someScript
-   --
-   put script_GetSuite (mTitle, someScript) into hLines
-   filter hLines with "on *"
-   repeat for each line scriptLine in hLines
-      put word 2 of scriptLine into hName
-      put hName & CR after hNames
-   end repeat
-   delete char -1 of hNames
-   return hNames
-end _SlowMenuHandlers
-
-private function _FastMenuHandlers mController
-   -- assumes only one menu and all named "menu_"
-   put the revAvailableHandlers of mController into hTable
-   
-   sort numeric hTable by word 3 of each
-   -- filter hTable with "M menu_*"
-   repeat for each line hLine in hTable
-      switch
-         -- case word 1 of hLine is not "M"
-         case word 1 to 2 of hLine = "M submenu_Dev"
-         case word 2 of hLine = "menu_Init"
-            break
-            -- case word 1 to 2 of hLine = "M _" -- a divider
-         case word 1 to 2 of hLine begins with "M _"
-         case word 1 to 2 of hLine begins with "PM _"
-            -- a divider is a command beginning with "_"
-            put "_" & CR after hNames
-            break
-         case hLine begins with "M submenu_"
-         case hLine begins with "M insert_"
-         case hLine begins with "M menu_"
-            put word 2 of hLine into hName
-            put hName & CR after hNames
-            break
-         default
-            -- not a menu
-      end switch
-   end repeat
-   delete char -1 of hNames
-   return hNames
-end _FastMenuHandlers
-
-private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
-   -- this is the one place where menu drawing happens that dispatches a message
-   -- it contains the core logic and messaging order
-   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
-   
-   -- guess controller
-   put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
-   
-   -- some checks and logging
-   switch
-      case exists (newMenuController) is false
-      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
-      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
-         return false
-      default
-         -- checks passed
-   end switch
-   
-   -- menu_Target
-   put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
-   --
-   -- menu_CheckTarget
-   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
-   if targetOk is false then return false
-   
-   -- put the script_MenuHandlers [mTitle] of newMenuController into scriptHandlers
-   if the menu_IsSimple of newMenuController then
-      -- only one menu defned in the script
-      put _FastMenuHandlers (newMenuController) into scriptHandlers
-   else
-      put _SlowMenuHandlers (newMenuController, mTitle) into scriptHandlers
-   end if
-   --
-   repeat for each line hName in scriptHandlers       
-      if hName = "_" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
-      switch
-         case isDisabled = true -- we can delete it as right now there is no graying out
-         case isDisabled = "delete"
-            next repeat
-         case hName begins with "submenu_"
-            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
-            _SetDisabled mArray, isDisabled
-            break
-         case hName begins with "insert_"
-            _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
-            _SetDisabled mArray, isDisabled
-            break
-         default
-            _AddMenuItem mArray, hName, newMenuController, mTarget
-            _SetDisabled mArray, isDisabled
-      end switch
-   end repeat
-   return true
-end _AddScriptMenu
-
 private command _FindActiveItem mItemPath, @hkeyController, @paramValue
    put mArray_GetActiveArray() into mArray
    --
@@ -318,67 +518,6 @@ private command _SetMenuObjectDefaults @tObject, @mButton
 end _SetMenuObjectDefaults
 
 
---> Menu | Dispatch | Working on
--
-command hKey_Do hKey, pTarget, pValue, pQuestion
-   if the optionKey is "Down" then
-      put scriptEditor_GetTop() into stackObject
-      if pQuestion is empty then
-         put "Edit script for this handler?" into pQuestion
-      end if
-      lcw_Answer pQuestion, stackObject
-      --
-      hkey_Edit hKey
-      return empty
-   end if
-   
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   handler_Do hName, hObject, pTarget, pValue
-   return the result
-end hKey_Do
-
-command handler_Do hName, hObject, pTarget, pValue
-   put hName && "pTarget,pValue" into callCommand
-   --
-   call callCommand of hObject
-   return the result
-end handler_Do
-
-on menu_Dispatch mItem
-   -- "menu_Dispatch mItem" placed in the mButton target
-   mArray_SetActiveItem mItem
-   put the long id of the target into tObject
-   switch word 1 of tObject
-      case "widget"
-         menu_DispatchPick mItem
-         break
-      default
-         menu_DispatchTextPick mItem
-   end switch
-end menu_Dispatch
-
-command menu_DispatchTextPick mItem
-   mArray_SetActiveItem mItem
-   _FindActiveItem mItem, hkeyController, paramValue   
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchTextPick
-
-command menu_DispatchPick mItem
-   local paramValue
-   
-   mArray_SetActiveItem mItem
-   set the itemdelimiter to "|"
-   put item -1 of mItem into hkeyController
-   if word 1 of hkeyController = "param" then
-      put word 2 to -1 of hkeyController into paramValue
-      put item -2 of mItem into hkeyController 
-   end if
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchPick
-
-
 --> Related | Props
 -
 getprop script_MenuHandlers [mTitle]
@@ -415,10 +554,6 @@ getprop menu_Button
    put menu_GetGlobalButton() into mButton
    return mButton
 end menu_Button
-
-getprop menu_IsSimple
-   return menu_GetSimple()
-end menu_IsSimple
 
 getprop menu_Handlers [pFast]
    put the long id of the target into mController
@@ -502,36 +637,6 @@ command menu_SetTopTargetObject tObject
 end menu_SetTopTargetObject
 
 
---> Menu | Simple
--
-function menu_GetSimple
-   -- a guess at the default property for a menu
-   -- as simple menu can only have one divider
-   -- we assume that if it does not have a "M submenu_Dev" handler it is simple
-   
-   if the shiftKey is "Down" then return false
-   put mArray_GetSimple() into isSimple
-   if isSimple is not empty then return isSimple
-   --
-   put the script_HandlerExists ["M submenu_Dev"] of the target into devExists
-   if devExists then
-      return false
-   else
-      return true
-   end if
-end menu_GetSimple
-
-function mArray_GetSimple
-   global gLCW
-   return gLCW ["menu_IsSimple"] is not false
-end mArray_GetSimple
-
-command mArray_SetSimple sBoolean
-   global gLCW
-   put sBoolean is not false into gLCW ["menu_IsSimple"]
-end mArray_SetSimple
-
-
 --> mArray | Find
 -
 command mArray_Marshal @hkeyController
@@ -553,60 +658,6 @@ function menu_GetCaseParams theParams, pController
    put the hkey_CaseConditions [shortHkey] of pController into cMenuParams
    return cMenuParams
 end menu_GetCaseParams
-
-
---> mArray | Mouse
--
-command mArray_MouseDown mTitle, pMenuButton, pTargetObject
-   if pTargetObject is empty then
-      put the long id of the target into pTargetObject
-   end if
-   if pMenuButton is empty then
-      -- defaults to the target rather than the global menu_Button
-      put pTargetObject into pMenuButton
-   end if
-   --
-   _ClearActiveMenuArray
-   menu_SetTopTargetObject pTargetObject
-   --
-   switch word 1 of pMenuButton
-      case "button"
-         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
-         put mArray_ToText (mArray) into mText
-         --
-         set the text of pMenuButton to mText
-         --
-         -- mArray_SetActive mArray, mText, mTitle
-         return mArray
-      case "widget"
-         break
-      default
-         exit to top
-   end switch
-end mArray_MouseDown
-
-command mArray_PullDown mTitle, pMenuButton, pTargetObject
-   _SetMenuObjectDefaults pTargetObject, pMenuButton
-   --
-   mArray_MouseDown mTitle, pMenuButton, pTargetObject
-   put the result into mArray
-   --
-   put the bottomleft of pTargetObject into popLoc
-   add 3 to item 2 of popLoc
-   --
-   popup pMenuButton at popLoc
-   return mArray
-end mArray_PullDown
-
-command mArray_PopUp mTitle, pMenuButton, pTargetObject
-   _SetMenuObjectDefaults pTargetObject, pMenuButton
-   --
-   mArray_MouseDown mTitle, pMenuButton, pTargetObject
-   put the result into mArray
-   --
-   popup pMenuButton -- target changes
-   return mArray
-end mArray_PopUp
 
 
 --> mArray | Dispatch
@@ -647,14 +698,6 @@ end mArray_Do
 
 --> mArray | Active | Set
 -
-function mArray_GetActiveTitle
-   return LocalArray ["active_MenuTitle"]
-end mArray_GetActiveTitle
-
-command  mArray_SetActiveTitle mItem
-   put mItem into LocalArray ["active_MenuTitle"]
-end mArray_SetActiveTitle
-
 command  mArray_SetActiveItem mItem
    put mItem into LocalArray ["active_MenuItemPath"]
 end mArray_SetActiveItem
@@ -678,6 +721,12 @@ end mArray_SetActive
 function mArray_GetTopTitle
    return LocalArray ["active_TopMenuTitle"]
 end mArray_GetTopTitle
+
+function mArray_GetTopController
+   put mArray_GetTopTitle() into mTitle
+   put mArray_GetActiveMenuController (mTitle) into mController
+   return mTitle
+end mArray_GetTopController
 
 function mArray_GetActiveArray
    return LocalArray ["active_MenuArray"]
@@ -725,7 +774,7 @@ function mArray_FromTitleTable mTitleTable, tObject
       if exists (topMenuController) is false then next repeat
       
       mArray_SetTopTitle mTitle
-      mArray_SetActiveTitle mTitle
+      -- mArray_SetActiveTitle mTitle
       dispatch "menu_Init" to topMenuController with tObject -- top only
       
       -- insert has not been done for tables yet
@@ -806,7 +855,7 @@ private function _MenuLogActivated newMenuController, tObject, mTitle
    
    put LocalArray ["MenuControllerInit"][newMenuController]["mInitialised"] is true into mInitialised
    if mInitialised is not true then      
-      put someBoolean into LocalArray ["MenuControllerInit"][newMenuController]["mInitialised"] -- check recursion
+      put mInitialised into LocalArray ["MenuControllerInit"][newMenuController]["mInitialised"] -- check recursion
       
       -- for debugging
       put mTitle into LocalArray ["MenuControllerInit"][newMenuController]["mTitle"] -- to find mController from mTitle
@@ -960,7 +1009,7 @@ private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArra
    put the result into subMenuTitle
    if subMenuTitle is empty then return false
    --
-   mArray_SetActiveTitle subMenuTitle
+   -- mArray_SetActiveTitle subMenuTitle
    --
    put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
    --
@@ -985,7 +1034,7 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
          put mController into insertController
    end switch
    --
-   mArray_SetActiveTitle insertMenuTitle
+   -- mArray_SetActiveTitle insertMenuTitle
    --
    _AddMenu mArray, insertMenuTitle, insertController, tObject, mTarget, recursionArray
    return the result
@@ -1086,13 +1135,155 @@ private function _NextIndexNum mArray
    return indexNum
 end _NextIndexNum
 
-
---> Private | Basic
--
-command _AddDivider @mArray
+private command _AddDivider @mArray
    put _NextIndexNum (mArray) into indexNum
    put "-" into mArray [indexNum]["name"]
    put "-" into mArray [indexNum]["label"]
    put false into mArray [indexNum]["checked"]
    return indexNum
 end _AddDivider
+
+private command number_PadLeft @someNum, padNum
+   put "%0" & padNum & "d" into fString
+   put format (fString, someNum) into someNum
+end number_PadLeft
+
+
+--> Deps
+-
+function menu_CommandToText handlerName
+   set the itemdelimiter to "_"
+   put item 2 of handlerName into mSuffix
+   put text_SplitCaps (mSuffix) into mLine
+   return mLine
+end menu_CommandToText
+
+function text_SplitCaps someWord
+   -- was "capsSplit"
+   put 1 into charNum
+   repeat the number of chars of someWord
+      put char charNum of someWord into someChar
+      if text_StartsWithCaps(someChar) is true then
+         put space before char charNum of someWord
+         add 2 to charNum
+      else
+         add 1 to charNum
+      end if
+   end repeat
+   put text_InitialCaps(word 1 of someWord) into word 1 of someWord
+   return word 1 to -1 of someWord
+end text_SplitCaps
+
+function text_InitialCaps someText
+   repeat with wordNum = 1 to the number of words of someText
+      put tolower (word wordNum of someText) into someWord
+      put toupper (char 1 of someWord ) into char 1 of someWord
+      put someWord into word wordNum of someText
+   end repeat
+   return someText
+end text_InitialCaps
+
+function text_StartsWithCaps someText
+   put char 1 of sometext into testChar
+   put chartonum (testChar) into someCharNum
+   if someCharNum >= 97 and someCharNum <= 122 then
+      return false
+   else
+      return true
+   end if
+end text_StartsWithCaps
+
+# Parameters
+#   pObject : either a long id or a valid reference to an object.
+# Returns
+#   The "rugged" id of the object. This can be used the same as a long id,
+#   but is slightly more resistant to stuff like objects being grouped, renamed etc.
+#   The script editor uses rugged ids to store object ids when there is a chance that the object
+#   could be renamed or grouped etc. 
+function revRuggedId pObject
+   # First get the long id of our object. If pObject is a valid object reference we just get the 
+   # object's long id. If its not a valid reference, this does not always mean the object doesn't
+   # exist (because of edit group mode), in this case we assume that pObject is the long id of the object
+   # we want, and parse it directly to obtain the rugged id, without needing to refer to the actual
+   # object at all.
+   local tObject
+   if there is a pObject then
+      put the long id of pObject into tObject
+   else
+      put pObject into tObject
+      # MDW-2015-08-21: [[ bugfix_revRuggedId ]] pObject is empty when creating a new object
+      if tObject is empty then
+         put the long id of the target into tObject
+      end if
+   end if
+   
+   # Find out what the name of the stack owning the object is. We are only interested in the 
+   # stack that immediately owns the object, which could be a substack. To find this we can
+   # simply search from the front and find the first ocurrence of "of stack".
+   local tSubStack, tMainstack
+   local tStackFound
+   local tWordNumber
+   put 1 into tWordNumber
+   repeat for each word tWord in tObject
+      # The first match is always the substack, the second (and last) match is always the mainstack
+      if tWord is "stack" then
+         if tStackFound then
+            put tMainStack into tSubStack
+            put word (tWordNumber + 1) of tObject into tMainStack
+            exit repeat
+         else
+            put word (tWordNumber + 1) of tObject into tMainStack
+         end if
+         put true into tStackFound
+      end if
+      add 1 to tWordNumber
+   end repeat
+   
+   try
+      local tStack
+      if tSubStack is not empty then
+         put "stack " & tSubStack & " of " & (the name of stack (char 2 to -2 of tMainStack)) into tStack
+      else
+         put (the name of stack (char 2 to -2 of tMainStack)) into tStack
+      end if
+   catch tError
+      
+   end try
+   
+   # MW-2008-09-08: [[ Bug 7142 ]] If the hcAddressing of the stack is true, then the long id
+   #    is in a different form than this expects. Thus we temporarily fetch it while hcAddressing
+   #    is false.
+   if there is a tStack and the hcAddressing of tStack then
+      set the hcAddressing of tStack to false
+      put the long id of pObject into tObject
+      set the hcAddressing of tStack to true
+   end if
+   
+   local tType
+   put word 1 of tObject into tType
+   
+   local tId
+   if tType is "stack" then
+      # With stacks, the name is the most robust way to refer to them. We assume that the stack exists...
+      put tStack into tId
+   else if tType is "audioclip" then
+      put "audioclip id" && word 3 of tObject & " of " & tStack into tId
+   else if tType is "videoclip" then
+      put "videoclip id" && word 3 of tObject & " of " & tStack into tId
+   else
+      # With any other object, the safest thing is to return the object id and the name of its owning stack.
+      # For cards we use "card id..." for other objects "control id..". This is significant because when in
+      # edit group mode, the group being edited can be referred to as "control id.." but *not* "group id..."
+      
+      local tPrefix
+      if tType is "card" then
+         put "card" into tPrefix
+      else
+         put "control" into tPrefix
+      end if
+      put tPrefix & " id " & word 3 of tObject & " of " & tStack into tId
+   end if
+   
+   return tId
+end revRuggedId
+

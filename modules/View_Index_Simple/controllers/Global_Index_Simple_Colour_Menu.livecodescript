@@ -1,7 +1,7 @@
 ﻿script "Global | Index | Simple | Colour | Menu"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: Global | Index | Simple | Colour | Menu
 type: controller
@@ -18,8 +18,9 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- called once for each menu
-   return the display_View of tObject
+   put the index_View of tObject into dView
+   -- put the display_View of tObject into dView
+   return dView
 end menu_Target
 
 getprop menu_CheckTarget [mTarget]

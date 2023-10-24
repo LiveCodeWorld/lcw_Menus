@@ -33,6 +33,89 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 
 --> Working on
 -
+command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
+   -- updated to use "call"
+   menu_DeconstructPath mPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType -- look up in array
+   if the result is false then
+      display_DebugHistory "Can't menu_DeconstructPath"
+      return empty
+   end if
+   if exists (mController) is false then breakPoint
+   
+   if exists (pMenuTarget) then
+      menu_SetItemTargetOveride mPath, pMenuTarget -- not sure we are using this any more ?
+      put pMenuTarget into mTarget
+   else
+      put menu_TargetFromGlobal (mPath) into mTarget
+   end if
+   
+   menu_SetSentPath mPath -- everything can be derived from that
+   menu_SetTitlePath mTitlePath     
+   
+   if the menu_OptionEdit of the target is true then
+      -- dispatching in case "lib_MenuEdit" is not present"
+      dispatch "menu_EditMenuItem" with pigeon,mController,mTarget
+   else
+      put token 1 of pigeon into mCommand
+      
+      put mCommand && "mTarget,subMenuPath" into callCommand
+      if exists (mController) then
+         try
+            call callCommand of mController
+            put the result into tResult
+         catch errorParameter
+            -- mController does not contain callCommand
+            edit the script of mController
+            put mCommand
+            --
+            set the menu_Update of mController to true
+            --
+            lcw_Notify "Updated menu in case it needed one :)"
+         end try
+      else
+         breakpoint
+      end if
+   end if
+   send "menu_DeleteActiveArray" to mController in 2 ticks
+end menu_SendMessage
+
+setprop menu_ButtonText [pMenuTarget] mTitleTable
+   display_DebugHistory "Can't find menu_FindController"
+   breakpoint
+   -- was "menu_TextFromTitle"
+   put the long id of the target into tObject
+   set the itemdelimiter to tab
+   put item 1 of line 1 of mTitleTable into mTopTitle
+   if mTopTitle is empty then 
+      put the menu_Title of tObject into mTopTitle
+   end if
+   --
+   put menu_FindController (tObject, mTopTitle) into mTopController
+   put mArray_FindMenuTarget (mTopController, tObject) into mTarget
+   --
+   menu_DeleteActiveArray
+   menu_SetTopTargetObject tObject
+   menu_SetTopController mTopController
+   
+   put menu_GetTextFromTitleTable (mTitleTable, tObject, pMenuTarget) into mText
+   menu_SetActiveText mText 
+   if mText is not empty then
+      put the menu_Button of tObject into mButton
+      if mButton is empty then return empty 
+      set the text of mButton to mText
+   end if
+   return mText
+end menu_ButtonText
+
+getprop menu_CheckTarget [mTarget]
+   /*
+   This is a default sent by  "menu_ConvertTable" 
+   Usually - all you want to do is check that the topMenuTarget exists.
+   But it could be a file or some other non-Rev structure.
+   */
+   return true
+end menu_CheckTarget
+
 getprop view_ToolMenu [pItems]
    -- complicaated and broken?
    put the long id of the target into tObject
@@ -155,57 +238,6 @@ This will mess up the menu functioning.
 Any new refactoring should be more robust, and tolerate this.
 */
 
-command menu_PopUp pMenuTitle, pLocation, pTargetObject
-   if pTargetObject is empty then put the long id of the target into pTargetObject
-   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
-   if pMenuTitle is empty then put "Menu" into pMenuTitle
-   
-   if the menu_Style of pTargetObject is "array" then
-      put the menu_Button of pTargetObject into mButton
-      mArray_PopUp pMenuTitle, mButton, pTargetObject
-   else
-      set the menu_ButtonText of pTargetObject to pMenuTitle
-      put the result into mText
-      if mText is empty then return "false"
-      
-      put the menu_Button of pTargetObject into mButton
-      if pLocation is not a point then
-         popup mButton
-      else
-         popup mButton at pLocation
-      end if
-   end if
-   return true
-end menu_PopUp
-
-command menu_PullDown pMenuTitle, pLocation, pTargetObject
-   if pTargetObject is empty then put the long id of the target into pTargetObject
-   if pMenuTitle is empty then put the menu_Title of pTargetObject into pMenuTitle
-   if pMenuTitle is empty then put "Menu" into pMenuTitle
-   
-   if the menu_Style of pTargetObject is "array" then
-      put the menu_Button of pTargetObject into mButton
-      mArray_PullDown pMenuTitle, mButton, pTargetObject
-   else
-      set the menu_ButtonText of pTargetObject to pMenuTitle
-      put the result into mText
-      if mText is empty then
-         return "false"
-      end if
-      
-      put the menu_Button of pTargetObject into mButton
-      if exists (mButton) is false then return false
-      
-      if pLocation is not a point then
-         put the bottomleft of pTargetObject into pLocation
-         add 3 to item 2 of pLocation
-      end if
-      if exists (mButton) is false then return false
-      popup mButton at pLocation
-      return true
-   end if
-end menu_PullDown
-
 command menu_MouseDown pMenuTitleTable, pTargetObject
    if exists(pTargetObject) is false then put the long id of the target into pTargetObject
    if pMenuTitleTable is empty then put the menu_Title of pTargetObject into pMenuTitleTable
@@ -215,68 +247,6 @@ command menu_MouseDown pMenuTitleTable, pTargetObject
    if mText is empty then return "false"
    return mText
 end menu_MouseDown
-
-command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
-   -- updated to use "call"
-   menu_DeconstructPath mPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType -- look up in array
-   if the result is false then return empty
-   if exists (mController) is false then breakPoint
-   
-   if exists (pMenuTarget) then
-      menu_SetItemTargetOveride mPath, pMenuTarget -- not sure we are using this any more ?
-      put pMenuTarget into mTarget
-   else
-      put menu_TargetFromGlobal (mPath) into mTarget
-   end if
-   
-   menu_SetSentPath mPath -- everything can be derived from that
-   menu_SetTitlePath mTitlePath     
-   
-   if the menu_OptionEdit of the target is true then
-      -- dispatching in case "lib_MenuEdit" is not present"
-      dispatch "menu_EditMenuItem" with pigeon,mController,mTarget
-   else
-      put token 1 of pigeon into mCommand
-      /*
-      -- put token 2 of pigeon into firstParamName
-      -- put token 4 of pigeon into secondParamName
-      dispatch mCommand to mController with mTarget, subMenuPath
-      switch it
-         case "handled"
-            
-            break
-         case "unhandled"
-            if exists (mController) then
-            else
-               breakpoint
-            end if
-            break
-         case "passed"
-            
-            break
-      end switch
-      */
-      
-      put mCommand && "mTarget,subMenuPath" into callCommand
-      if exists (mController) then
-         try
-            call callCommand of mController
-            put the result into tResult
-         catch errorParameter
-            -- mController does not contain callCommand
-            edit the script of mController
-            put mCommand
-            --
-            set the menu_Update of mController to true
-            --
-            lcw_Notify "Updated menu in case it needed one :)"
-         end try
-      else
-         breakpoint
-      end if
-   end if
-   send "menu_DeleteActiveArray" to mController in 2 ticks
-end menu_SendMessage
 
 command lcw_CreateMenuButton pProjectName
    -- this should be part of the new script-only  menu library 
@@ -298,7 +268,8 @@ command lcw_CreateMenuButton pProjectName
    menu_SetButtonStyle mButton
    
    put "on menuPick menuPath" into someScript
-   put CR & "   menu_SendMessage menuPath" after someScript
+   -- put CR & "   menu_SendMessage menuPath" after someScript
+   put CR & "   menu_DispatchTextPick menuPath" after someScript
    put CR & "end menuPick" after someScript
    
    set the script of mButton to someScript
@@ -435,41 +406,6 @@ getprop menu_DataArray
    put the customproperties ["menu_Table"] of the target into mTitleTableArray
    return mTitleTableArray
 end menu_DataArray
-
-getprop menu_CheckTarget [mTarget]
-   /*
-   This is a default sent by  "menu_ConvertTable" 
-   Usually - all you want to do is check that the topMenuTarget exists.
-   But it could be a file or some other non-Rev structure.
-   */
-   return true
-end menu_CheckTarget
-
-setprop menu_ButtonText [pMenuTarget] mTitleTable
-   -- was "menu_TextFromTitle"
-   put the long id of the target into tObject
-   set the itemdelimiter to tab
-   put item 1 of line 1 of mTitleTable into mTopTitle
-   if mTopTitle is empty then 
-      put the menu_Title of tObject into mTopTitle
-   end if
-   --
-   put menu_FindController (tObject, mTopTitle) into mTopController
-   put mArray_FindMenuTarget (mTopController, tObject) into mTarget
-   --
-   menu_DeleteActiveArray
-   menu_SetTopTargetObject tObject
-   menu_SetTopController mTopController
-   
-   put menu_GetTextFromTitleTable (mTitleTable, tObject, pMenuTarget) into mText
-   menu_SetActiveText mText 
-   if mText is not empty then
-      put the menu_Button of tObject into mButton
-      if mButton is empty then return empty 
-      set the text of mButton to mText
-   end if
-   return mText
-end menu_ButtonText
 
 getprop menu_OptionEdit
    put the optionkey is "Down" into someBoolean

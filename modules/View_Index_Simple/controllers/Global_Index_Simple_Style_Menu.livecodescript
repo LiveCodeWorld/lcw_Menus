@@ -1,7 +1,7 @@
 ﻿script "Global | Index | Simple | Style | Menu"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: Global | Index | Simple | Style | Menu
 type: controller
@@ -18,25 +18,61 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- called once for each menu
    return the display_View of tObject
 end menu_Target
 
-getprop menu_CheckTarget [mTarget]
-   -- use to do initialisation
-   pass menu_CheckTarget
-end menu_CheckTarget
+getprop fieldStyle_Param [indexView]
+   put the field_Style of indexView into fStyle
+   return fStyle
+end fieldStyle_Param
+
+getprop fieldStyle_Params [indexView]
+   if exists (indexView) is false then return empty
+   put the field_Styles of indexView into fStyles
+   return fStyles
+end fieldStyle_Params
+
+getprop fieldAlign_Param [indexView]
+   put the field_Align of indexView into fStyle
+   return fStyle
+end fieldAlign_Param
+
+getprop fieldAlign_Params [indexView]
+   if exists (indexView) is false then return empty
+   put the field_Aligns of indexView into fStyles
+   return fStyles
+end fieldAlign_Params
+
+getprop dontWrap_Param [indexView]
+   put the dont_Wrap of indexView into someBoolean
+   return someBoolean
+end dontWrap_Param
+
+getprop dontWrap_Params
+   return "true,false"
+end dontWrap_Params
+
+getprop setMenuTitle_Params
+   return "Card,Button,Tools,-,Ask"
+end setMenuTitle_Params
+
+getprop setMenuTitle_Param [indexView]
+   put the menu_Controller of indexView into someObject
+   switch someObject
+      case the card_Object of indexView
+         return "Card"
+      case the menu_Button of indexView
+         return "Button"
+      case menu_GetGlobalController ("Global | Index | Simple | Menu")
+         return "Tools"
+      default
+         return "Ask"
+   end switch
+end setMenuTitle_Param
 
 
 --> Global | Index | Simple | Style | Menu
 -
-on menu_EditViewScript indexView
-   edit the script of indexView
-end menu_EditViewScript
-
-on _
-end _
-
 on menu_FieldStyle indexView, fStyle
    set the field_Style of indexView to fStyle
 end menu_FieldStyle
@@ -54,7 +90,7 @@ on menu_InspectField indexView
    display_ObjectProperties indexField
 end menu_InspectField
 
-on _
+private on _
 end _
 
 on menu_SetMyName indexView

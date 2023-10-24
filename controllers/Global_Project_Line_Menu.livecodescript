@@ -96,7 +96,22 @@ end _
 return "Global | Modules | Tree | Line | Menu"
 end submenu_ModuleTools
 
+on menu_BringHere
+   put LocalArray ["displayView"] into displayView
+   put the stack_Name of displayView into dStackName
+   put _GetStackName() into stackName
+   --
+   put the mouseloc into gLoc
+   put the right of stack dStackName into dRight
+   put dRight into item 1 of gLoc
+   --
+   set the topleft of stack stackName to gLoc
+end menu_BringHere
+
 on menu_Go
    put _GetStackName() into stackName
    go to stack stackName
+   show stack stackName
+   --
+   menu_BringHere
 end menu_Go

@@ -42,7 +42,7 @@ getprop checked_ScriptOnly [projectName]
    return isScriptOnly
 end checked_ScriptOnly
 
-getprop disabled_DisplayGitStatus
+getprop disabled_DisplayGitStatus [projectName]
    if env_ProjectIsActive ("lcw_GIT") is true then
       return false
    else
@@ -61,18 +61,6 @@ on menu_StartProject projectName, someBoolean
    end if
 end menu_StartProject
 
-on menu_ScriptOnly projectName
-   put the scriptonly of stack projectName into isScriptOnly
-   set the scriptonly of stack projectName to isScriptOnly is false
-end menu_ScriptOnly
-
-on menu_UseProject projectName
-   project_UseStackFiles projectName
-end menu_UseProject
-
-private on _
-end _
-
 on menu_FixProjectStackFiles projectName
    project_FixStackFiles projectName
    put the result into projectArray
@@ -82,16 +70,8 @@ on menu_FixProjectStackFiles projectName
    display_GitRefreshProjectName projectName
 end menu_FixProjectStackFiles
 
-on menu_ProjectHelp projectName
-   launch_OrCreateProject projectName
-end menu_ProjectHelp
-
-on submenu_Git
-   return "Global | GIT | Simple | Menu"
-end submenu_Git
-
-private on __
-end __
+private on _
+end _
 
 on menu_EditProjectHome projectName
    put project_GetHomeStackPath (projectName) into homeStackPath
@@ -105,40 +85,17 @@ on menu_RevealProjectFolder projectName
    finder_Reveal projectFolder
 end menu_RevealProjectFolder
 
-on menu_Refresh projectName
-   display_Project projectName
-   dispatch "display_GitRefreshProjectName" with projectName
-end menu_Refresh
+on submenu_Git
+   return "Global | GIT | Simple | Menu"
+end submenu_Git
 
-on _LoadProjectArray projectName
-   put the project_Folder of stack projectName into projectFolder
-   project_LoadMenusAndStackFiles projectFolder
-   put the result into projectArray
-   --
-   display_Data projectArray, "Project Array", projectName
-end _LoadProjectArray
+private on ___
+end ___
 
-on _ReLoadHome projectName
-   put project_GetHomeStackPath (projectName) into homeStackPath
-   --
-   delete stack homeStackPath
-   go to stack homeStackPath
-end _ReLoadHome
+on menu_ProjectHelp projectName
+   launch_OrCreateProject projectName
+end menu_ProjectHelp
 
-on _TestControllers projectName
-   put LocalArray ["displayView"] into displayView
-   put the displayed_Data of displayView into dData
-   put dData ["Controllers"] into cData
-   --
-   repeat for each key stackName in cData
-      put the menu_GlobalTitle of stack stackName into gMenuTitle
-      if gMenuTitle is empty then
-         put stackName & CR after badStackNames
-      end if
-   end repeat
-   sort badStackNames
-   --
-   display_Data badStackNames, "Bad Controllers", projectName
-   put the result into dView
-end _TestControllers
-
+on submenu_Dev
+   return menu_DevTitle ("Global | Project | Tree | Menu")
+end submenu_Dev

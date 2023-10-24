@@ -9,6 +9,14 @@ deps: lib_FindHkey
 
 /*
 This library enables menu editing when present.
+
+function mArray_GetActiveTitle
+   return LocalArray ["active_MenuTitle"]
+end mArray_GetActiveTitle
+
+command mArray_SetActiveTitle mItem
+   put mItem into LocalArray ["active_MenuTitle"]
+end mArray_SetActiveTitle
 */
 
 
@@ -22,20 +30,19 @@ command menu_EditItem gMenuTitle, handlerName
 end menu_EditItem
    
 command menu_Edit pMenuTitle
-   -- should use "script_ScrollToLine"
-   
-   if pMenuTitle is empty then
-      display_DebugHistory "gMenuTitle is Empty"
-      breakpoint
-      return empty
-   end if
+   -- if pMenuTitle is empty  we assume we are looking for top title
    
    set the itemdelimiter to "|"
    if word 1 to -1 of item 1 of pMenuTitle is "Global" then
       put menu_GetGlobalController (pMenuTitle) into mController
    else if pMenuTitle is empty then
+      -- put mArray_GetActiveTitle() into pMenuTitle
+      -- put menu_ControllerFromTitlePath (pMenuTitle) into mController
+      -- put mArray_GetActiveMenuController (pMenuTitle) into mController
+      
+      ## Assume it is the top title
       put mArray_GetTopTitle() into pMenuTitle
-      put menu_ControllerFromTitlePath (pMenuTitle) into mController
+      put menu_GetGlobalController (pMenuTitle) into mController
    else
       put menu_ControllerFromTitlePath (pMenuTitle) into mController
    end if

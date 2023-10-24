@@ -28,6 +28,146 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+function menu_CreateTitle pMenuTitle, pDevBit
+   put the long name of target into mController
+   --
+   if pMenuTitle is empty then
+      put line 1 of the script_MenuTitles of mController into pMenuTitle
+   end if
+   if pMenuTitle is empty then
+      breakpoint
+      return empty
+   end if
+   
+   ## Add Dev Bit
+   if pDevBit is not empty then
+      put pDevBit into word -1 of pMenuTitle
+   end if
+   
+   put menu_GetGlobalController (pMenuTitle) into testController
+   if exists (testController) then
+      return pMenuTitle
+   else
+      put menu_GetTopTargetObject() into displayView
+      lcw_Answer "Create Developer menu '[[pMenuTitle]]'?", displayView, pMenuTitle
+      
+      put the stack_Folder of mController into mFolder
+      menu_CreateScriptOnlyStack pMenuTitle, mFolder
+      put the result into mController
+      
+      if exists (mController) is false then breakpoint
+      edit the script of mController
+      --
+      return pMenuTitle
+   end if
+end menu_CreateTitle
+
+function menu_DevTitle pMenuTitle
+   return menu_CreateTitle (pMenuTitle, "Dev | Menu")
+   
+   /*
+   put the long name of target into mController
+   --
+   if pMenuTitle is empty then
+      put line 1 of the script_MenuTitles of mController into pMenuTitle
+      -- put the script_MenuTitleAbove of me into pMenuTitle
+      -- put mArray_GetActiveMenuController (pMenuTitle) into mController
+   end if
+   
+   if pMenuTitle is empty then
+      breakpoint
+      return empty
+   end if
+   
+   ## Add Dev Bit
+   put "Dev | Menu" into word -1 of pMenuTitle
+   
+   put menu_GetGlobalController (pMenuTitle) into testController
+   if exists (testController) then
+      return pMenuTitle
+   else
+      put menu_GetTopTargetObject() into displayView
+      lcw_Answer "Create Developer menu '[[pMenuTitle]]'?", displayView, pMenuTitle
+      
+      put the stack_Folder of mController into mFolder
+      menu_CreateScriptOnlyStack pMenuTitle, mFolder
+      put the result into mController
+      
+      if exists (mController) is false then breakpoint
+      edit the script of mController
+      --
+      return pMenuTitle
+   end if
+   */
+end menu_DevTitle
+
+function controller_ConstructMenuScript mTitle
+   if mTitle ends with "| Dev | Menu" then
+      -- must not have "on submenu_Dev" handler to avoid recusion
+      put scaffold_GetTemplate ("Global Dev Menu Template") into menuScriptTemplate
+   else
+      put scaffold_GetTemplate ("Global Menu Template") into menuScriptTemplate
+   end if
+   put mTitle into controllerName
+   put lcw_GetAuthor() into authorName
+   put merge (menuScriptTemplate) into controllerScript
+   return controllerScript
+end controller_ConstructMenuScript
+
+private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath
+   /*
+   There should be no existing stack mName in memory.
+   The folder should exist
+   There should be no existing file mControllerPath
+   */
+   
+   if exists (stack mName) then
+      breakpoint
+      exit to top
+   end if
+   
+   if there is not a folder mFolder then
+      breakpoint
+      exit to top
+   end if
+   
+   if there is a file mControllerPath then
+      breakpoint
+      exit to top
+   end if
+end _CheckCreateScriptOnlyStack
+
+command menu_CreateScriptOnlyStack mName, mFolder, pControllerScript
+   /*
+   For creating a script only menu in a folder you know
+   */
+   
+   ## Construct stack path
+   put project_NameToShortFolder (mName) & ".livecodescript" into shortFile -- would have been better to leave plain?
+   put mFolder & shortFile into mControllerPath
+   
+   ## Checks
+   _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath
+   
+   ## Set the default script metadata
+   if pControllerScript is empty then put controller_ConstructMenuScript (mName) into pControllerScript
+   
+   ## Create menu stack
+   create script only stack mName -- revIDENewScriptOnlyStackWithScript pName, pScript
+   set the filename of stack mName to mControllerPath
+   set the script of stack mName to pControllerScript
+   save stack mName
+   
+   ## Add to stackfiles
+   set the stack_IsKnown of stack mName to true -- this also saves the stack
+   
+   ## Reindex
+   put the name of stack mName into mController
+   menu_ReIndexController mController
+   
+   return mController
+end menu_CreateScriptOnlyStack
+
 setprop custom_Delete [pSetName] propName
    put the long id of the target into tObject
    custom_DeleteProperty propName, tObject, pSetName
@@ -117,7 +257,7 @@ command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControl
    project_CreateStack moduleOrProjectFolder, gMenuTitle, "controllers", "controller", pControllerScript, false
    put the result into controllerStackPath
    --
-   save stack controllerStackPath 
+   -- save stack controllerStackPath -- already saved
    put the name of stack controllerStackPath into mController
    --
    menu_ReIndexController mController
