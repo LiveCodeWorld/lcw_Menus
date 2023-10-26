@@ -19,8 +19,10 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- return display_MenuTarget(tObject)
-   return the display_View of tObject
+   put the display_View of tObject into displayView
+   put displayView into LocalArray ["displayView"]
+   put the title_Text of displayView into projectName
+   return projectName
 end menu_Target
 
 

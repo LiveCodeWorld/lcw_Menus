@@ -65,31 +65,31 @@ end disabled_Behavior
 
 --> Global | Project | Line | Menu
 -
-on submenu_Controller
+on insert_Controller
    return _GetNewMenu ("Controllers")
-end submenu_Controller
+end insert_Controller
 
-on submenu_Library
+on insert_Library
    return _GetNewMenu ("Lib")
-end submenu_Library
+end insert_Library
 
-on submenu_Model
+on insert_Model
    return _GetNewMenu ("Model")
-end submenu_Model
+end insert_Model
 
-on submenu_Module
+on insert_Module
    return _GetNewMenu ("Module")
-end submenu_Module
+end insert_Module
 
-on submenu_View
+on insert_View
    return _GetNewMenu ("View")
-end submenu_View
+end insert_View
 
-on submenu_Behavior
+on insert_Behavior
    return _GetNewMenu ("Behavior")
-end submenu_Behavior
+end insert_Behavior
 
-on _
+private command _
 end _
 
 -- on submenu_ModuleTools
