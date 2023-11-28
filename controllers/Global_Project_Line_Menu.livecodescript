@@ -96,6 +96,14 @@ end _
 return "Global | Modules | Tree | Line | Menu"
 end submenu_ModuleTools
 
+on menu_GoAndShow
+   put _GetStackName() into stackName
+   go to stack stackName
+   show stack stackName
+   --
+   menu_BringHere
+end menu_GoAndShow
+
 on menu_BringHere
    put LocalArray ["displayView"] into displayView
    put the stack_Name of displayView into dStackName
@@ -107,11 +115,3 @@ on menu_BringHere
    --
    set the topleft of stack stackName to gLoc
 end menu_BringHere
-
-on menu_Go
-   put _GetStackName() into stackName
-   go to stack stackName
-   show stack stackName
-   --
-   menu_BringHere
-end menu_Go

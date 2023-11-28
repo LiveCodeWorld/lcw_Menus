@@ -7,7 +7,7 @@ type: behavior
 version: 0.1
 
 /*
-An additional behavior to add fetures to "behavior_ViewIndexSimple"
+An additional behavior to add features to "behavior_ViewIndexSimple"
 */
 
 

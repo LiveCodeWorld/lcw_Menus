@@ -23,10 +23,6 @@ getprop menu_Target [tObject]
    return the display_View of tObject
 end menu_Target
 
-getprop menu_IsSimple
-   return true
-end menu_IsSimple
-
 
 --> Global | Index | Simple | Dev | Menu
 -

@@ -32,6 +32,132 @@ local LocalArray
 
 --> Working on
 -
+private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
+   -- bug: can recurse
+   dispatch hName to mController with mTarget
+   put the result into subMenuTitle
+   if subMenuTitle is empty then return false
+   --
+   -- mArray_SetActiveTitle subMenuTitle
+   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
+   put menu_CommandToText (hName) into mLabel
+   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
+   --
+   return true
+end _SubmenuBit
+
+private function _GetNewMenuController tObject, mTitle, mController
+   -- logic: global, controller (overkill logic)
+   
+   switch
+      case word 1 of mTitle is "Global"
+         -- prioritize global Menu
+         put menu_GetGlobalController (mTitle) into gMenuController
+         
+         # Simple Recursion check hack
+         if _SimpleRecursionCheck (mController, mTitle) is true then
+            -- Not sure what is going on with recursion checking in general
+            return empty
+         end if
+         
+         if exists (gMenuController) is true then
+            return gMenuController
+         else
+            return empty
+         end if
+         break
+      case exists (mController)
+         -- next the controller
+         put the menu_Controller [tObject] of mController into newMenuController -- overkill logic?
+         if newMenuController is empty then
+            return mController
+         else
+            -- overriden with a getprop in the controller
+            return newMenuController
+         end if
+         break
+      default
+         -- mController does not exist and it's not global
+         display_DebugHistory
+         breakpoint
+         return empty
+   end switch
+end _GetNewMenuController
+
+private function _SimpleRecursionCheck mController, mTitle
+   put mArray_GetActiveControllerArray() into mControllerArray
+   put mControllerArray [mController] into testArray
+   return testArray is an array
+end _SimpleRecursionCheck
+
+private function _RecursionCheck @recursionArray, tObject, mController, mTitle
+   put recursionArray [mController][mTitle] into testObject
+   if testObject is not empty then
+      -- already indexed. Don't allow a menu to be there twice.
+      return false
+   else
+      put tObject into recursionArray [mController][mTitle]
+      return true
+   end if
+end _RecursionCheck
+
+private function _GetTopController mTitle, tObject
+   put menu_GetGlobalController (mTitle) into gMenuController
+   if exists (gMenuController) is true then return gMenuController
+   
+   -- check the local context (assumes global default can return empty)
+   put the menu_Controller [mTitle] of tObject into mController
+   if exists (mController) is true then return mController
+   
+   return tObject
+end _GetTopController
+
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActiveItem pMenuArray, mItem, hkeyController, paramValue   
+   mArray_DoController hkeyController, paramValue
+   return the result
+end menu_DispatchTextPick
+
+private command mArray_FindActiveItem mArray, mItemPath, @hkeyController, @paramValue
+   set the itemdelimiter to "|"
+   put mItemPath into subItemPath
+   repeat the number of items of mItemPath
+      put item 1 of subItemPath into itemText
+      put _FindItemArray (mArray, itemText) into nextItemArray
+      --
+      if nextItemArray is not an array then
+         -- was the last one -- probably because itemText caontained a param like "Hello|World"
+         exit repeat
+      else
+         put nextItemArray into itemArray
+      end if
+      
+      delete item 1 of subItemPath
+      --
+      put itemArray ["menu"] into subMenuArray
+      if subMenuArray is an array then
+         -- do we need to check that mItemPath is not emmpty?
+         put itemArray ["name"] into hkeyController
+         put subMenuArray into mArray
+      else
+         exit repeat -- at end (no more submenus)
+      end if
+   end repeat
+   --
+   put itemArray ["name"] into itemName
+   if word 1 of itemName is "param" then
+      put word 2 to -1 of itemName into paramValue
+   else
+      put itemName into hkeyController
+      put subItemPath into paramValue -- should be empty unless parramm contains "|"
+   end if
+end mArray_FindActiveItem
+
 function mArray_FindMenuTarget mController, tObject
    -- logic: controller, target (called for every nested menu)
    
@@ -51,44 +177,6 @@ end mArray_FindMenuTarget
 
 --> Menu | Introspection
 -
-private function _SlowMenuHandlers mController, mTitle
-   local hNames
-   put the script of mController into someScript
-   --
-   put script_GetSuite (mTitle, someScript) into scriptLines
-   delete line 1 of scriptLines
-   -- filter scriptLines with "on *"
-   --
-   repeat for each line scriptLine in scriptLines
-      put word 1 of scriptLine into firstWord
-      put word 2 of scriptLine into hName
-      switch
-         case firstWord = "-->"
-            exit repeat
-         case hName ends with "_"
-            ## Divider is a command ending with "_"
-            put "_" & CR after hNames
-            break
-         case firstWord is not "on"
-            next repeat
-         case hName = "submenu_Dev"
-            if the shiftKey is "Down" then
-               put hName & CR after hNames
-            end if
-            break
-         case hName begins with "submenu_"
-         case hName begins with "insert_"
-         case hName begins with "menu_"
-            put hName & CR after hNames
-            break
-         default
-            -- not a menu
-      end switch
-   end repeat
-   delete char -1 of hNames
-   return hNames
-end _SlowMenuHandlers
-
 private function _FastMenuHandlers mController
    local hNames
    /*
@@ -152,11 +240,7 @@ private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursion
    if targetOk is false then return false
    
    ## Get Handlers slow or fast
-   if the menu_IsSimple of newMenuController then
-      put _FastMenuHandlers (newMenuController) into scriptHandlers
-   else
-      put _SlowMenuHandlers (newMenuController, mTitle) into scriptHandlers
-   end if
+   put _FastMenuHandlers (newMenuController) into scriptHandlers
    
    repeat for each line hName in scriptHandlers       
       if hName ends with "_" then
@@ -184,21 +268,6 @@ private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursion
    end repeat
    return true
 end _AddScriptMenu
-
-
---> Menu | Simple
--
-getprop menu_IsSimple
-   return menu_GetSimple()
-end menu_IsSimple
-
-function menu_GetSimple 
-   ## Check the script (slow)
-   -- put the script_HandlerExists ["M submenu_Dev"] of the target is false into isSimple
-   put the script_MenuTitles of the target into mTitles
-   put the number of lines of mTitles = 1 into isSimple
-   return isSimple
-end menu_GetSimple
 
 
 --> Menu | Original
@@ -253,13 +322,6 @@ on menu_Dispatch mItem
          menu_DispatchTextPick mItem
    end switch
 end menu_Dispatch
-
-command menu_DispatchTextPick mItem
-   mArray_SetActiveItem mItem
-   _FindActiveItem mItem, hkeyController, paramValue   
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchTextPick
 
 command menu_DispatchPick mItem
    local paramValue
@@ -452,45 +514,7 @@ end hKeyLine_AddObject
 -
 private command _ClearActiveMenuArray
    delete variable LocalArray
-   -- delete variable LocalArray ["MenuControllerInit"]
 end _ClearActiveMenuArray
-
-private command _FindActiveItem mItemPath, @hkeyController, @paramValue
-   put mArray_GetActiveArray() into mArray
-   --
-   set the itemdelimiter to "|"
-   put mItemPath into subItemPath
-   repeat the number of items of mItemPath
-      put item 1 of subItemPath into itemText
-      put _FindItemArray (mArray, itemText) into nextItemArray
-      --
-      if nextItemArray is not an array then
-         -- was the last one -- probably because itemText caontained a param like "Hello|World"
-         exit repeat
-      else
-         put nextItemArray into itemArray
-      end if
-      
-      delete item 1 of subItemPath
-      --
-      put itemArray ["menu"] into subMenuArray
-      if subMenuArray is an array then
-         -- do we need to check that mItemPath is not emmpty?
-         put itemArray ["name"] into hkeyController
-         put subMenuArray into mArray
-      else
-         exit repeat -- at end (no more submenus)
-      end if
-   end repeat
-   --
-   put itemArray ["name"] into itemName
-   if word 1 of itemName is "param" then
-      put word 2 to -1 of itemName into paramValue
-   else
-      put itemName into hkeyController
-      put subItemPath into paramValue -- should be empty unless parramm contains "|"
-   end if
-end _FindActiveItem
 
 private function _FindItemArray mArray, itemText
    -- forgot why this is indexed with "01" rather thaan "1"
@@ -522,14 +546,7 @@ end _SetMenuObjectDefaults
 -
 getprop script_MenuHandlers [mTitle]
    put the long id of the target into mController
-   switch
-      case mTitle is empty
-      case the menu_IsSimple of mController is true
-         put _FastMenuHandlers (mController) into hNames
-         break
-      default
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-   end switch
+   put _FastMenuHandlers (mController) into hNames
    return hNames
 end script_MenuHandlers
 
@@ -555,23 +572,9 @@ getprop menu_Button
    return mButton
 end menu_Button
 
-getprop menu_Handlers [pFast]
+getprop menu_Handlers
    put the long id of the target into mController
-   switch pFast
-      case empty
-      case true
-         put _FastMenuHandlers (mController) into hNames -- latest fastest
-         break
-      case false
-         put line 1 of the script_MenuTitles of mController into mTitle
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-         break
-      default
-         put pFast into mTitle
-         -- put the script_MenuArray [mTitle] of mController into scriptMenuArray -- the way mArray works
-         -- put _GetMenuHandlers (mTitle, mController) into hNames -- old and thorough
-         put _SlowMenuHandlers (mController, mTitle) into hNames
-   end switch
+   put _FastMenuHandlers (mController) into hNames
    return hNames
 end menu_Handlers
 
@@ -741,8 +744,13 @@ function mArray_ActiveControllerExists mTitle
    return exists (mController)
 end mArray_ActiveControllerExists
 
-function mArray_GetActiveMenuController mTitle
+function mArray_GetActiveControllerArray
    put LocalArray ["MenuControllerInit"] into mControllerArray
+   return mControllerArray
+end mArray_GetActiveControllerArray
+
+function mArray_GetActiveMenuController mTitle
+   put mArray_GetActiveControllerArray() into mControllerArray
    repeat for each key mController in mControllerArray
       put mControllerArray [mController]["mTitle"] into testMTitle
       if testMTitle = mTitle then
@@ -795,59 +803,6 @@ function mArray_FromTitleTable mTitleTable, tObject
    --
    return mArray
 end mArray_FromTitleTable
-
-private function _GetTopController mTitle, tObject
-   put menu_GetGlobalController (mTitle) into gMenuController
-   if exists (gMenuController) is true then return gMenuController
-   
-   -- check the local context (assumes global default can return empty)
-   put the menu_Controller [mTitle] of tObject into mController
-   if exists (mController) is true then return mController
-   
-   return tObject
-end _GetTopController
-
-private function _GetNewMenuController tObject, mTitle, mController
-   -- logic: global, controller (overkill logic)
-   
-   switch
-      case word 1 of mTitle is "Global"
-         -- prioritize global Menu
-         put menu_GetGlobalController (mTitle) into gMenuController
-         if exists (gMenuController) is true then
-            return gMenuController
-         else
-            return empty
-         end if
-         break
-      case exists (mController)
-         -- next the controller
-         put the menu_Controller [tObject] of mController into newMenuController -- overkill logic?
-         if newMenuController is empty then
-            return mController
-         else
-            -- overriden with a getprop in the controller
-            return newMenuController
-         end if
-         break
-      default
-         -- mController does not exist and it's not global
-         display_DebugHistory
-         breakpoint
-         return empty
-   end switch
-end _GetNewMenuController
-
-private function _RecursionCheck @recursionArray, tObject, mController, mTitle
-   put recursionArray [mController][mTitle] into testObject
-   if testObject is not empty then
-      -- already indexed. Don't allow a menu to be there twice.
-      return false
-   else
-      put tObject into recursionArray [mController][mTitle]
-      return true
-   end if
-end _RecursionCheck
 
 private function _MenuLogActivated newMenuController, tObject, mTitle
    -- checks for double menus in an object
@@ -1003,21 +958,6 @@ private command _DeconstructHandlerParams theParams, @hName, @firstParam, @secon
    put char 2 to -2 of word 2 to -1 of it into firstParam
    put char 2 to -2 of word 1 of item 2 of theParams into secondParam
 end _DeconstructHandlerParams
-
-private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
-   dispatch hName to mController with mTarget
-   put the result into subMenuTitle
-   if subMenuTitle is empty then return false
-   --
-   -- mArray_SetActiveTitle subMenuTitle
-   --
-   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
-   --
-   put menu_CommandToText (hName) into mLabel
-   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
-   --
-   return true
-end _SubmenuBit
 
 private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recursionArray
    dispatch hName to mController with mTarget

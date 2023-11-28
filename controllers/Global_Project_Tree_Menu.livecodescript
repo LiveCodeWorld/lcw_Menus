@@ -62,12 +62,7 @@ on menu_StartProject projectName, someBoolean
 end menu_StartProject
 
 on menu_FixProjectStackFiles projectName
-   project_FixStackFiles projectName
-   put the result into projectArray
-   --
-   display_Project projectName, true
-   display_EnvironmentMenus true
-   display_GitRefreshProjectName projectName
+   display_FixProjectStackFiles projectName
 end menu_FixProjectStackFiles
 
 private on _
@@ -92,7 +87,7 @@ end submenu_Git
 private on ___
 end ___
 
-on menu_ProjectHelp projectName
+-- on menu_ProjectHelp projectName
    launch_OrCreateProject projectName
 end menu_ProjectHelp
 

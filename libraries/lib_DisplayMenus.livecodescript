@@ -13,6 +13,28 @@ See also lib_DisplayController
 
 --> Working on
 -
+command display_MenuManager mView
+   put the long id of mView into mView
+   if matchChunk (mView, "group id .+ of card .*" ) is false then
+      return empty
+   end if
+   put the stack_Name of mView into sName
+   --
+   get the menubar of stack sName
+   put the id of mView into menuID
+   put the short name of mView into mName
+   set the menubar of stack sName to mName
+   --   
+   set the cREVMenuID of stack "revMenuManager" to menuID
+   set the cREVDefaultStack of stack "revMenuManager" to sName
+   set the cREVMenubar of stack "revMenuManager" to mName
+   
+   -- dispatch "revEditMenubar" to card "Menu Manager" of stack "revMenuManager"
+   go to stack "revMenuManager"
+   send "revEditMenubar" to card "Menu Manager" of stack "revMenuManager" in 20 ticks
+   return mName
+end display_MenuManager
+
 command display_EnvironmentMenus pRefreshOnly, pFilterText
    put display_FindArrayView ("Global Menus") into displayView
    --

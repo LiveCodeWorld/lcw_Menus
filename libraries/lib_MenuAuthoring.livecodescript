@@ -28,7 +28,11 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
-function menu_CreateTitle pMenuTitle, pDevBit
+function menu_DevTitle pMenuTitle, pMenuFolder
+   return menu_CreateTitle (pMenuTitle, "Dev", pMenuFolder)
+end menu_DevTitle
+
+function menu_CreateTitle pMenuTitle, pDevBit, pMenuFolder
    put the long name of target into mController
    --
    if pMenuTitle is empty then
@@ -41,7 +45,10 @@ function menu_CreateTitle pMenuTitle, pDevBit
    
    ## Add Dev Bit
    if pDevBit is not empty then
-      put pDevBit into word -1 of pMenuTitle
+      put pDevBit && "| " before word -1 of pMenuTitle
+      put "Create developer menu '[[pMenuTitle]]'?" into sComment
+   else
+      put "Create menu '[[pMenuTitle]]'?" into sComment
    end if
    
    put menu_GetGlobalController (pMenuTitle) into testController
@@ -49,9 +56,15 @@ function menu_CreateTitle pMenuTitle, pDevBit
       return pMenuTitle
    else
       put menu_GetTopTargetObject() into displayView
-      lcw_Answer "Create Developer menu '[[pMenuTitle]]'?", displayView, pMenuTitle
+      lcw_Answer sComment, displayView, pMenuTitle
       
-      put the stack_Folder of mController into mFolder
+      if pMenuFolder is empty then
+         put the stack_Folder of mController into mFolder
+      else
+         put pMenuFolder into mFolder
+         folder_CreateNested mFolder
+      end if
+      --
       menu_CreateScriptOnlyStack pMenuTitle, mFolder
       put the result into mController
       
@@ -62,51 +75,12 @@ function menu_CreateTitle pMenuTitle, pDevBit
    end if
 end menu_CreateTitle
 
-function menu_DevTitle pMenuTitle
-   return menu_CreateTitle (pMenuTitle, "Dev | Menu")
-   
-   /*
-   put the long name of target into mController
-   --
-   if pMenuTitle is empty then
-      put line 1 of the script_MenuTitles of mController into pMenuTitle
-      -- put the script_MenuTitleAbove of me into pMenuTitle
-      -- put mArray_GetActiveMenuController (pMenuTitle) into mController
-   end if
-   
-   if pMenuTitle is empty then
-      breakpoint
-      return empty
-   end if
-   
-   ## Add Dev Bit
-   put "Dev | Menu" into word -1 of pMenuTitle
-   
-   put menu_GetGlobalController (pMenuTitle) into testController
-   if exists (testController) then
-      return pMenuTitle
-   else
-      put menu_GetTopTargetObject() into displayView
-      lcw_Answer "Create Developer menu '[[pMenuTitle]]'?", displayView, pMenuTitle
-      
-      put the stack_Folder of mController into mFolder
-      menu_CreateScriptOnlyStack pMenuTitle, mFolder
-      put the result into mController
-      
-      if exists (mController) is false then breakpoint
-      edit the script of mController
-      --
-      return pMenuTitle
-   end if
-   */
-end menu_DevTitle
-
 function controller_ConstructMenuScript mTitle
    if mTitle ends with "| Dev | Menu" then
       -- must not have "on submenu_Dev" handler to avoid recusion
-      put scaffold_GetTemplate ("Global Dev Menu Template") into menuScriptTemplate
+      put scaffold_Get ("Global Dev Menu Template") into menuScriptTemplate
    else
-      put scaffold_GetTemplate ("Global Menu Template") into menuScriptTemplate
+      put scaffold_Get ("Global Menu Template") into menuScriptTemplate
    end if
    put mTitle into controllerName
    put lcw_GetAuthor() into authorName
@@ -114,7 +88,7 @@ function controller_ConstructMenuScript mTitle
    return controllerScript
 end controller_ConstructMenuScript
 
-private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath
+private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath, pDisplayView
    /*
    There should be no existing stack mName in memory.
    The folder should exist
@@ -132,7 +106,14 @@ private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath
    end if
    
    if there is a file mControllerPath then
-      breakpoint
+      -- probably needs indexing?
+      put the project_Name of stack mControllerPath into projectName
+      put "Fix stack files for project '[[projectName]]'?" into someQuestion 
+      lcw_Answer someQuestion, pDisplayView, projectName
+      --
+      project_FixStackFiles projectName
+      put the result into projectArray
+      --
       exit to top
    end if
 end _CheckCreateScriptOnlyStack

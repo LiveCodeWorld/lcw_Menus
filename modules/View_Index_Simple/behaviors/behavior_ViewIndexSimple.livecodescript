@@ -450,6 +450,12 @@ setprop coloured_Lines [someColour] someIndex
       case someIndex is empty
          put the number of lines of displayedIndex into maxNum
          repeat with lineNum = 1 to maxNum
+            set the textcolor of line lineNum of fldObject to empty
+         end repeat
+         break
+      case someIndex = "all"
+         put the number of lines of displayedIndex into maxNum
+         repeat with lineNum = 1 to maxNum
             set the textcolor of line lineNum of fldObject to someColour
          end repeat
          break
