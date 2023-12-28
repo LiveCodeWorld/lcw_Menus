@@ -32,6 +32,193 @@ local LocalArray
 
 --> Working on
 -
+private command _DeconstructHandlerName hName, @propLabel, @shortCut
+   set the itemdelimiter to "_"
+   get item 2 of hName
+   set the itemdelimiter to "."
+   put item 1 of it into propLabel
+   put item 2 to -1 of it into shortCut
+end _DeconstructHandlerName
+
+private function _PropLabel hName
+   _DeconstructHandlerName hName, propLabel, shortCut
+   return propLabel
+end _PropLabel
+
+function menu_CommandToText hName
+   _DeconstructHandlerName hName, propLabel, shortCut
+   put text_SplitCaps (propLabel) into mLine
+   return mLine
+end menu_CommandToText
+
+command mArray_TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
+   put keys (mArray) into indexNums
+   sort numeric indexNums
+   repeat for each line indexNum in indexNums
+      put mArray [indexNum] into itemArray
+      --
+      put itemArray ["name"] into mController
+      put itemArray ["label"] into itemText
+      
+      # Set disabled
+      if pController is empty then
+         put itemArray ["checked"] into isChecked
+         put itemArray ["disabled"] into isDisabled
+      else
+         -- check live (not sure if this is ever used?)
+         -- put mArray_GetObjectCheckStatus (hName, pController, pMenuTarget) into isDisabled
+         put mArray_GetDisabled (hName, pController, pMenuTarget) into isDisabled
+      end if
+      if isDisabled is true then put "(" before itemText
+      
+      # Set Shortcut
+      put itemArray ["shortcut"] into shortcut
+      if shortcut is not empty then
+         put "/" & shortCut after itemText
+      end if
+      
+      # Set checked
+      if isChecked is true then
+         put "!c" before itemText
+      else
+         -- put "!n" before itemText
+      end if
+      put someIndent & itemText & CR after mText
+      
+      # Recurse
+      put itemArray ["menu"] into subArray
+      if subArray is an array then
+         put tab & someIndent into nextIndent
+         mArray_TextRecurse mText, nextIndent, subArray
+      end if
+   end repeat
+end mArray_TextRecurse
+
+function mArray_GetDisabled hName, mController, mTarget
+   put _PropLabel(hName) into hText
+   put "disabled_" & hText & "[" & mTarget & "]" into mProperty
+   put the mProperty of mController into isDisabled
+   return isDisabled
+end mArray_GetDisabled
+
+function mArray_GetCheckItem hName, mController, mTarget
+   put _PropLabel(hName) into hText
+   put "checked_" & hText & "[" & mTarget & "]" into mProperty
+   put the mProperty of mController into someBoolean
+   return someBoolean is true
+end mArray_GetCheckItem
+
+function mArray_GetParamValues propLabel, mController, mTarget
+   put propLabel & "_Params" & "[" & mTarget & "]" into mProperty
+   try
+      put the mProperty of mController into paramValues
+      return paramValues
+   catch e
+      breakpoint
+      edit the script of mController
+   end try
+end mArray_GetParamValues
+
+function mArray_GetCheckParams propLabel, mController, mTarget
+   put propLabel & "_Param" & "[" & mTarget & "]" into mProperty
+   put the mProperty of mController into checkParams
+   return checkParams
+end mArray_GetCheckParams
+
+
+--> Private | Construct | MenuItem
+-
+private command _AddMenuItem @mArray, hName, mController, mTarget
+   _DeconstructHandlerName hName, propLabel, shortCut
+   --
+   put mArray_GetParamValues (propLabel, mController, mTarget) into paramValues
+   put paramValues into LocalArray ["Params"][mController][hName]["mParams"]
+   --
+   put _NextIndexNum (mArray) into indexNum
+   put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
+   put text_SplitCaps (propLabel) into mArray [indexNum]["label"] -- menu_CommandToText (hName)
+   put shortCut into mArray [indexNum]["shortCut"]
+   --
+   if paramValues is empty then
+      put mArray_GetCheckItem (hName, mController, mTarget) into hNameIsChecked
+      put mTarget into LocalArray ["Params"][mController][hName]["hNameIsChecked"][hNameIsChecked]
+      --
+      -- bizarre bug in Livecode widget being strict on boolean type an text type
+      -- put true into mArray [indexNum]["disabled"] does not seem possible
+      -- put itemChecked into mArray [indexNum]["checked"] -- does nto work!
+      
+      -- put item 2 of the extents of mArray into indexNum
+      -- number_PadLeft indexNum, 2
+      put hNameIsChecked is true into mArray [indexNum]["checked"]
+   else
+      put mArray_GetCheckParams (propLabel, mController, mTarget) into checkParams
+      put checkParams into LocalArray ["Params"][mController][hName]["mCheckParams"]
+      --
+      _SetParamMenuItem mArray, propLabel, hName, mController, paramValues, checkParams, indexNum
+   end if
+   return true
+end _AddMenuItem
+
+private command _SetParamMenuItem @mArray, propLabel, hName, mController, paramValues, checkParams, indexNum
+   replace comma with CR in paramValues
+   replace comma with CR in checkParams
+   set the wholematches to true
+   
+   -- not safe for widget bug ordering
+   put 1 into subIndexNum
+   repeat for each line paramValue in paramValues
+      put paramValue into subMenuArray [subIndexNum]["label"]
+      --
+      put "param" && paramValue into subMenuArray [subIndexNum]["name"]
+      --
+      put paramValue is among the lines of checkParams into someBoolean
+      put someBoolean is true into subMenuArray [subIndexNum]["checked"]
+      --
+      add 1 to subIndexNum
+   end repeat
+   
+   put subMenuArray into mArray [indexNum]["menu"]
+   
+   # Set mArray
+   -- put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
+   -- put text_SplitCaps (propLabel) into mArray [indexNum]["label"]
+end _SetParamMenuItem
+
+private command _SetDisabled @mArray, isDisabled
+   if isDisabled is not empty then
+      put item 2 of the extents of mArray into indexNum
+      number_PadLeft indexNum, 2
+      put isDisabled is true into mArray [indexNum]["disabled"]
+   end if
+end _SetDisabled
+
+
+--> mTarget
+-
+function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target (called for every nested menu)
+   
+   if exists (tObject) is false then
+      put menu_GetTopTargetObject() into tObject -- bug: should exist
+   end if
+   --
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   --
+   put the menu_Target [tObject] of tObject into mTarget
+   if mTarget is empty then
+      return tObject
+   else
+      return mTarget
+   end if
+end mArray_FindMenuTarget
+
+command mArray_ClearActiveMenuArray
+   delete variable LocalArray
+end mArray_ClearActiveMenuArray
+
 private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
    -- bug: can recurse
    dispatch hName to mController with mTarget
@@ -118,12 +305,16 @@ command menu_DispatchTextPick mItem, pMenuArray
    end if
    --
    mArray_SetActiveItem mItem
-   mArray_FindActiveItem pMenuArray, mItem, hkeyController, paramValue   
-   mArray_DoController hkeyController, paramValue
+   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
+   mArray_DoHkey hKey, paramValue
    return the result
 end menu_DispatchTextPick
 
-private command mArray_FindActiveItem mArray, mItemPath, @hkeyController, @paramValue
+private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
+   -- was "mArray_FindActiveItem"
+   -- only used by "menu_DispatchTextPick"
+   -- need to check if mItemPath is now just mItem?
+   
    set the itemdelimiter to "|"
    put mItemPath into subItemPath
    repeat the number of items of mItemPath
@@ -142,7 +333,7 @@ private command mArray_FindActiveItem mArray, mItemPath, @hkeyController, @param
       put itemArray ["menu"] into subMenuArray
       if subMenuArray is an array then
          -- do we need to check that mItemPath is not emmpty?
-         put itemArray ["name"] into hkeyController
+         put itemArray ["name"] into hkey
          put subMenuArray into mArray
       else
          exit repeat -- at end (no more submenus)
@@ -153,26 +344,22 @@ private command mArray_FindActiveItem mArray, mItemPath, @hkeyController, @param
    if word 1 of itemName is "param" then
       put word 2 to -1 of itemName into paramValue
    else
-      put itemName into hkeyController
+      put itemName into hkey
       put subItemPath into paramValue -- should be empty unless parramm contains "|"
    end if
-end mArray_FindActiveItem
+end _FindActiveHkey
 
-function mArray_FindMenuTarget mController, tObject
-   -- logic: controller, target (called for every nested menu)
+command mArray_DoHkey hKey, pValue
+   -- changed "dispatch" to "call" which keeps the context of the target
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
    
-   if exists (mController) is true then
-      put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
-   end if
-   
-   put the menu_Target [tObject] of tObject into mTarget
-   if mTarget is empty then
-      return tObject
-   else
-      return mTarget
-   end if
-end mArray_FindMenuTarget
+   put menu_GetTopTargetObject() into tObject
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   --
+   hKey_Do hKey, mTarget, pValue
+   return the result
+end mArray_DoHkey
 
 
 --> Menu | Introspection
@@ -250,7 +437,7 @@ private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursion
       
       put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
       switch
-         case isDisabled = true -- we can delete it as right now there is no graying out
+         -- case isDisabled = true -- we can delete it as right now there is no graying out
          case isDisabled = "delete"
             next repeat
          case hName begins with "submenu_"
@@ -279,22 +466,6 @@ command menu_PopUp pMenuTitle, pLocation, pTargetObject
    
    put the menu_Button of pTargetObject into mButton
    mArray_PopUp pMenuTitle, mButton, pTargetObject
-   
-   /*
-   if the menu_Style of pTargetObject is not "array" then
-      set the menu_ButtonText of pTargetObject to pMenuTitle
-      put the result into mText
-      if mText is empty then return "false"
-      
-      put the menu_Button of pTargetObject into mButton
-      if pLocation is not a point then
-         popup mButton
-      else
-         popup mButton at pLocation
-      end if
-   end if
-   return true
-   */
 end menu_PopUp
 
 command menu_PullDown pMenuTitle, pLocation, pTargetObject
@@ -316,26 +487,12 @@ on menu_Dispatch mItem
    put the long id of the target into tObject
    switch word 1 of tObject
       case "widget"
-         menu_DispatchPick mItem
+         breakpoint
          break
       default
          menu_DispatchTextPick mItem
    end switch
 end menu_Dispatch
-
-command menu_DispatchPick mItem
-   local paramValue
-   
-   mArray_SetActiveItem mItem
-   set the itemdelimiter to "|"
-   put item -1 of mItem into hkeyController
-   if word 1 of hkeyController = "param" then
-      put word 2 to -1 of hkeyController into paramValue
-      put item -2 of mItem into hkeyController 
-   end if
-   mArray_DoController hkeyController, paramValue
-   return the result
-end menu_DispatchPick
 
 command hKey_Do hKey, pTarget, pValue, pQuestion
    if the optionKey is "Down" then
@@ -373,7 +530,7 @@ command mArray_MouseDown mTitle, pMenuButton, pTargetObject
       put pTargetObject into pMenuButton
    end if
    --
-   _ClearActiveMenuArray
+   mArray_ClearActiveMenuArray
    menu_SetTopTargetObject pTargetObject
    --
    switch word 1 of pMenuButton
@@ -512,10 +669,6 @@ end hKeyLine_AddObject
 
 --> Private
 -
-private command _ClearActiveMenuArray
-   delete variable LocalArray
-end _ClearActiveMenuArray
-
 private function _FindItemArray mArray, itemText
    -- forgot why this is indexed with "01" rather thaan "1"
    -- something to do with display sorting, but a bad solution I think
@@ -629,14 +782,10 @@ end menu_SetTarget
 
 function menu_GetTopTargetObject
    return LocalArray ["active_TopTargetObject"]
-   -- global gLCW
-   -- put gLCW ["activeMenuArray"]["top"]["targetObject"] into targetObject
 end menu_GetTopTargetObject
 
 command menu_SetTopTargetObject tObject
    put tObject into LocalArray ["active_TopTargetObject"]
-   -- global gLCW
-   -- put targetObject into gLCW ["activeMenuArray"]["top"]["targetObject"]
 end menu_SetTopTargetObject
 
 
@@ -671,19 +820,6 @@ These handlers all take the form of "controller messaging".
 In the receiving hName handler "the target" is changed to = mController, which is useless as it is where the handler is.
 This is because we use "dispatch". If we use call we may get around this and try to preserve the target?
 */
-command mArray_DoController mKey, pValue
-   -- changed "dispatch" to "call" which keeps the context of the target
-   -- put the long id of the target into tObject
-   put menu_GetTopTargetObject() into tObject
-   --
-   mArray_UnMarshal mKey
-   hkeyLine_Deconstruct mKey, hName, hType, mController
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
-   --
-   hKey_Do mKey, mTarget, pValue
-   return the result
-end mArray_DoController
-
 command mArray_Do mCommand, mTitle, pMenuTarget, pValue
    -- only search in active mArray
    put mArray_GetActiveMenuController (mTitle) into mController
@@ -886,69 +1022,6 @@ function mArray_ToText mArray
    return mText
 end mArray_ToText
 
-command mArray_TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
-   put keys (mArray) into indexNums
-   sort numeric indexNums
-   repeat for each line indexNum in indexNums
-      -- repeat for each key indexNum in mArray
-      put mArray [indexNum] into itemArray
-      --
-      put itemArray ["name"] into mController
-      put itemArray ["label"] into itemText
-      --
-      if pController is empty then
-         put itemArray ["checked"] into isChecked
-         put itemArray ["disabled"] into isDisabled
-      else
-         -- check live (not sure if this is ever used?)
-         -- put mArray_GetObjectCheckStatus (hName, pController, pMenuTarget) into isDisabled
-         put mArray_GetDisabled (hName, pController, pMenuTarget) into isDisabled
-      end if
-      --
-      if isDisabled is true then put "(" before itemText
-      if isChecked is true then
-         put "!c" before itemText
-      else
-         -- put "!n" before itemText
-      end if
-      put someIndent & itemText & CR after mText
-      --
-      put itemArray ["menu"] into subArray
-      if subArray is an array then
-         put tab & someIndent into nextIndent
-         mArray_TextRecurse mText, nextIndent, subArray
-      end if
-   end repeat
-end mArray_TextRecurse
-
-function mArray_GetDisabled hName, mController, mTarget
-   set the itemdelimiter to "_"
-   put item 2 of hName into hText
-   put "disabled_" & hText & "[" & mTarget & "]" into mProperty
-   put the mProperty of mController into isDisabled
-   return isDisabled
-end mArray_GetDisabled
-
-function mArray_GetCheckItem hName, mController, mTarget
-   set the itemdelimiter to "_"
-   put item 2 of hName into hText
-   put "checked_" & hText & "[" & mTarget & "]" into mProperty
-   put the mProperty of mController into someBoolean
-   return someBoolean is true
-end mArray_GetCheckItem
-
-function mArray_GetParamValues propLabel, mController, mTarget
-   put propLabel & "_Params" & "[" & mTarget & "]" into mProperty
-   put the mProperty of mController into paramValues
-   return paramValues
-end mArray_GetParamValues
-
-function mArray_GetCheckParams propLabel, mController, mTarget
-   put propLabel & "_Param" & "[" & mTarget & "]" into mProperty
-   put the mProperty of mController into checkParams
-   return checkParams
-end mArray_GetCheckParams
-
 
 --> Private
 -
@@ -981,86 +1054,6 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
 end _InsertBit
 
 
---> Private | Construct | MenuItem
--
-private command _AddMenuItem @mArray, hName, mController, mTarget
-   set the itemdelimiter to "_"
-   put item 2 of hName into propLabel
-   --
-   put mArray_GetParamValues (propLabel, mController, mTarget) into paramValues
-   put paramValues into LocalArray ["Params"][mController][hName]["mParams"]
-   --
-   if paramValues is empty then
-      put mArray_GetCheckItem (hName, mController, mTarget) into hNameIsChecked
-      put mTarget into LocalArray ["Params"][mController][hName]["hNameIsChecked"][hNameIsChecked]
-      _SetPlainMenuItem mArray, hName, mController, hNameIsChecked
-   else
-      put mArray_GetCheckParams (propLabel, mController, mTarget) into checkParams
-      put checkParams into LocalArray ["Params"][mController][hName]["mCheckParams"]
-      --
-      _SetParamMenuItem mArray, propLabel, hName, mController, paramValues, checkParams
-   end if
-   return true
-end _AddMenuItem
-
-private command _SetPlainMenuItem @mArray, hName, mController, hNameIsChecked   
-   put _NextIndexNum (mArray) into indexNum
-   put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
-   put menu_CommandToText (hName) into mArray [indexNum]["label"]
-   
-   -- bizarre bug in Livecode widget being strict on boolean type an text type
-   -- put true into mArray [indexNum]["disabled"] does not seem possible
-   -- put itemChecked into mArray [indexNum]["checked"] -- does nto work!
-   
-   put item 2 of the extents of mArray into indexNum
-   number_PadLeft indexNum, 2
-   
-   if hNameIsChecked is true then
-      put true into mArray [indexNum]["checked"]
-   else
-      put false into mArray [indexNum]["checked"]
-   end if
-end _SetPlainMenuItem
-
-private command _SetParamMenuItem @mArray, propLabel, hName, mController, paramValues, checkParams
-   put _NextIndexNum (mArray) into indexNum
-   replace comma with CR in paramValues
-   replace comma with CR in checkParams
-   set the wholematches to true
-   
-   -- not safe for widget bug ordering
-   put 1 into subIndexNum
-   repeat for each line paramValue in paramValues
-      put paramValue into subMenuArray [subIndexNum]["label"]
-      --
-      put "param" && paramValue into subMenuArray [subIndexNum]["name"]
-      --
-      put paramValue is among the lines of checkParams into someBoolean
-      -- crazy boolean bug
-      if someBoolean is true then
-         put true into subMenuArray [subIndexNum]["checked"]
-      else
-         put false into subMenuArray [subIndexNum]["checked"]
-      end if
-      --
-      add 1 to subIndexNum
-   end repeat
-   
-   put subMenuArray into mArray [indexNum]["menu"]
-   --
-   put mArray_ConstructHkey (hName, mController) into mArray [indexNum]["name"]
-   put text_SplitCaps (propLabel) into mArray [indexNum]["label"]
-end _SetParamMenuItem
-
-private command _SetDisabled @mArray, isDisabled
-   if isDisabled is not empty then
-      put item 2 of the extents of mArray into indexNum
-      number_PadLeft indexNum, 2
-      put isDisabled is true into mArray [indexNum]["disabled"]
-   end if
-end _SetDisabled
-
-
 --> Private | Next
 -
 private function _NextIndexNum mArray
@@ -1091,13 +1084,6 @@ end number_PadLeft
 
 --> Deps
 -
-function menu_CommandToText handlerName
-   set the itemdelimiter to "_"
-   put item 2 of handlerName into mSuffix
-   put text_SplitCaps (mSuffix) into mLine
-   return mLine
-end menu_CommandToText
-
 function text_SplitCaps someWord
    -- was "capsSplit"
    put 1 into charNum
@@ -1226,4 +1212,3 @@ function revRuggedId pObject
    
    return tId
 end revRuggedId
-

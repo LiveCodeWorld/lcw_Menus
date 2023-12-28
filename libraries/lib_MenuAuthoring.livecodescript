@@ -28,6 +28,69 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+function controller_ConstructMenuScript mTitle
+   if mTitle ends with "| Dev | Menu" then
+      -- must not have "on submenu_Dev" handler to avoid recusion
+      put scaffold_Get ("Global Dev Menu Template") into menuScriptTemplate
+   else
+      put scaffold_Get ("Global Menu Template") into menuScriptTemplate
+   end if
+   --
+   put mTitle into controllerName
+   put lcw_GetAuthor() into authorName
+   put menu_DefaultHandler (mTitle) into defaultMenuHandler
+   --
+   put merge (menuScriptTemplate) into controllerScript
+   return controllerScript
+end controller_ConstructMenuScript
+
+function menu_DefaultHandler mTitle
+   put "menu_" into mHandler
+   put menu_Bit (mTitle) into menuBit
+   set the itemdelimiter to "|"
+   repeat with itemNum = 1 to the number of items of menuBit
+      put item itemNum of menuBit into sText
+      put text_CamelWord (sText) into camelWord
+      put camelWord after mHandler
+   end repeat
+   return mHandler
+end menu_DefaultHandler
+
+function text_CamelWord sText
+   get word 1 to -1 of sText
+   put text_InitialCaps (it) into camelWord
+   replace space with empty in camelWord
+   return camelWord
+end text_CamelWord
+
+function menu_Bit mTitle
+   set the itemdelimiter to "|"
+   put mTitle into middleBit
+   put word 1 to -1 of item 1 of mTitle into firstBit
+   if firstBit = "Global" then
+      delete item 1 of middleBit
+   end if
+   --
+   put word 1 to -1 of item -1 of mTitle into lastBit
+   if lastBit = "Menu" then
+      delete item -1 of middleBit
+   end if
+   --
+   return word 1 to -1 of middleBit
+end menu_Bit
+
+command menu_CreateController menuTitle, mFolder, pAskQuestion, pDisplayView
+   if pAskQuestion is not empty then
+      if exists (pDisplayView) is false then put menu_GetTopTargetObject() into pDisplayView
+      lcw_Answer pAskQuestion, pDisplayView, menuTitle
+   end if
+   --
+   folder_CreateNested mFolder
+   menu_CreateScriptOnlyStack menuTitle, mFolder
+   put the result into mController
+   return mController
+end menu_CreateController
+
 function menu_DevTitle pMenuTitle, pMenuFolder
    return menu_CreateTitle (pMenuTitle, "Dev", pMenuFolder)
 end menu_DevTitle
@@ -55,38 +118,19 @@ function menu_CreateTitle pMenuTitle, pDevBit, pMenuFolder
    if exists (testController) then
       return pMenuTitle
    else
-      put menu_GetTopTargetObject() into displayView
-      lcw_Answer sComment, displayView, pMenuTitle
-      
       if pMenuFolder is empty then
          put the stack_Folder of mController into mFolder
       else
          put pMenuFolder into mFolder
-         folder_CreateNested mFolder
       end if
       --
-      menu_CreateScriptOnlyStack pMenuTitle, mFolder
-      put the result into mController
-      
+      menu_CreateController pMenuTitle, mFolder, sComment
+      --
       if exists (mController) is false then breakpoint
       edit the script of mController
-      --
       return pMenuTitle
    end if
 end menu_CreateTitle
-
-function controller_ConstructMenuScript mTitle
-   if mTitle ends with "| Dev | Menu" then
-      -- must not have "on submenu_Dev" handler to avoid recusion
-      put scaffold_Get ("Global Dev Menu Template") into menuScriptTemplate
-   else
-      put scaffold_Get ("Global Menu Template") into menuScriptTemplate
-   end if
-   put mTitle into controllerName
-   put lcw_GetAuthor() into authorName
-   put merge (menuScriptTemplate) into controllerScript
-   return controllerScript
-end controller_ConstructMenuScript
 
 private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath, pDisplayView
    /*

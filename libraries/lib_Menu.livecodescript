@@ -33,6 +33,48 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 
 --> Working on
 -
+
+
+--> Menu | Names
+-
+command menu_NormalizeGlobalTitle @mTitle
+   menu_NormalizeTitle mTitle
+   set the itemdelimiter to " | "
+   if item 1 of mTitle is not "Global" then put "Global | " before mTitle
+   if item -1 of mTitle is not "Menu" then put " | Menu" after mTitle
+end menu_NormalizeGlobalTitle
+
+command menu_NormalizeTitle @mTitle, pMakePretty
+   set the itemdelimiter to "|"
+   repeat for each item someItem in mTitle
+      if pMakePretty is true then
+         put empty into prettyItem
+         repeat for each word someWord in someItem
+            put toUpper (char 1 of someWord) into char 1 of someWord
+            put someWord & space after prettyItem
+         end repeat
+         put char 1 to -2 of prettyItem into someText
+      else
+         put word 1 to -1 of someItem into someText
+      end if
+      put space & someText & space & "|" after normalizedMenuTitle
+   end repeat
+   delete char -2 to -1 of normalizedMenuTitle
+   delete char 1 of normalizedMenuTitle
+   put normalizedMenuTitle into mTitle
+end menu_NormalizeTitle
+
+command menu_NormalizeName @mTitle
+   if word 1 of mTitle = "-->" then
+      delete word 1 of mTitle
+   end if
+   view_NormalizePiped mTitle
+   replace "|" with " | " in mTitle
+end menu_NormalizeName
+
+
+--> Menu | More
+-
 command menu_SendMessage mPath, pMenuTarget, pCreateActiveArray
    -- updated to use "call"
    menu_DeconstructPath mPath, foundPath, subMenuPath, pigeon, mController, mTitlePath, mItemType -- look up in array

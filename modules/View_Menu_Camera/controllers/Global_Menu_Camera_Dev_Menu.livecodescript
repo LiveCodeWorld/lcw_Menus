@@ -26,14 +26,18 @@ end menu_Target
 
 --> Global | Menu | Camera | Dev | Menu
 -
-on menu_Behavior displayView
-   put the behavior of displayView into bObject
-   edit the script of bObject
-end menu_Behavior
+on menu_DevHelp mView
+   put the params
+end menu_DevHelp
 
-private on _
-end _
+on menu_RenameTwo mView
+   set the menuItem_Name [2] of mView to "Recording"
+end menu_RenameTwo
 
-on menu_MenuEdit displayView
-   menu_Edit "Global | Menu | Camera | Dev | Menu"
-end menu_MenuEdit
+on menu_SetRecordMenu mView
+   set the menu_GroupData of mView to empty
+   set the menu_Title [1] of mView to "Global | Camera | Menu"
+   set the menu_Title [2] of mView to "Global | Camera | Recording | Menu"
+   set the menu_Title [3] of mView to "Global | Screen | Record | Menu"
+   set the menu_Title [4] of mView to "Global | Menu | Camera | Menu"
+end menu_SetRecordMenu

@@ -405,17 +405,21 @@ getprop line_Colour [lineNum]
 end line_Colour
 
 setprop line_Colour [lineNumList] someColour
-   -- could change to using:
-   -- put the styledText of fldObject into styledArray
-   
    put _fieldObject() into fldObject
    if lineNumList is empty then
       put line 1 of the hilitedlines of fldObject into lineNumList
    end if
    
    lock screen
+   put the displayed_Index of me into displayedIndex
    repeat for each item lineNum in lineNumList
-      if lineNum is not a number then next repeat
+      if lineNum is not a number then
+         put lineOffset (lineNum, displayedIndex) into lineNum
+         if lineNum is not a number then
+            next repeat
+         end if
+      end if
+      --
       set the textcolor of line lineNum of fldObject to someColour
    end repeat
    unlock screen

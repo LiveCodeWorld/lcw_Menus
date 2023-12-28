@@ -1,54 +1,202 @@
 ﻿script "behavior_ViewMenuCamera"
 --> Events
 -
-getprop menu_GroupData
-   put the number of buttons of me into maxNum
-   repeat with mButtonNum = 1 to maxNum
-      put the menu_ButtonData of btn mButtonNum of me into mData
-      put mData into mGroupData [mButtonNum]
-   end repeat
-   return mGroupData
-end menu_GroupData
-
--- getprop menu_Array
-put the menu_ButtonData ["mArray"] of me into mArray
-if mArray is an array then return mArray
-
-## First Time we find and set
-## First Time we find and set
-_SetMenuData
-put the result into mData
-return mData ["mArray"]
-end menu_Array
+on menuPick mTitle
+   menu_DispatchTextPick mTitle
+end menuPick
 
 on mouseDown
-   -- breakpoint -- only called in testing
+   -- Also when mousedown in menubar
    put the long id of the target into mButton
+   if word 1 of mButton is "button" then
+      mArray_ClearActiveMenuArray
+      _SetButtonText mButton
+   else
+      _SetMenuGroupText
+   end if
+end mouseDown
+
+private command _SetMenuGroupText
+   mArray_ClearActiveMenuArray
    --
-   # Get mData of mButton
-   put the menu_Data of mButton into mData
+   put the number of buttons of me into maxNum
+   repeat with mButtonNum = 1 to maxNum
+      put the long id of btn mButtonNum of me into mButton
+      _SetButtonText mButton
+   end repeat
+end _SetMenuGroupText
+
+private command _SetButtonText mButton
+   -- put _CachedMenuArray (mButton) into mArray
+   put the live_MenuArray of mButton into mArray
+   mArray_SetActiveArray mArray -- consistant with async shift key or other drawing of menus
+   
+   # Set text of mButton
+   if mArray is empty then
+      put "Hello" into mText
+   else
+      put mArray_ToText (mArray) into mText
+   end if 
+   set the text of mButton to mText
+   return mArray
+end _SetButtonText
+
+private function _CachedMenuArray mButton
+   put the short name of mButton into mName
+   
+   # Get mArray_GetActive(keyItems)
+   put the menu_ButtonData [mName] of me into mData
+   put mData ["mArray"] into mArray
+   --
+   return mArray
+end _CachedMenuArray
+
+getprop menu_Title [mNum]
+   put the menu_ButtonData [mNum] of me into mData
+   put mData ["mTitle"] into mTitle
+   return mTitle
+end menu_Title
+
+setprop menu_Title [menuNum] mTitleAndName
+   if exists (button menuNum of me) is false then return empty
+   
+   put item 1 of mTitleAndName into mTitle
+   put item 2 of mTitleAndName into mName
+   
+   put the long id of button menuNum of me into mButton
+   put the live_MenuData [mTitle] of mButton into mData
+   set the menu_ButtonData [menuNum] of mButton to mData
+   
+   put mData ["mArray"] into mArray
+   put mArray_ToText (mArray) into mText
+   set the text of mButton to mText
+   --
+   set the menu_ButtonName of mButton to mName
+   return mData
+end menu_Title
+
+getprop menu_ButtonName [menuNum]
+   if exists (button menuNum of me) is false then return empty
+   
+   put the long id of button menuNum of me into mButton
+   put the short name of mButton into mName
+   return mName
+end menu_ButtonName
+
+setprop menu_ButtonName [menuNum] mName
+   if exists (button menuNum of me) is false then return empty
+   put the long id of button menuNum of me into mButton
+   if mName is empty then
+      -- get a default from the menu_Title
+      put the menu_Title [menuNum] of mButton into mTitle
+      set the itemdelimiter to "|"
+      put word 1 to -1 of item -2 of mTitle into mName
+      if mName is empty then
+         return "Error, menu_Title [" & menuNum & "]" of mButton & "is broken."
+      end if
+   end if
+   
+   set the name of mButton to mName
+   set the label of mButton to mName
+   --
+   
+   --
+   return mButton
+end menu_ButtonName
+
+function _GetMenuButton numOrName
+   if exists (button numOrName of me) then
+      put the long id of button numOrName of me into mButton
+      return mButton
+   else
+      return empty
+   end if
+end _GetMenuButton
+
+getprop menu_Target
+   return the long id of group "View|Camera" of card 1 of stack "View|Camera"
+end menu_Target
+
+getprop live_MenuArray
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then
+      breakpoint
+      return empty
+   end if
+   --
+   -- put the number of mButton into mNum
+   put the short name of mButton into mName
+   put the menu_Title [mName] of mButton into mTitle
+   if mTitle is empty then return empty
+   
+   # Update mData
+   put the live_MenuData [mTitle] of mButton into mData
+   set the menu_ButtonData [mTitle] of mButton to mData
+   --
+   put mData ["mArray"] into mArray
+   return mArray
+end live_MenuArray
+
+getprop live_MenuData [mTitle]
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then
+      breakpoint
+      return empty
+   end if
+   --
+   put the menu_Target of mButton into mTarget
+   
+   mArray_ClearActiveMenuArray
+   menu_SetTopTargetObject mTarget
+   put _LiveMenuData (mTitle, mButton, mTarget) into mData
+   return mData
+end live_MenuData
+
+private function _LiveMenuData mTitle, mButton, pMenuTarget
+   put menu_GetGlobalController (mTitle) into mTopController
+   if exists (mTopController) is false then return empty
+   --
+   put mTitle into mData ["mTitle"]
+   put mTopController into mData ["mController"] -- this is mTopController
+   put the short name of mButton into mData ["mName"]
+   --
+   put _FindMenuTarget (mButton, mTopController, pMenuTarget) into mTarget
+   put mTarget into mData ["mTarget"]
+   
+   # Construct mData from mController script
+   put mArray_FromTitleTable (mTitle, mTarget) into mArray
+   put mArray into mData ["mArray"]
+   return mData
+end _LiveMenuData
+
+
+--> Menu | Set
+-
+setprop menu_Title [pMenuTarget] gMenutitle
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then
+      breakpoint
+      return empty
+   end if
+   
+   _SetMenuButtonText gMenutitle, mButton, pMenuTarget
+   put the result into mData
+   return mData
+end menu_Title
+
+private command _SetMenuButtonText mTitle, mButton, pMenuTarget
+   put _LiveMenuData (mTitle, mButton, pMenuTarget) into mData
    put mData ["mArray"] into mArray
    
    # Set text of mButton
    put mArray_ToText (mArray) into mText
    set the text of mButton to mText
-end mouseDown
-
-on menuPick mItem
-   put the long id of the target into mButton
-   --
-   put the menu_ButtonData ["mArray"] of mButton into mArray
-   menu_DispatchTextPick mItem, mArray
-end menuPick
-
-
---> Menu | Set
--
-setprop menu_Title gMenutitle
-   _SetMenuData gMenutitle
-   put the result into mData
+   
+   # Set menu_ButtonData of mButton
+   put the short name of mButton into mName
+   set the menu_ButtonData [mName] of me to mData
    return mData
-end menu_Title
+end _SetMenuButtonText
 
 setprop menu_Controller mController
    _SetMenuData mController
@@ -59,9 +207,27 @@ end menu_Controller
 
 --> Menu | Get
 -
+getprop show_Menu
+   put the stack_Name of me into sName
+   put the menubar of stack sName into mName
+   put mName is not empty into sBoolean
+   return sBoolean
+end show_Menu
+
+setprop show_Menu sBoolean
+   put the stack_Name of me into sName
+   --
+   if sBoolean is true then
+      put the short name of me into mName
+      set the menubar of stack sName to mName
+   else
+      set the menubar of stack sName to empty
+   end if
+end show_Menu
+
 getprop menu_Target
    put the long id of the target into tObject
-   get the menu_GroupData of me
+   get the menubar_Data of me
    put the menu_ButtonData ["mTarget"] of me into mTarget
    if exists (mTarget) is true then return mTarget
    
@@ -81,36 +247,53 @@ getprop menu_Controller
    return mData ["mController"]
 end menu_Controller
 
+command _NormaliseButtonNum @mNum, mGroupData
+   if mNum is a number then return true
+   
+   put mNum into mName
+   repeat with itemNum = 1 to item 2 of the extents of mGroupData
+      put mGroupData [itemNum]["mName"] into testName
+      if testName = mName then
+         put itemNum into mNum
+         return true
+      end if
+   end repeat
+   put 0 into mNum
+   return false
+end _NormaliseButtonNum
+
 
 --> Menu | Model
 -
-getprop menu_Group
+getprop menubar_View
    return the long id of me
-end menu_Group
+end menubar_View
 
-getprop menu_ButtonData [sKey]
-   if word 1 of the target is not "button" then
-      -- probably me
-      return empty
-   end if
+getprop menu_ButtonData [mNum]
+   if mNum is empty then return empty
+   put the menubar_Data of me into mGroupData
+   _NormaliseButtonNum mNum, mGroupData
    
-   put the menu_Data of the target into mData
-   if sKey is empty then
-      return mData
-   else
-      return mData [sKey]
-   end if
+   return mGroupData [mNum]
 end menu_ButtonData
 
-setprop menu_ButtonData [sKey] sValue
-   if sKey is empty then
-      set the menu_ButtonData of the target to sValue
-   else
-      put the menu_ButtonData of the target to mData
-      put sValue into mData [sKey]
-      set the menu_ButtonData of the target to mData
-   end if
+setprop menu_ButtonData [mNum] mData
+   if mNum is empty then return empty
+   put the menubar_Data of me into mGroupData
+   _NormaliseButtonNum mNum
+   
+   put mData into mGroupData [mNum]
+   set the menubar_Data of me to mGroupData
+   return mData
 end menu_ButtonData
+
+getprop menubar_Data
+   return the menubar_Data of me
+end menubar_Data
+
+setprop menubar_Data mGroupData
+   set the menubar_Data of me to mGroupData
+end menubar_Data
 
 
 --> Private
@@ -152,23 +335,21 @@ private function _ConstructMenuData mTitle, mButton, pTopController, pMenuTarget
    end if
    put revRuggedId (mTopController) into mData ["mController"] -- this is mTopController
    
+   # Construct mArray from mController script
+   put mArray_FromTitleTable (mTitle, pMenuTarget) into mArray -- works of mControllers from mTitle, mTarget each loop
+   put mArray into mData ["mArray"]
+   return mData
+end _ConstructMenuData
+
+private function _FindMenuTarget mButton, mTopController, pMenuTarget
    # Find mTarget
    if exists (pMenuTarget) is false then
       put the card_Object of mButton into cardObject
       put the view_Object of cardObject into tView
       put the menu_Target [tView] of mTopController into mTarget
+      return mTarget
    else
-      put pMenuTarget into mTarget
+      return pMenuTarget
    end if
-   if exists (mTarget) then
-      put revRuggedId (mTarget) into mData ["mTarget"]
-   else
-      -- not alsways a control (ie projectName)
-      put mTarget into mData ["mTarget"]
-   end if
-   
-   # Construct mArray from mController script
-   put mArray_FromTitleTable (mTitle, mTarget) into mArray -- works of mControllers from mTitle, mTarget each loop
-   put mArray into mData ["mArray"]  --
-   return mData
-end _ConstructMenuData
+end _FindMenuTarget
+

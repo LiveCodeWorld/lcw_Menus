@@ -38,28 +38,36 @@ private function _GetNewMenu menuBit
    return gMenuTitle
 end _GetNewMenu
 
+private function _Disabled shortFolder, sName
+   if shortFolder is not sName then
+      return "delete"
+   else
+      return false
+   end if
+end _Disabled
+
 getprop disabled_Library [shortFolder]
-   return shortFolder is not "Libraries"
+   return _Disabled (shortFolder, "Libraries")
 end disabled_Library
 
 getprop disabled_Controller [shortFolder]
-   return shortFolder is not "Controllers"
+   return _Disabled (shortFolder, "Controllers")
 end disabled_Controller
 
 getprop disabled_Module [shortFolder]
-   return shortFolder is not "Modules"
+   return _Disabled (shortFolder, "Modules")
 end disabled_Module
 
 getprop disabled_Model [shortFolder]
-   return shortFolder is not "Models"
+   return _Disabled (shortFolder, "Models")
 end disabled_Model
 
 getprop disabled_View [shortFolder]
-   return shortFolder is not "Views"
+   return _Disabled (shortFolder, "Views")
 end disabled_View
 
 getprop disabled_Behavior [shortFolder]
-   return shortFolder is not "Behaviors"
+   return _Disabled (shortFolder, "Behaviors")
 end disabled_Behavior
 
 

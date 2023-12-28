@@ -69,8 +69,18 @@ private on _
 end _
 
 on menu_EditProjectHome projectName
-   put project_GetHomeStackPath (projectName) into homeStackPath
+   put env_GetProjectHomePath (projectName) into homeStackPath
+   -- put project_GetHomeStackPath (projectName) into homeStackPath
+   if exists (stack homeStackPath) is false then
+      put homeStackPath
+      breakpoint
+      exit to top
+   end if
+   
    go to stack homeStackPath
+   --
+   put the name of stack homeStackPath into sObject
+   display_ObjectProperties sObject
    --
    edit the script of stack homeStackPath
 end menu_EditProjectHome
