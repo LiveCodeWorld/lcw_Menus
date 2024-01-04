@@ -53,12 +53,15 @@ end disabled_DisplayGitStatus
 
 --> Global | Project | Tree | Menu
 -
-on menu_StartProject projectName, someBoolean
-   if someBoolean is true then
-      project_Start projectName
-   else
+on menu_StartProject projectName
+   put env_ProjectIsActive (projectName) is true into isActive
+   if isActive is true then
       project_Stop projectName
+   else
+      project_Start projectName
    end if
+   --
+   display_Environment true
 end menu_StartProject
 
 on menu_FixProjectStackFiles projectName
