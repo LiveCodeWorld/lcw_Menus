@@ -63,12 +63,37 @@ getprop menuButtonInspector_Params [wikiView]
    return _MenuButtonNames (wikiView)
 end menuButtonInspector_Params
 
+getprop scale_Params
+   return "0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,-,1,-,1.5"
+end scale_Params
+
+getprop shrinkPage_Params [wikiView]
+   return the lineup_Titles of wikiView
+end shrinkPage_Params
+
+getprop updateToolsMenu_Params [wikiView]
+   return _MenuButtonNames (wikiView)
+end updateToolsMenu_Params
+
 
 --> Global | Menu | Group | Tools | Menu
 -
-on menu_EditToolsMenu dView
-   menu_Edit "Global | Tools | Menu"
-end menu_EditToolsMenu
+on menu_UpdateToolsMenu wikiView, mName
+   if mName is empty then put "Tools" into mName
+   
+   put the menubar_View of wikiView into menubarView
+   put the long id of btn mName of menubarView into mButton
+   --
+   mArray_ClearActiveMenuArray
+   put the live_MenuArray of mButton into mArray
+   mArray_SetActiveArray mArray -- so we can use live menus
+   
+   # Set text of mButton
+   if mArray is an array then
+      put mArray_ToText (mArray) into mText
+      set the text of mButton to mText
+   end if 
+end menu_UpdateToolsMenu
 
 private on _
 end _
@@ -82,8 +107,9 @@ on menu_SetMenuTitle wikiView, mName
 end menu_SetMenuTitle
 
 on menu_MenuButtonInspector wikiView, mName
-   put the menubar_View of wikiView into mBar
-   display_ObjectProperties mBar
+   put the menubar_View of wikiView into menubarView
+   put the long id of button mName of menubarView into mButton
+   display_ObjectProperties mButton
 end menu_MenuButtonInspector
 
 private on __
@@ -102,6 +128,20 @@ end menu_BrowserVisible
 private on ___
 end ___
 
-on menu_FetchDomainMenu wikiView
-   put the wiki_Domain of wikiView
-end menu_FetchDomainMenu
+on menu_Scale wikiView, sSale
+   -- put wikijs_SetPageScale (sSale) into sJavascript
+   -- set the browser_Javascript of wikiView to sJavascript
+   set the wiki_Scale of wikiView to sSale
+end menu_Scale
+
+private on ____
+end ____
+
+on menu_EditBehavior wikiView
+   put the behavior of wikiView into bObject
+   edit the script of bObject
+end menu_EditBehavior
+
+on submenu_Dev
+   return menu_DevTitle ("Global | Menu | Group | Tools | Menu")
+end submenu_Dev
