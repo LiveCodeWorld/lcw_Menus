@@ -79,6 +79,59 @@ function menu_Bit mTitle
    return word 1 to -1 of middleBit
 end menu_Bit
 
+function menu_DevTitle pMenuTitle, pMenuFolder
+   put the long name of target into mController
+   
+   # Set pMenuTitle
+   if pMenuTitle is empty then
+      put line 1 of the script_MenuTitles of mController into pMenuTitle
+   end if
+   if pMenuTitle is empty then
+      breakpoint
+      return empty
+   end if
+   
+   # Set mFolder
+   if pMenuFolder is empty then
+      put the stack_Folder of mController into mFolder
+   else
+      put pMenuFolder into mFolder
+   end if
+   
+   # Create Dev Menu
+   put menu_CreateTitle (pMenuTitle, "Dev", mFolder) into mController
+   return mController
+end menu_DevTitle
+
+function menu_CreateTitle mTitle, pDevBit, pMenuFolder
+   # Create Menu
+   menu_CreateFromTitle mTitle, mFolder, pDevBit
+   put the result into mController
+   if exists (mController) is false then breakpoint
+   
+   edit the script of mController
+   return mController
+end menu_CreateTitle
+
+command menu_CreateFromTitle mTitle, mFolder, pDevBit
+   ## Add Dev Bit (if provided)
+   if pDevBit is not empty then
+      put pDevBit && "| " before word -1 of mTitle
+      put "Create developer menu '[[mTitle]]'?" into sComment
+   else
+      put "Create menu '[[mTitle]]'?" into sComment
+   end if
+   
+   put menu_GetGlobalController (mTitle) into testController
+   if exists (testController) then
+      return "Error, controller for menu '[[mTitle]]' exists:" && testController
+   else
+      menu_CreateController mTitle, mFolder, pComment
+      put the result into mController
+      return mController
+   end if
+end menu_CreateFromTitle
+
 command menu_CreateController menuTitle, mFolder, pAskQuestion, pDisplayView
    if pAskQuestion is not empty then
       if exists (pDisplayView) is false then put menu_GetTopTargetObject() into pDisplayView
@@ -90,47 +143,6 @@ command menu_CreateController menuTitle, mFolder, pAskQuestion, pDisplayView
    put the result into mController
    return mController
 end menu_CreateController
-
-function menu_DevTitle pMenuTitle, pMenuFolder
-   return menu_CreateTitle (pMenuTitle, "Dev", pMenuFolder)
-end menu_DevTitle
-
-function menu_CreateTitle pMenuTitle, pDevBit, pMenuFolder
-   put the long name of target into mController
-   --
-   if pMenuTitle is empty then
-      put line 1 of the script_MenuTitles of mController into pMenuTitle
-   end if
-   if pMenuTitle is empty then
-      breakpoint
-      return empty
-   end if
-   
-   ## Add Dev Bit
-   if pDevBit is not empty then
-      put pDevBit && "| " before word -1 of pMenuTitle
-      put "Create developer menu '[[pMenuTitle]]'?" into sComment
-   else
-      put "Create menu '[[pMenuTitle]]'?" into sComment
-   end if
-   
-   put menu_GetGlobalController (pMenuTitle) into testController
-   if exists (testController) then
-      return pMenuTitle
-   else
-      if pMenuFolder is empty then
-         put the stack_Folder of mController into mFolder
-      else
-         put pMenuFolder into mFolder
-      end if
-      --
-      menu_CreateController pMenuTitle, mFolder, sComment
-      --
-      if exists (mController) is false then breakpoint
-      edit the script of mController
-      return pMenuTitle
-   end if
-end menu_CreateTitle
 
 private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath, pDisplayView
    /*

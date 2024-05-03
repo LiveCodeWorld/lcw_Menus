@@ -19,6 +19,11 @@ local LocalArray
 -
 getprop menu_Target [tObject]
    put the browser_View of tObject into browserView
+   --
+   put the card_Object of tObject into arrayObject
+   put the displayed_RectDataNum [true] of arrayObject into LocalArray ["dRectDataNum"]
+   put the displayed_ObjectNames of arrayObject into LocalArray ["objectNames"]
+   --
    return browserView
 end menu_Target
 
@@ -128,14 +133,95 @@ end menu_BrowserVisible
 private on ___
 end ___
 
+on menu_ShowWiki.W  wikiView
+   put the card_Object of wikiView into arrayObject
+   --
+   set the rectArray_AnimateScaled of arrayObject to "Wiki"
+end menu_ShowWiki.W
+
+on menu_ShowVideo.D wikiView
+   put the card_Object of wikiView into arrayObject
+   --
+   set the rectArray_AnimateScaled of arrayObject to "Full"
+end menu_ShowVideo.D
+
+on menu_ShowThree.T wikiView
+   put the card_Object of wikiView into arrayObject
+   --
+   set the rectArray_AnimateScaled of arrayObject to "Three"
+end menu_ShowThree.T
+
+private on ____
+end ____
+
+getprop checked_AnimationEngine [wikiView]
+   return "animationEngine" is among the lines of the stacksinuse
+end checked_AnimationEngine
+
+on menu_AnimationEngine wikiView
+   if "animationEngine" is among the lines of the stacksinuse then
+      stop using stack "animationEngine"
+   else if exists (stack "animationEngine") then
+      start using stack "animationEngine"
+   else
+      lcw_AnswerWarning "Cannot locate stack animationEngine!"
+   end if
+end menu_AnimationEngine
+
+on menu_ToggleLayout.N wikiView
+   put the card_Object of wikiView into arrayObject
+   --
+   put the displayed_RectDataNum of arrayObject into itemNum
+   put the rect_Data of arrayObject into rectData
+   put item 2 of the extents of rectData into maxNum
+   if the shiftKey is "Down" then
+      subtract 1 from itemNum
+      if itemNum < 1 then
+         put maxNum into itemNum
+      end if
+   else
+      add 1 to itemNum
+      if itemNum > maxNum then
+         put 1 into itemNum
+      end if
+   end if
+   set the rectArray_AnimateScaled of arrayObject to itemNum
+end menu_ToggleLayout.N
+
 on menu_Scale wikiView, sSale
    -- put wikijs_SetPageScale (sSale) into sJavascript
    -- set the browser_Javascript of wikiView to sJavascript
    set the wiki_Scale of wikiView to sSale
 end menu_Scale
 
-private on ____
-end ____
+private on _____
+end _____
+
+on menu_FormatMenuButtons wikiView
+   put the menubar_View of wikiView into mGroup
+   put the menu_Buttons of mGroup into mButtons
+   --
+   repeat for each line mButton in mButtons
+      set the cursor to busy
+      _SetMenuButtonDefaults mButton
+   end repeat
+end menu_FormatMenuButtons
+
+private command _SetMenuButtonDefaults mButton
+   set the showname of mButton to true
+   set the style of mButton to "transparent"
+   set the threed of mButton to false
+   set the borderwidth of mButton to 0
+   set the blendlevel of mButton to 0
+   set the margins of mButton to "4,0,4,1"
+   set the traversalOn of mButton to false
+   set the autoHilite of mButton to false
+end _SetMenuButtonDefaults
+
+on menu_EditCardScript wikiView
+   put the card_Object of wikiView into cardObject
+   edit the script of cardObject
+end menu_EditCardScript
 
 on menu_EditBehavior wikiView
    put the behavior of wikiView into bObject
@@ -145,3 +231,41 @@ end menu_EditBehavior
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Tools | Menu")
 end submenu_Dev
+
+on menu_ObeyaStudioTools browserView
+   put the view_Name of browserView into viewName
+   display_ModuleTools viewName
+end menu_ObeyaStudioTools
+
+on menu_StorePositions browserView
+   put the card_object of browserView into cardObject
+   put the displayed_RectDataNum of cardObject into indexNum
+   --
+   put the rect_Array of cardObject into rectArray
+   put the rect_MetaArray [indexNum] of cardObject into mArray
+   put mArray into rectArray ["meta"]
+   set the rect_Data [indexNum] of cardObject to rectArray
+end menu_StorePositions
+   
+on menu_SetMenuBar browserView
+   put the menubar_View of browserView into mView
+   put the show_Menu of mView into sBoolean
+   set the show_Menu of mView to (sBoolean is false)
+end menu_SetMenuBar
+
+on menu_PreviewMenu browserView
+   put the menubar_View of browserView into mView
+   menubar_TogglePreview mView
+end menu_PreviewMenu
+
+on menu_MenuGroupTools
+   put the stack_Folder of stack "View|Menu|Group" into moduleFolder
+   put project_PathFromFolder (moduleFolder) into stackPath
+   display_ModuleTools stackPath
+end menu_MenuGroupTools
+
+on menu_SaveStack browserView
+   put the stack_Name of browserView into stackName
+   save stack stackName
+end menu_SaveStack
+

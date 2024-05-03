@@ -12,15 +12,12 @@ version: 0.2
 -
 local LocalArray
 
-on menu_Init tObject
-   put the title_Text of tObject into oProjectName
-   put oProjectName into LocalArray ["oProjectName"]
-   --
-   put the display_View of tObject into LocalArray ["displayView"]
-end menu_Init
-
 getprop menu_Target [tObject]
    put the top_Line of tObject into shortFolder
+   --
+   put the title_Text of tObject into LocalArray ["oProjectName"]
+   put the display_View of tObject into LocalArray ["displayView"]
+   --
    return shortFolder
 end menu_Target
 

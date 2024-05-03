@@ -99,8 +99,8 @@ on menu_MenuGroupBehavior mGroup
    edit the script of bObject
 end menu_MenuGroupBehavior
 
-on menu_MenuGroupTools dView
-   put the view_Name of dView into viewName
+on menu_MenuGroupTools mGroup
+   put the view_Name of mGroup into viewName
    display_ModuleTools viewName
 end menu_MenuGroupTools
 
@@ -115,6 +115,24 @@ end menu_DisplayIdeMenubar
 on menu_ResetDefaultMenubar
    ide_ResetDefaultMenubar
 end menu_ResetDefaultMenubar
+
+on menu_FormatMenuButtons mGroup
+   put the menu_Buttons of mGroup into mButtons
+   repeat ofr each line mButton in mButtons
+      _SetMenuButtonDefaults mButton
+   end repeat
+end menu_FormatMenuButtons
+
+private command _SetMenuButtonDefaults mButton
+   set the showname of mButton to true
+   set the style of mButton to "transparent"
+   set the threed of mButton to false
+   set the borderwidth of mButton to 0
+   set the blendlevel of mButton to 0
+   set the margins of mButton to "4,0,4,1"
+   set the traversalOn of mButton to false
+   set the autoHilite of mButton to false
+end _SetMenuButtonDefaults
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Menu")

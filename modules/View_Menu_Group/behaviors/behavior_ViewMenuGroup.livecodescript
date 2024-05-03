@@ -43,6 +43,25 @@ private command _SetMenuButtonDefaults
 end _SetMenuButtonDefaults
 */
 
+--> Events
+-
+on menuPick mItem
+   put the live_MenuArray of the target into mArray
+   menu_DispatchTextPick mItem, mArray
+end menuPick
+
+on mouseDown
+   -- called when the stack menu is initiated
+   put the long id of the target into mButton
+   if word 1 of mButton is "button" then
+      mArray_ClearActiveMenuArray
+      _SetButtonText mButton
+   else
+      _SetMenuGroupText
+   end if
+end mouseDown
+
+
 --> Working on
 -
 getprop menu_Target [mNum]
@@ -301,25 +320,6 @@ getprop live_MenuArray [numOrName]
    return mArray
 end live_MenuArray
 
-
---> Events
--
-on menuPick mItem
-   put the live_MenuArray of the target into mArray
-   menu_DispatchTextPick mItem, mArray
-end menuPick
-
-on mouseDown
-   -- called when the stack menu is initiated
-   put the long id of the target into mButton
-   if word 1 of mButton is "button" then
-      mArray_ClearActiveMenuArray
-      _SetButtonText mButton
-   else
-      _SetMenuGroupText
-   end if
-end mouseDown
-
 private command _SetMenuGroupText
    mArray_ClearActiveMenuArray
    --
@@ -347,8 +347,19 @@ private command _SetButtonText mButton, pUseCached
    return mArray
 end _SetButtonText
 
+
 --> Menu | Props
 -
+getprop menu_Buttons
+   put the number of buttons of me into maxNum
+   repeat with mButtonNum = 1 to maxNum
+      put the long id of btn mButtonNum of me into mButton
+      put mButton & CR after mButtons
+   end repeat
+   delete char -1 of mButtons
+   return mButtons
+end menu_Buttons
+
 getprop menu_Names
    repeat with mNum = 1 to the number of buttons of me
       put the short name of btn mNum of me into mName
@@ -495,7 +506,6 @@ end menu_ButtonName
 --> MenuGroup | Live
 -
 private function _Error
-   breakpoint
    return empty
 end _Error
 
