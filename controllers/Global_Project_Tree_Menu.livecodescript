@@ -65,7 +65,7 @@ on menu_StartProject projectName
 end menu_StartProject
 
 on menu_FixProjectStackFiles projectName
-   display_FixProjectStackFiles projectName
+   display_ProjectArray projectName, true
 end menu_FixProjectStackFiles
 
 private on _

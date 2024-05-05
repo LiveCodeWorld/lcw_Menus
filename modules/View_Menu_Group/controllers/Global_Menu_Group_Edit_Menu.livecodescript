@@ -263,7 +263,7 @@ actionUndo
 end menu_Undo
 
 == on menu_Redo dView
-   put the params
+put the params
 end menu_Redo
 
 on menu_Cut.X dView
@@ -287,7 +287,7 @@ on menu_SelectAll.A dView
 end menu_SelectAll.A
 
 -- on menu_Revert dView
-   put the params
+put the params
 end menu_Revert
 
 private on __
@@ -297,9 +297,20 @@ on menu_MessageBox.M
    revIDETogglePalette "message box"
 end menu_MessageBox.M
 
+on menu_EditCardScript dView
+   put the card_Object of dView into cardObject
+   edit the script of cardObject
+end menu_EditCardScript
+
+on menu_WikiBehavior dView
+   put the browser_View of dView into browserView
+   put the behavior of browserView into bObject
+   edit the script of bObject
+end menu_WikiBehavior
+
+private on ___
+end ___
+
 on menu_DisplayMenuArray dView
    display_ActiveMenuArray
 end menu_DisplayMenuArray
-
-private on __
-end __

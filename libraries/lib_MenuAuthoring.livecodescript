@@ -99,22 +99,29 @@ function menu_DevTitle pMenuTitle, pMenuFolder
    end if
    
    # Create Dev Menu
-   put menu_CreateTitle (pMenuTitle, "Dev", mFolder) into mController
-   return mController
+   put "Dev | " before word -1 of pMenuTitle
+   put menu_GetGlobalController (pMenuTitle) into testController
+   if exists (testController) is true then return pMenuTitle
+   
+   # Ask to create
+   menu_CreateController pMenuTitle, mFolder, sComment
+   put the result into mController
+   return pMenuTitle
 end menu_DevTitle
 
-function menu_CreateTitle mTitle, pDevBit, pMenuFolder
+function menu_CreateTitle mTitle, pDevBit, mFolder
    # Create Menu
    menu_CreateFromTitle mTitle, mFolder, pDevBit
    put the result into mController
-   if exists (mController) is false then breakpoint
-   
-   edit the script of mController
+   if exists (mController) is false then
+      put menu_GetGlobalController (mTitle) into mController
+      breakpoint
+   end if
    return mController
 end menu_CreateTitle
 
 command menu_CreateFromTitle mTitle, mFolder, pDevBit
-   ## Add Dev Bit (if provided)
+   # Add Dev Bit (if provided)
    if pDevBit is not empty then
       put pDevBit && "| " before word -1 of mTitle
       put "Create developer menu '[[mTitle]]'?" into sComment
@@ -124,9 +131,11 @@ command menu_CreateFromTitle mTitle, mFolder, pDevBit
    
    put menu_GetGlobalController (mTitle) into testController
    if exists (testController) then
-      return "Error, controller for menu '[[mTitle]]' exists:" && testController
+      -- return "Error, controller for menu '[[mTitle]]' exists:" && testController
+      return testController
    else
-      menu_CreateController mTitle, mFolder, pComment
+      # Ask to create
+      menu_CreateController mTitle, mFolder, sComment
       put the result into mController
       return mController
    end if
