@@ -114,8 +114,8 @@ function mArray_GetParamValues propLabel, mController, mTarget
       put the mProperty of mController into paramValues
       return paramValues
    catch e
-      breakpoint
-      edit the script of mController
+      -- edit the script of mController
+      lcw_Notify the params
    end try
 end mArray_GetParamValues
 

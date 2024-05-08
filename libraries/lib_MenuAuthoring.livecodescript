@@ -173,10 +173,10 @@ private command _CheckCreateScriptOnlyStack mName, mFolder, mControllerPath, pDi
    if there is a file mControllerPath then
       -- probably needs indexing?
       put the project_Name of stack mControllerPath into projectName
-      put "Fix stack files for project '[[projectName]]'?" into someQuestion 
+      put "Fix stack files and project array for project '[[projectName]]'?" into someQuestion 
       lcw_Answer someQuestion, pDisplayView, projectName
       --
-      project_FixStackFiles projectName
+      project_UpdateArray projectName
       put the result into projectArray
       --
       exit to top

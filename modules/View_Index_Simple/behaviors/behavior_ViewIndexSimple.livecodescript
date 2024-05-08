@@ -37,6 +37,22 @@ private command _doButtonMenu
 end _doButtonMenu
 
 
+--> Props
+-
+getprop data_MenuBit
+   -- return the data_MenuBit name = menuBit
+   get the title_Menu of me
+   set the itemdelimiter to "|"
+   put word 1 to -1 of item 2 to -2 of it into menuBit
+   return menuBit
+end data_MenuBit
+
+setprop data_MenuBit [projectName] menuBit
+   put the long id of me into displayView
+   display_SetToolMenus menuBit, displayView, projectName
+end data_MenuBit
+
+
 --> Objects
 -
 private function _titleView
@@ -328,22 +344,6 @@ end drop_Target
 setprop drop_Target darget
    put darget into LocalArray ["drop_Target"]
 end drop_Target
-
-
---> Props
--
-getprop tool_Menus
-   -- return the tool_Menus name = menuBit
-   get the title_Menu of me
-   set the itemdelimiter to "|"
-   put word 1 to -1 of item 2 to -2 of it into menuBit
-   return menuBit
-end tool_Menus
-
-setprop tool_Menus [projectName] menuBit
-   put the long id of me into displayView
-   display_SetToolMenus menuBit, displayView, projectName
-end tool_Menus
 
 
 --> Displayed

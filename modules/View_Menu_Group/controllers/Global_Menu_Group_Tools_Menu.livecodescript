@@ -83,39 +83,32 @@ end updateToolsMenu_Params
 
 --> Global | Menu | Group | Tools | Menu
 -
-on menu_UpdateToolsMenu wikiView, mName
-   if mName is empty then put "Tools" into mName
-   
-   put the menubar_View of wikiView into menubarView
-   put the long id of btn mName of menubarView into mButton
+on menu_ShowTerminal browserView
+   put "radar" into shortPluginName
    --
-   mArray_ClearActiveMenuArray
-   put the live_MenuArray of mButton into mArray
-   mArray_SetActiveArray mArray -- so we can use live menus
-   
-   # Set text of mButton
-   if mArray is an array then
-      put mArray_ToText (mArray) into mText
-      set the text of mButton to mText
-   end if 
-end menu_UpdateToolsMenu
+   put the other_Browser of browserView into oBrowser
+   put "cd $(npm prefix -g); npm i wiki-plugin-" & shortPluginName into sShellCommand
+   --
+   display_Xterm oBrowser, sShellCommand
+end menu_ShowTerminal
+
+on menu_ShowChatGpt browserView
+   put the other_Browser of browserView into oBrowser
+   set the browser_URL of oBrowser to "https://auth0.openai.com/authorize?client_id=TdJIcbe16WoTHtN95nyywh5E4yOo6ItG&scope=openid%20email%20profile%20offline_access%20model.request%20model.read%20organization.read%20organization.write&response_type=code&redirect_uri=https%3A%2F%2Fchat.openai.com%2Fapi%2Fauth%2Fcallback%2Fauth0&audience=https%3A%2F%2Fapi.openai.com%2Fv1&state=TCb84sVofxommgO0nGSP6XeL_hIdIIvaeXtgt26fiD4&code_challenge=N28l-klMH55P8456l89bQgkMxADesMuYms3VYIyCECQ&code_challenge_method=S256"
+end menu_ShowChatGpt
+
+on menu_ShowAsana browserView
+   put the other_Browser of browserView into oBrowser
+   set the browser_URL of oBrowser to "https://app.asana.com/0/1206580415766932/1206580454304519"
+end menu_ShowAsana
 
 private on _
 end _
 
-on menu_SetMenuTitle wikiView, mName
-   put the menubar_View of wikiView into mBar
-   --
-   put the menu_Title [mName] of mBar into mTitle
-   put lcw_Ask ("Edit menu_Title...", mTitle, "Edit Menu Titles", wikiView) into mTitle
-   set the menu_Title [mName] of mBar to mTitle
-end menu_SetMenuTitle
-
-on menu_MenuButtonInspector wikiView, mName
-   put the menubar_View of wikiView into menubarView
-   put the long id of button mName of menubarView into mButton
-   display_ObjectProperties mButton
-end menu_MenuButtonInspector
+on menu_SaveStack browserView
+   put the stack_Name of browserView into stackName
+   save stack stackName
+end menu_SaveStack
 
 private on __
 end __
@@ -197,6 +190,41 @@ end menu_Scale
 private on _____
 end _____
 
+on submenu_Dev
+   return menu_DevTitle ("Global | Menu | Group | Tools | Menu")
+end submenu_Dev
+
+on menu_UpdateToolsMenu wikiView, mName
+   if mName is empty then put "Tools" into mName
+   
+   put the menubar_View of wikiView into menubarView
+   put the long id of btn mName of menubarView into mButton
+   --
+   mArray_ClearActiveMenuArray
+   put the live_MenuArray of mButton into mArray
+   mArray_SetActiveArray mArray -- so we can use live menus
+   
+   # Set text of mButton
+   if mArray is an array then
+      put mArray_ToText (mArray) into mText
+      set the text of mButton to mText
+   end if 
+end menu_UpdateToolsMenu
+
+on menu_SetMenuTitle wikiView, mName
+   put the menubar_View of wikiView into mBar
+   --
+   put the menu_Title [mName] of mBar into mTitle
+   put lcw_Ask ("Edit menu_Title...", mTitle, "Edit Menu Titles", wikiView) into mTitle
+   set the menu_Title [mName] of mBar to mTitle
+end menu_SetMenuTitle
+
+on menu_MenuButtonInspector wikiView, mName
+   put the menubar_View of wikiView into menubarView
+   put the long id of button mName of menubarView into mButton
+   display_ObjectProperties mButton
+end menu_MenuButtonInspector
+
 on menu_FormatMenuButtons wikiView
    put the menubar_View of wikiView into mGroup
    put the menu_Buttons of mGroup into mButtons
@@ -263,9 +291,4 @@ on menu_MenuGroupTools
    put project_PathFromFolder (moduleFolder) into stackPath
    display_ModuleTools stackPath
 end menu_MenuGroupTools
-
-on menu_SaveStack browserView
-   put the stack_Name of browserView into stackName
-   save stack stackName
-end menu_SaveStack
 
