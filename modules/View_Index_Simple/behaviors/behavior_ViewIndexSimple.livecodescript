@@ -4,7 +4,7 @@
 copyright: David Bovill
 license: GPLv3
 name: behavior_ViewIndexSimple
-type: view behavior
+type: behavior
 version: 0.6
 
 /*
@@ -16,6 +16,23 @@ For instance the ScriptEditor menus use the "menuPick" handler below.
 --> Variables
 -
 local LocalArray
+
+
+--> Props
+-
+getprop data_MenuBit
+   -- return the data_MenuBit name = menuBit
+   get the title_Menu of me
+   set the itemdelimiter to "|"
+   put word 1 to -1 of item 2 to -2 of it into menuBit
+   return menuBit
+end data_MenuBit
+
+setprop data_MenuBit [projectName] menuBit
+   put the long id of me into displayView
+   display_SetToolMenus menuBit, displayView, projectName
+end data_MenuBit
+
 
 --> Working on
 -
@@ -35,22 +52,6 @@ private command _doButtonMenu
          mArray_MouseDown mTitle, mButton
    end switch
 end _doButtonMenu
-
-
---> Props
--
-getprop data_MenuBit
-   -- return the data_MenuBit name = menuBit
-   get the title_Menu of me
-   set the itemdelimiter to "|"
-   put word 1 to -1 of item 2 to -2 of it into menuBit
-   return menuBit
-end data_MenuBit
-
-setprop data_MenuBit [projectName] menuBit
-   put the long id of me into displayView
-   display_SetToolMenus menuBit, displayView, projectName
-end data_MenuBit
 
 
 --> Objects

@@ -104,7 +104,8 @@ function menu_DevTitle pMenuTitle, pMenuFolder
    if exists (testController) is true then return pMenuTitle
    
    # Ask to create
-   menu_CreateController pMenuTitle, mFolder, sComment
+   -- get menu_GetGlobalController (pMenuTitle)
+   menu_CreateController pMenuTitle, mFolder
    put the result into mController
    return pMenuTitle
 end menu_DevTitle

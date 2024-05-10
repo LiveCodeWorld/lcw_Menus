@@ -43,6 +43,190 @@ private command _SetMenuButtonDefaults
 end _SetMenuButtonDefaults
 */
 
+--> Working on
+-
+private function _Error
+   return empty
+end _Error
+
+getprop menu_Title [numOrName]
+   put the menu_ButtonNum [numOrName] of the target into mNum
+   if mNum is empty then return empty
+   --
+   return _GetMenuButtonTitle (mNum)
+end menu_Title
+
+setprop menu_Title [numOrName] mTitleAndName  
+   put the menu_ButtonNum [numOrName] of the target into mNum
+   if mNum is empty then return empty
+   --
+   put item 1 of mTitleAndName into mTitle
+   put item 2 of mTitleAndName into mItemName
+   --
+   _SetMenuButtonTitle mNum, mTitle, mItemName
+   put the result into mData
+   return mData
+end menu_Title
+
+getprop menu_Titles
+   repeat with mNum = 1 to the number of buttons of me
+      put _GetMenuButtonTitle (mNum) into mTitle
+      put mTitle & CR after mTitles
+   end repeat
+   delete char -1 of mTitles
+   return mTitles
+end menu_Titles
+
+setprop menu_Titles mTitles
+   replace comma with CR in mTitles
+   repeat with mNum = 1 to the number of buttons of me
+      -- repeat with mNum = 1 to the number of lines of mTitles
+      get line mNum of mTitles
+      put item 1 of it into mTitle
+      put item 2 of it into mItemName
+      --
+      _SetMenuButtonTitle mNum, mTitle, mItemName
+      --
+      put the result into mData
+      put mData into rData [mNum]
+   end repeat
+   return mNum
+end menu_Titles
+
+setprop menu_Controller [numOrName] mController
+   put the menu_ButtonNum [numOrName] of the target into mNum
+   if mNum is empty then return empty
+   --
+   put the long id of button mNum of me into mButton
+   --
+   _SetMenuItemController mController, mButton
+   --
+   put the result into mData
+   return mData
+end menu_Controller
+
+setprop menuItem_Controller [numOrName] mController
+   put the menu_ButtonNum [numOrName] of the target into mNum
+   if mNum is empty then return empty
+   --
+   put the long id of button mNum of me into mButton
+   --
+   _SetMenuItemController mController, mButton
+   --
+   put the result into mData
+   return mData
+end menuItem_Controller
+
+
+--> Props | Rename
+-
+getprop menuButton_LiveData [numOrName]
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then return _Error()
+   put the menu_ButtonNum [numOrName] of mButton into mNum
+   --
+   put _GetMenuButtonData (mNum) into mData
+   put mData ["mTitle"] into mTitle
+   if mTitle is empty then return empty
+   
+   # Get live mData
+   put the menu_Target of mButton into mTarget
+   put _LiveMenuData (mTitle, mButton, mTarget) into mData
+   --
+   put mData ["mArray"] into mArray
+   return mArray
+end menuButton_LiveData
+
+getprop live_MenuArray [numOrName]
+   -- from menu_Title [numOrName]
+   local tObject
+   _NormalizeClickTarget tObject
+   
+   put the menu_ButtonNum [numOrName] of the target into mNum
+   if mNum is empty then return empty
+   --
+   put _GetMenuButtonTarget [mNum] into mTarget
+   _NormalizeMenuTarget mTarget
+   
+   put _GetMenuButtonTitle (mNum) into mTitle
+   
+   # Get live mData
+   mArray_ClearActiveMenuArray
+   menu_SetTopTargetObject tObject
+   put mArray_FromTitleTable (mTitle, mTarget) into mArray
+   return mArray
+end live_MenuArray
+
+getprop live_MenuData [mTitle]
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then
+      breakpoint
+      return empty
+   end if
+   --
+   put the menu_Target of mButton into mTarget
+   put _LiveMenuData (mTitle, mButton, mTarget) into mData
+   return mData
+end live_MenuData
+
+getprop group_ButtonNumber
+   put the long id of the target into tObject
+   if word 1 of tObject is not "button" then return empty
+   put the owner of tObject into tOwner
+   if word 1 of tOwner is not "group" then return empty
+   --
+   put the short id of tObject into targetID
+   repeat with btnNum = 1 to the number of buttons of tOwner
+      put the short id of btn btnNum of tOwner into btnID
+      if btnID = targetID then
+         return btnNum
+      end if
+   end repeat
+   return it
+end group_ButtonNumber
+
+getprop top_Sister
+   put the long id of me into tObject
+   put the top_Controls of the owner of tObject into topControls
+   repeat for each line topControl in topControls
+      if topControl = tObject then
+         next repeat
+      end if
+      return topControl
+   end repeat
+   return empty
+end top_Sister
+
+getprop show_Menu
+   put the stack_Name of me into sName
+   put the menubar of stack sName into mName
+   put mName is not empty into sBoolean
+   return sBoolean
+end show_Menu
+
+setprop show_Menu [sRect] sBoolean
+   put the stack_Name of me into sName
+   if sRect is empty then
+      put the rect of this card into sRect
+   end if
+   --
+   set the lockscreen to true
+   if sBoolean is true then
+      put the short name of me into mName
+      set the menubar of stack sName to mName
+   else
+      set the menubar of stack sName to empty
+   end if
+   -- set the editMenus of this stack to false
+   -- send "LayoutCard sRect" to the owner of me in 2 ticks
+   put the browser_View of me into browserView
+   if exists (browserView) then
+      set the rect of browserView to sRect
+   end if
+   set the lockscreen to false
+end show_Menu
+
+
 --> Events
 -
 on menuPick mItem
@@ -79,6 +263,11 @@ getprop menu_Target [mNum]
    return mTarget
 end menu_Target
 
+setprop menu_Target [mNum] mTarget
+   _SetMenuButtonTarget mNum, mTarget
+   return the result
+end menu_Target
+
 getprop menu_ButtonTitle
    put the menu_ButtonNum of the target into mNum
    return _GetMenuButtonTitle (mNum) -- for mGroup buttons
@@ -92,22 +281,6 @@ setprop menu_ButtonTitle [mItemName] mTitle
    return mData
 end menu_ButtonTitle
 
-getprop menu_ButtonTitle
-   put the menu_ButtonNum of the target into mNum
-   return _GetMenuButtonTitle (mNum)
-end menu_ButtonTitle
-
-setprop menu_ButtonTitle [mItemName] mTitle
-   put the menu_ButtonNum of the target into mNum
-   --
-   _SetMenuButtonTitle mNum, mTitle, mItemName
-   put the result into mData
-   return mData
-end menu_ButtonTitle
-
-
---> Normalize | mButtonNum
--
 getprop menu_ButtonNum [numOrName]
    switch
       case numOrName is an integer
@@ -132,220 +305,12 @@ getprop menu_ButtonNum [numOrName]
    end switch
 end menu_ButtonNum
 
-private command _NormaliseButtonNum @mNum, mBarData
-   if mNum is a number then return true
-   
-   -- could use button name ?
-   put mNum into mName
-   repeat with itemNum = 1 to item 2 of the extents of mBarData
-      put mBarData [itemNum]["mName"] into testName
-      if testName = mName then
-         put itemNum into mNum
-         return true
-      end if
-   end repeat
-   put 0 into mNum
-   return false
-end _NormaliseButtonNum
-
-getprop group_ButtonNumber
-   put the long id of the target into tObject
-   if word 1 of tObject is not "button" then return empty
-   put the owner of tObject into tOwner
-   if word 1 of tOwner is not "group" then return empty
-   --
-   put the short id of tObject into targetID
-   repeat with btnNum = 1 to the number of buttons of tOwner
-      put the short id of btn btnNum of tOwner into btnID
-      if btnID = targetID then
-         return btnNum
-      end if
-   end repeat
-   return it
-end group_ButtonNumber
-
-function group_GetButtonNumber numOrName, groupObject
-   if exists (btn numOrName of groupObject) is false then return empty
-   put the short id of btn numOrName of groupObject into btnID
-   --
-   repeat with btnNum = 1 to the number of buttons of groupObject
-      put the short id of btn btnNum of groupObject into testID
-      if testID = btnID then
-         return btnNum
-      end if
-   end repeat
-   return empty -- should not happen
-end group_GetButtonNumber
-
-
---> Normailxe
--
-private command _NormalizeClickTarget @tObject
-   if exists (tObject) then
-      return true
-   else
-      put _DefaultTarget() into tObject
-      return false
-   end if
-end _NormalizeClickTarget
-
-private command _NormalizeMenuTarget @pMenuTarget
-   if exists (pMenuTarget) then
-      return true
-   else
-      put _DefaultTarget() into pMenuTarget
-      return false
-   end if
-end _NormalizeMenuTarget
-
-function _DefaultTarget
-   put the top_Sister of me into sTarget
-   if exists (sTarget) is false then
-      put the long id of the owner of me into sTarget
-   end if
-   return sTarget
-end _DefaultTarget
-
-getprop top_Sister
-   put the long id of me into tObject
-   put the top_Controls of the owner of tObject into topControls
-   repeat for each line topControl in topControls
-      if topControl = tObject then
-         next repeat
-      end if
-      return topControl
-   end repeat
-   return empty
-end top_Sister
-
-
---> Live
--
-private function _LiveMenuData mTitle, mTarget, tObject
-   # Set mTarget
-   if exists (mTarget) is false then breakpoint -- dangerous
-   
-   put mTarget into mData ["mTarget"]
-   mArray_ClearActiveMenuArray -- or recursioncheck blanks this
-   menu_SetTopTargetObject tObject -- we assume target is mButton?
-   
-   # Get mController form mTitle
-   put menu_GetGlobalController (mTitle) into mTopController
-   if exists (mTopController) is false then
-      breakpoint
-      return empty
-   end if
-   --
-   put mTitle into mData ["mTitle"]
-   put mTopController into mData ["mController"] -- this is mTopController
-   put the short name of mButton into mData ["mName"]
-   
-   # Construct mData from mController script
-   put mArray_FromTitleTable (mTitle, mTarget) into mArray
-   put mArray into mData ["mArray"]
-   return mData
-end _LiveMenuData
-
 getprop menu_Text [numOrName]
    put the live_MenuArray [numOrName] of the target into mArray
    if mArray is not an array then return empty
    put mArray_ToText (mArray) into mText
    return mText
 end menu_Text
-
-getprop live_MenuData [mTitle]
-   put the long id of the target into mButton
-   if word 1 of mButton is not "button" then
-      breakpoint
-      return empty
-   end if
-   --
-   put the menu_Target of mButton into mTarget
-   put _LiveMenuData (mTitle, mButton, mTarget) into mData
-   return mData
-end live_MenuData
-
-getprop menuButton_LiveData [numOrName]
-   put the long id of the target into mButton
-   if word 1 of mButton is not "button" then return _Error()
-   put the menu_ButtonNum [numOrName] of mButton into mNum
-   --
-   put _GetMenuButtonData (mNum) into mData
-   put mData ["mTitle"] into mTitle
-   if mTitle is empty then return empty
-   
-   # Get live mData
-   put the menu_Target of mButton into mTarget
-   put _LiveMenuData (mTitle, mButton, mTarget) into mData
-   --
-   put mData ["mArray"] into mArray
-   return mArray
-end menuButton_LiveData
-
-
---> Props
--
-setprop menu_Target [mNum] mTarget
-   _SetMenuButtonTarget mNum, mTarget
-   return the result
-end menu_Target
-
-private function _GetMenuButtonTarget mNum
-   put _GetMenuButtonValue (mNum, "mTarget") into mTarget
-   return mTarget
-end _GetMenuButtonTarget
-
-private command _SetMenuButtonTarget mNum, mTarget
-   _SetMenuButtonValue mNum, "mTarget", mTarget
-   return the result
-end _SetMenuButtonTarget
-
-getprop live_MenuArray [numOrName]
-   -- from menu_Title [numOrName]
-   local tObject
-   _NormalizeClickTarget tObject
-   
-   put the menu_ButtonNum [numOrName] of the target into mNum
-   if mNum is empty then return empty
-   --
-   put _GetMenuButtonTarget [mNum] into mTarget
-   _NormalizeMenuTarget mTarget
-   
-   put _GetMenuButtonTitle (mNum) into mTitle
-   
-   # Get live mData
-   mArray_ClearActiveMenuArray
-   menu_SetTopTargetObject tObject
-   put mArray_FromTitleTable (mTitle, mTarget) into mArray
-   return mArray
-end live_MenuArray
-
-private command _SetMenuGroupText
-   mArray_ClearActiveMenuArray
-   --
-   put the number of buttons of me into maxNum
-   repeat with mButtonNum = 1 to maxNum
-      put the long id of btn mButtonNum of me into mButton
-      _SetButtonText mButton
-   end repeat
-end _SetMenuGroupText
-
-private command _SetButtonText mButton, pUseCached
-   set the showBorder of mButton to false
-   if pUseCached is true then
-      put _CachedMenuArray (mButton) into mArray
-   else
-      put the live_MenuArray of mButton into mArray
-   end if
-   mArray_SetActiveArray mArray -- so we can use live menus
-   
-   # Set text of mButton
-   if mArray is an array then
-      put mArray_ToText (mArray) into mText
-      set the text of mButton to mText
-   end if 
-   return mArray
-end _SetButtonText
 
 
 --> Menu | Props
@@ -369,116 +334,6 @@ getprop menu_Names
    return mNames
 end menu_Names
 
-getprop menu_Titles
-   repeat with mNum = 1 to the number of buttons of me
-      put _GetMenuButtonTitle (mNum) into mTitle
-      put mTitle & CR after mTitles
-   end repeat
-   delete char -1 of mTitles
-   return mTitles
-end menu_Titles
-
-setprop menu_Titles mTitles
-   replace comma with CR in mTitles
-   repeat with mNum = 1 to the number of buttons of me
-      -- repeat with mNum = 1 to the number of lines of mTitles
-      get line mNum of mTitles
-      put item 1 of it into mTitle
-      put item 2 of it into mItemName
-      --
-      _SetMenuButtonTitle mNum, mTitle, mItemName
-      --
-      put the result into mData
-      put mData into rData [mNum]
-   end repeat
-   return mNum
-end menu_Titles
-
-private command _SetMenuItemController mController, mButton
-   put the menu_GlobalTitle of mController into mTitle
-   put _ConstructMenuBarData (mTitle, mButton, mController) into mData
-   set the menu_ButtonData of me to mData
-   return mData
-end _SetMenuItemController
-
-getprop menu_Title [numOrName]
-   put the menu_ButtonNum [numOrName] of the target into mNum
-   if mNum is empty then return empty
-   --
-   return _GetMenuButtonTitle (mNum)
-end menu_Title
-
-setprop menu_Title [numOrName] mTitleAndName  
-   put the menu_ButtonNum [numOrName] of the target into mNum
-   if mNum is empty then return empty
-   --
-   put item 1 of mTitleAndName into mTitle
-   put item 2 of mTitleAndName into mItemName
-   --
-   _SetMenuButtonTitle mNum, mTitle, mItemName
-   put the result into mData
-   return mData
-end menu_Title
-
-setprop menu_Controller [numOrName] mController
-   put the menu_ButtonNum [numOrName] of the target into mNum
-   if mNum is empty then return empty
-   --
-   put the long id of button mNum of me into mButton
-   --
-   _SetMenuItemController mController, mButton
-   --
-   put the result into mData
-   return mData
-end menu_Controller
-
-setprop menuItem_Controller [numOrName] mController
-   put the menu_ButtonNum [numOrName] of the target into mNum
-   if mNum is empty then return empty
-   --
-   put the long id of button mNum of me into mButton
-   --
-   _SetMenuItemController mController, mButton
-   --
-   put the result into mData
-   return mData
-end menuItem_Controller
-
-
---> MenuGroup | Props
--
-getprop show_Menu
-   put the stack_Name of me into sName
-   put the menubar of stack sName into mName
-   put mName is not empty into sBoolean
-   return sBoolean
-end show_Menu
-
-setprop show_Menu [sRect] sBoolean
-   put the stack_Name of me into sName
-   if sRect is empty then
-      put the rect of this card into sRect
-   end if
-   --
-   set the lockscreen to true
-   if sBoolean is true then
-      put the short name of me into mName
-      set the menubar of stack sName to mName
-   else
-      set the menubar of stack sName to empty
-   end if
-   -- set the editMenus of this stack to false
-   -- send "LayoutCard sRect" to the owner of me in 2 ticks
-   put the browser_View of me into browserView
-   if exists (browserView) then
-      set the rect of browserView to sRect
-   end if
-   set the lockscreen to false
-end show_Menu
-
-
---> MenuItem
--
 getprop menu_ButtonName [numOrName]
    put the menu_ButtonNum [numOrName] of the target into mNum
    if mNum is empty then return empty
@@ -501,13 +356,6 @@ setprop menu_ButtonName [numOrName] mName
    set the label of mButton to mName
    return mButton
 end menu_ButtonName
-
-
---> MenuGroup | Live
--
-private function _Error
-   return empty
-end _Error
 
 getprop menu_ButtonData [numOrName]
    put the menu_ButtonNum [numOrName] of the target into mNum
@@ -544,6 +392,134 @@ end menubar_View
 getprop view_Object
    return the long id of me
 end view_Object
+
+
+--> Private
+-
+private command _SetMenuItemController mController, mButton
+   put the menu_GlobalTitle of mController into mTitle
+   put _ConstructMenuBarData (mTitle, mButton, mController) into mData
+   set the menu_ButtonData of me to mData
+   return mData
+end _SetMenuItemController
+
+private function group_GetButtonNumber numOrName, groupObject
+   if exists (btn numOrName of groupObject) is false then return empty
+   put the short id of btn numOrName of groupObject into btnID
+   --
+   repeat with btnNum = 1 to the number of buttons of groupObject
+      put the short id of btn btnNum of groupObject into testID
+      if testID = btnID then
+         return btnNum
+      end if
+   end repeat
+   return empty -- should not happen
+end group_GetButtonNumber
+
+private command _NormaliseButtonNum @mNum, mBarData
+   if mNum is a number then return true
+   
+   -- could use button name ?
+   put mNum into mName
+   repeat with itemNum = 1 to item 2 of the extents of mBarData
+      put mBarData [itemNum]["mName"] into testName
+      if testName = mName then
+         put itemNum into mNum
+         return true
+      end if
+   end repeat
+   put 0 into mNum
+   return false
+end _NormaliseButtonNum
+
+private command _NormalizeClickTarget @tObject
+   if exists (tObject) then
+      return true
+   else
+      put _DefaultTarget() into tObject
+      return false
+   end if
+end _NormalizeClickTarget
+
+private command _NormalizeMenuTarget @pMenuTarget
+   if exists (pMenuTarget) then
+      return true
+   else
+      put _DefaultTarget() into pMenuTarget
+      return false
+   end if
+end _NormalizeMenuTarget
+
+private function _DefaultTarget
+   put the top_Sister of me into sTarget
+   if exists (sTarget) is false then
+      put the long id of the owner of me into sTarget
+   end if
+   return sTarget
+end _DefaultTarget
+
+private function _LiveMenuData mTitle, mButton, mTarget
+   # Set mTarget
+   if exists (mTarget) is false then breakpoint -- dangerous
+   put mButton into tObject
+   
+   put mTarget into mData ["mTarget"]
+   mArray_ClearActiveMenuArray -- or recursioncheck blanks this
+   menu_SetTopTargetObject tObject -- we assume target is mButton?
+   
+   # Get mController form mTitle
+   put menu_GetGlobalController (mTitle) into mTopController
+   if exists (mTopController) is false then
+      breakpoint
+      return empty
+   end if
+   --
+   put mTitle into mData ["mTitle"]
+   put mTopController into mData ["mController"] -- this is mTopController
+   put the short name of mButton into mData ["mName"]
+   
+   # Construct mData from mController script
+   put mArray_FromTitleTable (mTitle, mTarget) into mArray
+   put mArray into mData ["mArray"]
+   return mData
+end _LiveMenuData
+
+private function _GetMenuButtonTarget mNum
+   put _GetMenuButtonValue (mNum, "mTarget") into mTarget
+   return mTarget
+end _GetMenuButtonTarget
+
+private command _SetMenuButtonTarget mNum, mTarget
+   _SetMenuButtonValue mNum, "mTarget", mTarget
+   return the result
+end _SetMenuButtonTarget
+
+private command _SetMenuGroupText
+   mArray_ClearActiveMenuArray
+   --
+   put the number of buttons of me into maxNum
+   repeat with mButtonNum = 1 to maxNum
+      put the long id of btn mButtonNum of me into mButton
+      _SetButtonText mButton
+   end repeat
+end _SetMenuGroupText
+
+private command _SetButtonText mButton, pUseCached
+   set the showBorder of mButton to false
+   if pUseCached is true then
+      put _CachedMenuArray (mButton) into mArray
+   else
+      put the live_MenuArray of mButton into mArray
+   end if
+   mArray_SetActiveArray mArray -- so we can use live menus
+   
+   # Set text of mButton
+   if mArray is an array then
+      put mArray_ToText (mArray) into mText
+      set the text of mButton to mText
+   end if 
+   return mArray
+end _SetButtonText
 
 
 --> Private | Model

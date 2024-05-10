@@ -54,6 +54,8 @@ end menu_CreateNewProject
 on menu_CreateModule projectName
    put lcw_Ask ("What name would you like for this module?", "View|Something") into moduleName
    module_CreateWithObject moduleName, projectName
+   
+   project_UpdateArray projectName
    display_Project projectName
 end menu_CreateModule
 
@@ -66,6 +68,8 @@ on menu_CreateMenu projectName
    ask_CreateProjectMenu projectName, gMenuTitle
    put the result into controllerStackObject
    edit the script of controllerStackObject
+   --
+   project_UpdateArray projectName
 end menu_CreateMenu
 
 on menu_CreateProjectMenu projectName
@@ -76,30 +80,34 @@ end menu_CreateProjectMenu
 
 on menu_CreateProjectLibrary projectName
    ask_CreateProjectLibrary projectName
+   
    display_Project projectName
+   project_UpdateArray projectName
 end menu_CreateProjectLibrary
 
 on menu_CreateProjectModel projectName
    put "Choose a name for your script only model stack...." into someQuestion
    put "model_XXX" into suggestedAnswer
    ask_CreateProjectStack "models", projectName, someQuestion, suggestedAnswer
+   
    display_Project projectName
+   project_UpdateArray projectName
 end menu_CreateProjectModel
 
 on menu_CreateProjectBehavior projectName
    card_CreateBehavior
+   project_UpdateArray projectName
 end menu_CreateProjectBehavior
 
 private command __
 end __
 
-on menu_ExportMenusAndStackFiles projectName
-   put project_GetFolder (projectName) into projectFolder
-   project_ExportMenusAndStackFiles projectFolder
+on menu_UpdateProjectArray projectName
+   project_UpdateArray projectName
    --
    display_ProjectLibs projectName
    display_GitRefreshProjectName projectName
-end menu_ExportMenusAndStackFiles
+end menu_UpdateProjectArray
 
 private command __
 end __

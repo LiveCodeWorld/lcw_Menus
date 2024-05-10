@@ -21,31 +21,45 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- return display_MenuTarget(tObject)
-   return the display_View of tObject
+   put tObject into LocalArray ["tObject"]
+   --
+   put display_MenuTarget (tObject) into dView
+   if exists (dView) then
+      put the menubar_View of dView into mGroup
+   else
+      put the menubar_View of tObject into mGroup
+   end if
+   
+   if exists (mGroup) is true then
+      put false into LocalArray ["mMissing"]
+   else
+      put "delete" into LocalArray ["mMissing"]
+   end if
+   return mGroup
 end menu_Target
 
-getprop menu_CheckTarget [mTarget]
-   return exists (mTarget)
-end menu_CheckTarget
+private command _SetMenuButtonDefaults mButton
+   set the showname of mButton to true
+   set the style of mButton to "transparent"
+   set the threed of mButton to false
+   set the borderwidth of mButton to 0
+   set the blendlevel of mButton to 0
+   set the margins of mButton to "4,0,4,1"
+   set the traversalOn of mButton to false
+   set the autoHilite of mButton to false
+end _SetMenuButtonDefaults
 
 
 --> Global | Menu | Group | Dev | Menu
 -
-on menu_Behavior displayView
-   put the behavior of displayView into bObject
-   edit the script of bObject
-end menu_Behavior
+on menu_DisplayIdeMenubar
+   put ide_DefaultMenubar() into defaultMenuBarGroup
+   object_GoTo defaultMenuBarGroup, treu 
+end menu_DisplayIdeMenubar
 
-private on _
-end _
-
-on menu_ShrinkPage wikiView, pageTitle
-   put wikijs_SetPageScale (sSale) into sJavascript
-   set the browser_Javascript of wikiView to sJavascript
-end menu_ShrinkPage
-
-on menu_FetchDomainMenu wikiView
-   put the wiki_Domain of wikiView
-end menu_FetchDomainMenu
-
+on menu_FormatMenuButtons mGroup
+   put the menu_Buttons of mGroup into mButtons
+   repeat ofr each line mButton in mButtons
+      _SetMenuButtonDefaults mButton
+   end repeat
+end menu_FormatMenuButtons

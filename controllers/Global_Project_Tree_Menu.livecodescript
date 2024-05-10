@@ -64,9 +64,9 @@ on menu_StartProject projectName
    display_Environment true
 end menu_StartProject
 
-on menu_FixProjectStackFiles projectName
+on menu_UpdateProjectArray projectName
    display_ProjectArray projectName, true
-end menu_FixProjectStackFiles
+end menu_UpdateProjectArray
 
 private on _
 end _
