@@ -40,23 +40,23 @@ getprop checked_PreviewMenu
    return isPreview
 end checked_PreviewMenu
 
-getprop checked_SetMenuBar [mGroup]
+getprop checked_ToggleMenu [mGroup]
    put the show_Menu of mGroup into sBoolean
    return sBoolean
-end checked_SetMenuBar
+end checked_ToggleMenu
 
-getprop checked_EditMenus [mGroup]
+getprop checked_ToggleEditMenus [mGroup]
    put the stack_Name of mGroup into stackName
    put the editMenus of stack stackName into sBoolean
    return sBoolean
-end checked_EditMenus
+end checked_ToggleEditMenus
 
 getprop setMenuTitle_Params [mGroup]
-   return the menu_Names of mGroup
+   return the menuButton_Names of mGroup
 end setMenuTitle_Params
 
 getprop editMenuScript_Params [mGroup]
-   return the menu_Names of mGroup
+   return the menuButton_Names of mGroup
 end editMenuScript_Params
 
 getprop disabled_EditMenuScript
@@ -66,10 +66,6 @@ end disabled_EditMenuScript
 getprop disabled_SetMenuTitle
    return LocalArray ["mMissing"]
 end disabled_SetMenuTitle
-
-getprop disabled_SetMenuBar
-   return LocalArray ["mMissing"]
-end disabled_SetMenuBar
 
 getprop disabled_PreviewMenu
    return LocalArray ["mMissing"]
@@ -96,7 +92,7 @@ getprop disabled_ResetDefaultMenubar
 end disabled_ResetDefaultMenubar
 
 -- getprop menu_CheckTarget [mGroup]
- menu_CheckTarget
+menu_CheckTarget
 
 getprop disabled_InsertMenuGroup
    if LocalArray ["mMissing"] is false then
@@ -127,8 +123,79 @@ on menu_InsertMenuGroup
    set the topleft of mGroup to 0,0
 end menu_InsertMenuGroup
 
+on menu_NewMenuButton mGroup
+   put menuBar_ListButtonNames (mGroup) into mButtonNames
+   put the number of lines of mButtonNames into newNum
+   add 1 to newNum
+   put "Item" && newNum into newName
+   
+   # Ask
+   put lcw_Ask ("Create a new menu button in this stack menu...", newName, "Creat Menu", mGroup) into newButtonName
+   
+   # Create
+   -- menuBar_CreateButton newButtonName, mGroup
+   set the new_MenuButton ["Help"] of mGroup to newButtonName
+   put the result
+end menu_NewMenuButton
+
+on menu_ReorderMenus mGroup
+   put menuBar_ListButtonNames (mGroup) into mButtonNames
+   replace CR with comma in mButtonNames
+   
+   # Ask
+   put lcw_Ask ("Reorder these menu names...", mButtonNames, "Creat Menu", mGroup) into newButtonNames
+   
+   set the menuBar_ButtonNames of mGroup to newButtonNames
+end menu_ReorderMenus
+
+getprop deleteMenuButton_Params [mGroup]
+   put menuBar_ListButtonNames (mGroup) into mButtonNames
+   return mButtonNames
+end deleteMenuButton_Params
+
+on menu_DeleteMenuButton mGroup, mName
+   lcw_Answer "Delete menu button [[mName]]?", mGroup, mName
+   --
+   dispatch "menuButton_Delete" to mGroup with mName
+end menu_DeleteMenuButton
+
+-- on menu_NewMenuItem mGroup
+put menuBar_ManagerCard() into menuManagerCard
+dispatch "revNewMenuItem" to menuManagerCard
+end menu_NewMenuItem
+
 private on _
 end _
+
+on menu_SetMenuTitle mGroup, mName
+   put the menu_Title [mName] of mGroup into mTitle
+   put lcw_Ask ("Edit menu_Title...", mTitle, "Edit Menu Titles", mGroup) into mTitle
+   
+   -- set the menu_Title [mName] of mGroup to mTitle
+   set the menuButton_Title [mName] of mGroup to mTitle
+end menu_SetMenuTitle
+
+private on __
+end __
+
+on menu_ToggleMenu mGroup
+   menuBar_ToggleShowMenu mGroup
+end menu_ToggleMenu
+
+on menu_ToggleEditMenus mGroup
+   menuBar_ToggleEditMenus mGroup
+end menu_ToggleEditMenus
+
+on menu_PreviewMenu mGroup
+   menubar_TogglePreview mGroup
+end menu_PreviewMenu
+
+on menu_ResetDefaultMenubar
+   ide_ResetDefaultMenubar
+end menu_ResetDefaultMenubar
+
+private on ___
+end ___
 
 on menu_EditMenuScript mGroup, mName
    put the menu_Title [mName] of mGroup into mTitle
@@ -138,27 +205,24 @@ on menu_EditMenuScript mGroup, mName
    menu_Edit mTitle
 end menu_EditMenuScript
 
-on menu_SetMenuTitle mGroup, mName
-   put the menu_Title [mName] of mGroup into mTitle
-   put lcw_Ask ("Edit menu_Title...", mTitle, "Edit Menu Titles", mGroup) into mTitle
-   set the menu_Title [mName] of mGroup to mTitle
-end menu_SetMenuTitle
-
-private on __
-end __
-
-on menu_EditMenus mGroup
+on menu_DeleteMenuGroup mGroup
    put the stack_Name of mGroup into stackName
-   put the editMenus of stack stackName into sBoolean
-   set the editMenus of stack stackName to (sBoolean is false)
-end menu_EditMenus
+   save stack stackName
+   --
+   delete mGroup
+end menu_DeleteMenuGroup
+
+on menu_LayoutMenuButtons mGroup
+   dispatch "LayoutControls" to mGroup
+   -- menuBar_RelayerMenuButtons mGroup
+end menu_LayoutMenuButtons
+
+private on ____
+end ____
 
 on menu_MenuManagerTools mGroup
    display_MenuManager mGroup
 end menu_MenuManagerTools
-
-private on ___
-end ___
 
 on menu_MenuGroupBehavior mGroup
    put the behavior of mGroup into bObject
@@ -170,31 +234,8 @@ on menu_MenuGroupTools mGroup
    display_ModuleTools viewName
 end menu_MenuGroupTools
 
-private on ____
-end ____
-
-on menu_SetMenuBar mGroup
-   put the show_Menu of mGroup into sBoolean
-   set the show_Menu of mGroup to (sBoolean is false)
-end menu_SetMenuBar
-
-on menu_PreviewMenu mGroup
-   menubar_TogglePreview mGroup
-end menu_PreviewMenu
-
-on menu_ResetDefaultMenubar
-   ide_ResetDefaultMenubar
-end menu_ResetDefaultMenubar
-
 private on _____
 end _____
-
-on menu_DeleteMenuGroup mGroup
-   put the stack_Name of mGroup into stackName
-   save stack stackName
-   
-   delete mGroup
-end menu_DeleteMenuGroup
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Menu")

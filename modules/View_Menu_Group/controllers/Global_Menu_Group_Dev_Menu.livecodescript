@@ -53,7 +53,7 @@ end _SetMenuButtonDefaults
 --> Global | Menu | Group | Dev | Menu
 -
 on menu_DisplayIdeMenubar
-   put ide_DefaultMenubar() into defaultMenuBarGroup
+   put ide_DefaultMenuGroup() into defaultMenuBarGroup
    object_GoTo defaultMenuBarGroup, treu 
 end menu_DisplayIdeMenubar
 

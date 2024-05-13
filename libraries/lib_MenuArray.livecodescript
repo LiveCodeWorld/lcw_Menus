@@ -512,8 +512,13 @@ command hKey_Do hKey, pTarget, pValue, pQuestion
 end hKey_Do
 
 command handler_Do hName, hObject, pTarget, pValue
+   if exists (hObject) is false then
+      put the params
+      display_DebugHistory hName
+      return "Error, hObject does not exists."
+   end if
+   
    put hName && "pTarget,pValue" into callCommand
-   --
    call callCommand of hObject
    return the result
 end handler_Do

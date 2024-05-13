@@ -21,17 +21,57 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- return display_MenuTarget(tObject)
-   return the display_View of tObject
+   put the browser_View of tObject into browserView
+   --
+   -- put the card_Object of tObject into arrayObject
+   -- put the displayed_RectDataNum [true] of arrayObject into LocalArray ["dRectDataNum"]
+   -- put the displayed_ObjectNames of arrayObject into LocalArray ["objectNames"]
+   --
+   return browserView
 end menu_Target
 
-getprop menu_CheckTarget [mTarget]
-   return exists (mTarget)
-end menu_CheckTarget
+private command _SetMenuButtonDefaults mButton
+   set the showname of mButton to true
+   set the style of mButton to "transparent"
+   set the threed of mButton to false
+   set the borderwidth of mButton to 0
+   set the blendlevel of mButton to 0
+   set the margins of mButton to "4,0,4,1"
+   set the traversalOn of mButton to false
+   set the autoHilite of mButton to false
+end _SetMenuButtonDefaults
+
+private function _MenuButtonNames wikiView
+   put the menubar_View of wikiView into mBar
+   if exists (mBar) then
+      return the menuButton_Names of mBar
+   else
+      breakpoint
+      return empty
+   end if
+end _MenuButtonNames
+
+getprop setMenuTitle_Params [wikiView]
+   return _MenuButtonNames (wikiView)
+end setMenuTitle_Params
+
+getprop shrinkPage_Params [wikiView]
+   put the lineUp_Titles of wikiView into pageTitles
+   return pageTitles
+end shrinkPage_Params
 
 
 --> Global | Menu | Group | Tools | Dev | Menu
 -
+on menu_BrowserProps browserView
+   display_ObjectProperties browserView
+end menu_BrowserProps
+
+on menu_StackProps browserView
+   put the stack_Object of browserView into sObject
+   display_ObjectProperties sObject
+end menu_StackProps
+   
 on menu_UpdateToolsMenu wikiView, mName
    if mName is empty then put "Tools" into mName
    
@@ -73,31 +113,33 @@ on menu_FormatMenuButtons wikiView
    end repeat
 end menu_FormatMenuButtons
 
-private command _SetMenuButtonDefaults mButton
-   set the showname of mButton to true
-   set the style of mButton to "transparent"
-   set the threed of mButton to false
-   set the borderwidth of mButton to 0
-   set the blendlevel of mButton to 0
-   set the margins of mButton to "4,0,4,1"
-   set the traversalOn of mButton to false
-   set the autoHilite of mButton to false
-end _SetMenuButtonDefaults
+private on _
+end _
 
 on menu_EditCardScript wikiView
    put the card_Object of wikiView into cardObject
    edit the script of cardObject
 end menu_EditCardScript
 
+on menu_EditCardBehavior wikiView
+   put the card_Object of wikiView into cardObject
+   put the behavior of cardObject into bObject
+   edit the script of bObject
+end menu_EditCardBehavior
+
 on menu_EditBehavior wikiView
    put the behavior of wikiView into bObject
    edit the script of bObject
 end menu_EditBehavior
 
-on menu_ObeyaStudioTools browserView
-   put the view_Name of browserView into viewName
-   display_ModuleTools viewName
-end menu_ObeyaStudioTools
+private on __
+end __
+
+on menu_DisplayRectData browserView
+   put the card_object of browserView into cardObject
+   --
+   display_RectData cardObject
+end menu_DisplayRectData
 
 on menu_StorePositions browserView
    put the card_object of browserView into cardObject
@@ -108,7 +150,10 @@ on menu_StorePositions browserView
    put mArray into rectArray ["meta"]
    set the rect_Data [indexNum] of cardObject to rectArray
 end menu_StorePositions
-   
+
+private on ___
+end ___
+
 on menu_SetMenuBar browserView
    put the menubar_View of browserView into mView
    put the show_Menu of mView into sBoolean
@@ -126,15 +171,22 @@ on menu_MenuGroupTools
    display_ModuleTools stackPath
 end menu_MenuGroupTools
 
-private on _
-end _
+private on ____
+end ____
+
+on menu_ObeyaStudioTools browserView
+   put the view_Name of browserView into viewName
+   display_ModuleTools viewName
+end menu_ObeyaStudioTools
 
 on menu_DisplayWikiTools wikiView
    set the page_Title of wikiView to "Tools"
 end menu_DisplayWikiTools
 
 on menu_ShrinkPage wikiView, pageTitle
-   put wikijs_SetPageScale (sSale) into sJavascript
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   put wikijs_SetPageScale (0.3, pageSlug) into sJavascript
    set the browser_Javascript of wikiView to sJavascript
 end menu_ShrinkPage
 

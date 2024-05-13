@@ -308,6 +308,14 @@ on menu_WikiBehavior dView
    edit the script of bObject
 end menu_WikiBehavior
 
+on menu_MenuGroupBehavior dView
+   put the browser_View of dView into wikiView
+   put the menuBar_View of wikiView into mGroup
+   put the behavior of mGroup into bObject
+   --
+   edit the script of bObject
+end menu_MenuGroupBehavior
+
 private on ___
 end ___
 
