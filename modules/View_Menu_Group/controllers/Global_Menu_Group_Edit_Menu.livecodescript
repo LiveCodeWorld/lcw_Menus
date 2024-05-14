@@ -258,49 +258,51 @@ end checked_MessageBox
 
 --> Global | Menu | Group | Edit | Menu
 -
--- on menu_Undo dView
-actionUndo
+on menu_Undo dView
+   -- actionUndo
 end menu_Undo
 
-== on menu_Redo dView
-put the params
+on menu_Redo dView
+   breakpoint
+   -- put the params
 end menu_Redo
-
-on menu_Cut.X dView
-   -- actionCut
-   cut
-end menu_Cut.X
-
-on menu_Copy.C dView
-   copy
-end menu_Copy.C
-
-on menu_Paste.V dView
-   paste
-end menu_Paste.V
 
 private on _
 end _
 
+on menu_Cut.X dView
+   -- actionCut
+   -- cut
+   -- revMenubarEditMenuPick "Cut"
+end menu_Cut.X
+
+on menu_Copy.C dView
+   -- copy
+end menu_Copy.C
+
+on menu_Paste.V dView
+   -- paste
+end menu_Paste.V
+
+private on __
+end __
+
 on menu_SelectAll.A dView
-   actionSelectAll
+   -- actionSelectAll
+   revMenubarEditMenuPick "Select All"
 end menu_SelectAll.A
 
 -- on menu_Revert dView
 put the params
 end menu_Revert
 
-private on __
-end __
+private on ___
+end ___
 
-on menu_MessageBox.M
-   revIDETogglePalette "message box"
-end menu_MessageBox.M
-
-on menu_EditCardScript dView
+on menu_CardScript dView
    put the card_Object of dView into cardObject
    edit the script of cardObject
-end menu_EditCardScript
+end menu_CardScript
 
 on menu_WikiBehavior dView
    put the browser_View of dView into browserView
@@ -316,9 +318,9 @@ on menu_MenuGroupBehavior dView
    edit the script of bObject
 end menu_MenuGroupBehavior
 
-private on ___
-end ___
+private on ____
+end ____
 
-on menu_DisplayMenuArray dView
-   display_ActiveMenuArray
-end menu_DisplayMenuArray
+on menu_MessageBox.M
+   revIDETogglePalette "message box"
+end menu_MessageBox.M

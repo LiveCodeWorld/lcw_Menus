@@ -50,7 +50,8 @@ setprop menuBar_ButtonNames newButtonNames
    end repeat
    delete char -1 of menuButtonIDs
    
-   menuBar_RelayerMenuButtons mGroup, menuButtonIDs
+   set the menuButton_Order of mGroup to menuButtonIDs
+   return menuButtonIDs
 end menuBar_ButtonNames
 
 function menuBar_ListButtonNames mGroup
@@ -115,7 +116,7 @@ setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
       put mTitleOrButtonName into mTitle
       put item -2 of mTitle into newButtonName      
    else
-      put newButtonName into newButtonName
+      put mTitleOrButtonName into newButtonName
       put empty into mTitle
    end if
    put word 1 to -1 of newButtonName into newButtonName
@@ -195,13 +196,13 @@ command menuBar_SetButtonTemplate tButtonName
 end menuBar_SetButtonTemplate
 
 command menuBar_RelayerMenuButtons mGroup, pMenuButtonIDs
-   dispatch "LayoutControls" to mGroup with pMenuButtonIDs
-   return the result
-   
    # Layout buttons from left to right according to order in Menu Buttons field
    if pMenuButtonIDs is empty then
       put the childControlIDs of mGroup into pMenuButtonIDs
    end if
+   
+   set the menuButton_Order of mGroup to pMenuButtonIDs
+   return the result
    
    # Props of mGroup
    put the stack_Name of mGroup into menuBarStackName

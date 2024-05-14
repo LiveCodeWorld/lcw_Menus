@@ -42,6 +42,10 @@ on menu_SuspendDevelopmentTools
    revIDESuspendDevelopmentTools
 end menu_SuspendDevelopmentTools
 
+on menu_PluginSettings
+   revIDEOpenPalette "plugin preferences"
+end menu_PluginSettings
+
 private on _
 end _
 

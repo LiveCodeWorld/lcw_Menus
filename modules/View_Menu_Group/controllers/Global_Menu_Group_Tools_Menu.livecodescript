@@ -27,16 +27,6 @@ getprop menu_Target [tObject]
    return browserView
 end menu_Target
 
-private function _MenuButtonNames wikiView
-   put the menubar_View of wikiView into mBar
-   if exists (mBar) then
-      return the menuButton_Names of mBar
-   else
-      breakpoint
-      return empty
-   end if
-end _MenuButtonNames
-
 getprop disabled_EditMode
    if LocalArray ["footer_IsVisible"] is true then
       return false
@@ -59,14 +49,6 @@ getprop checked_SetMenuBar [wikiView]
    put the show_Menu of wikiView into sBoolean
    return sBoolean
 end checked_SetMenuBar
-
-getprop setMenuTitle_Params [wikiView]
-   return _MenuButtonNames (wikiView)
-end setMenuTitle_Params
-
-getprop menuButtonInspector_Params [wikiView]
-   return _MenuButtonNames (wikiView)
-end menuButtonInspector_Params
 
 getprop scale_Params
    return "0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,-,1,-,1.5"
@@ -111,25 +93,6 @@ end _
 on menu_FlagEvent wikiView
    set the flag_Handler of wikiView to "default"
 end menu_FlagEvent
-
-on menu_Footer wikiView
-   put the footer_IsVisible of wikiView into sBoolean
-   set the footer_IsVisible of wikiView to (sBoolean is false)
-end menu_Footer
-
-on menu_BrowserVisible wikiView
-   put the visible of wikiView into isVisible
-   set the visible of wikiView to (isVisible is false)
-end menu_BrowserVisible
-
-private on ___
-end ___
-
-on menu_Scale wikiView, sSale
-   -- put wikijs_SetPageScale (sSale) into sJavascript
-   -- set the browser_Javascript of wikiView to sJavascript
-   set the wiki_Scale of wikiView to sSale
-end menu_Scale
 
 private on ____
 end ____

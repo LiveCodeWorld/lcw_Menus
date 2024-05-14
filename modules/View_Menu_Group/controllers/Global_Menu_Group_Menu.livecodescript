@@ -110,6 +110,11 @@ getprop disabled_DeleteMenuGroup
    end if
 end disabled_DeleteMenuGroup
 
+getprop deleteMenuButton_Params [mGroup]
+   put menuBar_ListButtonNames (mGroup) into mButtonNames
+   return mButtonNames
+end deleteMenuButton_Params
+
 
 --> Global | Menu | Group | Menu
 -
@@ -135,23 +140,7 @@ on menu_NewMenuButton mGroup
    # Create
    -- menuBar_CreateButton newButtonName, mGroup
    set the new_MenuButton ["Help"] of mGroup to newButtonName
-   put the result
 end menu_NewMenuButton
-
-on menu_ReorderMenus mGroup
-   put menuBar_ListButtonNames (mGroup) into mButtonNames
-   replace CR with comma in mButtonNames
-   
-   # Ask
-   put lcw_Ask ("Reorder these menu names...", mButtonNames, "Creat Menu", mGroup) into newButtonNames
-   
-   set the menuBar_ButtonNames of mGroup to newButtonNames
-end menu_ReorderMenus
-
-getprop deleteMenuButton_Params [mGroup]
-   put menuBar_ListButtonNames (mGroup) into mButtonNames
-   return mButtonNames
-end deleteMenuButton_Params
 
 on menu_DeleteMenuButton mGroup, mName
    lcw_Answer "Delete menu button [[mName]]?", mGroup, mName
@@ -175,6 +164,14 @@ on menu_SetMenuTitle mGroup, mName
    set the menuButton_Title [mName] of mGroup to mTitle
 end menu_SetMenuTitle
 
+on menu_EditMenuScript mGroup, mName
+   put the menu_Title [mName] of mGroup into mTitle
+   if mTitle is empty then
+      lcw_AnswerWarning "The menu_Title of button '[[mName]]' is empty", mGroup, mName
+   end if
+   menu_Edit mTitle
+end menu_EditMenuScript
+
 private on __
 end __
 
@@ -197,20 +194,15 @@ end menu_ResetDefaultMenubar
 private on ___
 end ___
 
-on menu_EditMenuScript mGroup, mName
-   put the menu_Title [mName] of mGroup into mTitle
-   if mTitle is empty then
-      lcw_AnswerWarning "The menu_Title of button '[[mName]]' is empty", mGroup, mName
-   end if
-   menu_Edit mTitle
-end menu_EditMenuScript
-
-on menu_DeleteMenuGroup mGroup
-   put the stack_Name of mGroup into stackName
-   save stack stackName
-   --
-   delete mGroup
-end menu_DeleteMenuGroup
+on menu_ReorderMenus mGroup
+   put menuBar_ListButtonNames (mGroup) into mButtonNames
+   replace CR with comma in mButtonNames
+   
+   # Ask
+   put lcw_Ask ("Reorder these menu names...", mButtonNames, "Creat Menu", mGroup) into newButtonNames
+   
+   set the menuBar_ButtonNames of mGroup to newButtonNames
+end menu_ReorderMenus
 
 on menu_LayoutMenuButtons mGroup
    dispatch "LayoutControls" to mGroup
@@ -236,6 +228,27 @@ end menu_MenuGroupTools
 
 private on _____
 end _____
+
+on menu_DisplayMenubarData mGroup
+   put the menubar_Data of mGroup into mBarData
+   --
+   put the stack_Name of mGroup into stackName
+   display_Data mBarData, stackName, "Menubar Dat"
+end menu_DisplayMenubarData
+
+on menu_DisplayMenuArray dView
+   display_ActiveMenuArray
+end menu_DisplayMenuArray
+
+on menu_DeleteMenuGroup mGroup
+   put the stack_Name of mGroup into stackName
+   save stack stackName
+   --
+   delete mGroup
+end menu_DeleteMenuGroup
+
+private on ______
+end ______
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Menu")
