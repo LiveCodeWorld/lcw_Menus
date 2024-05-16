@@ -40,10 +40,10 @@ getprop checked_PreviewMenu
    return isPreview
 end checked_PreviewMenu
 
-getprop checked_ToggleMenu [mGroup]
+getprop checked_ShowMenu [mGroup]
    put the show_Menu of mGroup into sBoolean
    return sBoolean
-end checked_ToggleMenu
+end checked_ShowMenu
 
 getprop checked_ToggleEditMenus [mGroup]
    put the stack_Name of mGroup into stackName
@@ -115,18 +115,29 @@ getprop deleteMenuButton_Params [mGroup]
    return mButtonNames
 end deleteMenuButton_Params
 
+getprop checked_LiveMenu [mGroup]
+   put the live_Menu of mGroup into sBoolean
+   return sBoolean
+end checked_LiveMenu
+
 
 --> Global | Menu | Group | Menu
 -
-on menu_InsertMenuGroup
-   put LocalArray ["tObject"] into tObject
-   put display_MenuTarget (tObject) into dView
-   put the card_Object of dView into cardObject
-   
-   view_InsertFromPath "View|Menu|Group", cardObject
-   put the result into mGroup
-   set the topleft of mGroup to 0,0
-end menu_InsertMenuGroup
+on menu_LiveMenu mGroup
+   put the live_Menu of mGroup into sBoolean
+   put sBoolean is false into newStatus
+   set the live_Menu of mGroup to newStatus
+   --
+   put "The Live Menu status is now" && newStatus into sComment
+   lcw_Notify sComment
+end menu_LiveMenu
+
+on menu_ShowMenu mGroup
+   menuBar_ToggleShowMenu mGroup
+end menu_ShowMenu
+
+private on _
+end _
 
 on menu_NewMenuButton mGroup
    put menuBar_ListButtonNames (mGroup) into mButtonNames
@@ -148,13 +159,8 @@ on menu_DeleteMenuButton mGroup, mName
    dispatch "menuButton_Delete" to mGroup with mName
 end menu_DeleteMenuButton
 
--- on menu_NewMenuItem mGroup
-put menuBar_ManagerCard() into menuManagerCard
-dispatch "revNewMenuItem" to menuManagerCard
-end menu_NewMenuItem
-
-private on _
-end _
+private on __
+end __
 
 on menu_SetMenuTitle mGroup, mName
    put the menu_Title [mName] of mGroup into mTitle
@@ -172,12 +178,12 @@ on menu_EditMenuScript mGroup, mName
    menu_Edit mTitle
 end menu_EditMenuScript
 
-private on __
-end __
+private on ___
+end ___
 
-on menu_ToggleMenu mGroup
-   menuBar_ToggleShowMenu mGroup
-end menu_ToggleMenu
+on menu_RefreshLiveMenus mGroup
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshLiveMenus
 
 on menu_ToggleEditMenus mGroup
    menuBar_ToggleEditMenus mGroup
@@ -191,8 +197,8 @@ on menu_ResetDefaultMenubar
    ide_ResetDefaultMenubar
 end menu_ResetDefaultMenubar
 
-private on ___
-end ___
+private on ____
+end ____
 
 on menu_ReorderMenus mGroup
    put menuBar_ListButtonNames (mGroup) into mButtonNames
@@ -209,8 +215,8 @@ on menu_LayoutMenuButtons mGroup
    -- menuBar_RelayerMenuButtons mGroup
 end menu_LayoutMenuButtons
 
-private on ____
-end ____
+private on _____
+end _____
 
 on menu_MenuManagerTools mGroup
    display_MenuManager mGroup
@@ -226,8 +232,8 @@ on menu_MenuGroupTools mGroup
    display_ModuleTools viewName
 end menu_MenuGroupTools
 
-private on _____
-end _____
+private on ______
+end ______
 
 on menu_DisplayMenubarData mGroup
    put the menubar_Data of mGroup into mBarData
@@ -247,8 +253,15 @@ on menu_DeleteMenuGroup mGroup
    delete mGroup
 end menu_DeleteMenuGroup
 
-private on ______
-end ______
+on menu_InsertMenuGroup
+   put LocalArray ["tObject"] into tObject
+   put display_MenuTarget (tObject) into dView
+   put the card_Object of dView into cardObject
+   
+   view_InsertFromPath "View|Menu|Group", cardObject
+   put the result into mGroup
+   set the topleft of mGroup to 0,0
+end menu_InsertMenuGroup
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Menu")

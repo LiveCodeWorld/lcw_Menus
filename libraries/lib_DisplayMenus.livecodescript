@@ -53,7 +53,7 @@ command display_EnvironmentMenus pRefreshOnly, pFilterText
    display_Data mData, sTitle, "Global Menus", displayView
    --
    put the result into displayView
-   set the data_MenuBit of displayView to "Menu | Global"
+   set the tool_MenuBit of displayView to "Menu | Global"
    return displayView
 end display_EnvironmentMenus
 
@@ -120,7 +120,7 @@ command display_MenuItems mController
    put the result into displayView
    --
    -- display_SetInteractions displayView, "Menu | Tree", "mDoubleUp_MenuTree"
-   set the data_MenuBit of displayView to "Menu | Tree"
+   set the tool_MenuBit of displayView to "Menu | Tree"
    --
    return displayView
 end display_MenuItems

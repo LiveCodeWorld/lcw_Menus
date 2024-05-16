@@ -20,26 +20,97 @@ local LocalArray
 
 --> Props
 -
-getprop data_MenuBit
-   -- return the data_MenuBit name = menuBit
+getprop tool_MenuBit
+   -- return the tool_MenuBit name = menuBit
    get the title_Menu of me
    set the itemdelimiter to "|"
    put word 1 to -1 of item 2 to -2 of it into menuBit
    return menuBit
-end data_MenuBit
+end tool_MenuBit
 
-setprop data_MenuBit [projectName] menuBit
-   put the long id of me into displayView
-   display_SetToolMenus menuBit, displayView, projectName
-end data_MenuBit
+setprop tool_MenuBit [libName] menuBit
+   -- used to use "display_SetToolMenus"
+   put the menu_Button of me into mButton
+   set the tool_LibName of me to libName
+   --
+   set the menumode of mButton to "pulldown"
+   set the style of mButton to "menu"
+   
+   # Construct Menu Titles
+   get "Global |" && menuBit
+   put it && "| Menu" into titleMenu
+   put it && "| Line | Menu" into lineMenu
+   
+   # Construct mDoubleUp
+   replace "|" with empty in menuBit
+   replace space with empty in menuBit
+   put "mDoubleUp_" & menuBit into mDoubleUp
+   
+   # Set menus and mouse
+   set the title_Menu of me to titleMenu
+   set the line_Menu of me to lineMenu
+   set the mouse_DoubleUp of me to mDoubleUp
+   
+   # Create menus if needed
+   dispatch "ask_CreateMenuFromObject" to me with titleMenu,libName
+   
+   if the shiftKey is "Down" then
+      dispatch "ask_CreateMenuFromObject" to me with lineMenu,libName
+      dispatch "ask_CreateMouseDoubleUpHandler" to me with mDoubleUp
+   end if
+   --
+   return titleMenu
+end tool_MenuBit
 
 
 --> Working on
 -
+command _DoDoubleClick
+   put the mouse_DoubleUp of me into mDoubleClick
+   if mDoubleClick is empty then return empty
+   
+   put the mouse_Target of me into mouseTarget
+   put the clickText into someLine
+   --
+   put the long id of me into displayView
+   if exists (mouseTarget) is true then
+      dispatch mDoubleClick to mouseTarget with displayView,someLine
+   else
+      dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
+   end if
+end _DoDoubleClick
+
+private command _doFieldDown
+   put word 2 of the clickline into cNum
+   if the controlkey is "Down" then
+      set the hilitedlines of the target to cNum
+      put the line_Menu of me into lineTitle
+      
+      # Option Edit
+      put the menu_Controller [lineTitle] of me into mController
+      if exists (mController) is false then
+         put the tool_LibName of me into libName
+         ask_CreateMenuFromObject lineTitle, libName
+      else
+         put the menu_Button of me into mButton
+         mArray_PopUp lineTitle, mButton
+      end if
+   else
+      put the drop_Command of me into dCommand
+      if dCommand is empty then return false
+      
+      put the selectedtext of the target into someText
+      -- set the dragImage to 3137
+      set the dragAction to "copy"
+      set the dragData ["text"] to someText
+      return true
+   end if
+end _doFieldDown
+
 private command _doButtonMenu
    put the menu_Button of me into mButton
-   set the menumode of mButton to "pulldown"
-   set the style of mButton to "menu"
+   set the menumode of mButton to "pulldown" -- seems to be needed!
+   -- set the style of mButton to "menu"
    --
    put the title_Menu of me into mTitle
    put the menu_Button of me into mButton
@@ -106,19 +177,7 @@ on mouseDoubleUp
       case "button"
          break
       case "field"
-         put the mouse_DoubleUp of me into mDoubleClick
-         if mDoubleClick is empty then return empty
-         
-         put the mouse_Target of me into mouseTarget
-         put the clickText into someLine
-         --
-         put the long id of me into displayView
-         if exists (mouseTarget) is true then
-            dispatch mDoubleClick to mouseTarget with displayView,someLine
-         else
-            dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
-         end if
-         return mDoubleClick
+         _DoDoubleClick
    end switch
 end mouseDoubleUp
 
@@ -1123,26 +1182,6 @@ private command _doFieldClick
    end if
    return mouseUpEvent
 end _doFieldClick
-
-private command _doFieldDown
-   put word 2 of the clickline into cNum
-   if the controlkey is "Down" then
-      set the hilitedlines of the target to cNum
-      put the line_Menu of me into mTitle
-      --
-      put the menu_Button of me into mButton
-      mArray_PopUp mTitle, mButton
-   else
-      put the drop_Command of me into dCommand
-      if dCommand is empty then return false
-      
-      put the selectedtext of the target into someText
-      -- set the dragImage to 3137
-      set the dragAction to "copy"
-      set the dragData ["text"] to someText
-      return true
-   end if
-end _doFieldDown
 
 private function _headerRect someRect
    put item 2 of someRect + _headerHeight() into item 4 of someRect

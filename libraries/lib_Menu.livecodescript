@@ -33,6 +33,13 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 
 --> Working on
 -
+getprop menu_Controller [pMenuTitle]
+   put the long id of the target into tObject
+   --
+   put menu_GetGlobalController (pMenuTitle) into mController
+   if exists (mController) is true then return mController
+   return empty
+end menu_Controller
 
 
 --> Menu | Names
@@ -432,15 +439,6 @@ getprop menu_Button
    put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
    return mButton
 end menu_Button
-
-getprop menu_Controller [pMenuTitle]
-   put the long id of the target into tObject
-   --
-   put menu_GetGlobalController (pMenuTitle) into mController
-   if exists (mController) is true then return mController
-   return empty
-   return tObject
-end menu_Controller
 
 getprop menu_DataArray
    -- the problem with this is if the target has been cloned or copied
