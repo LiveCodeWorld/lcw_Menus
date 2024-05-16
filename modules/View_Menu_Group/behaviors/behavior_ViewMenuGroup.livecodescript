@@ -64,8 +64,18 @@ end menuButton_Delete
 --> Events
 -
 on menuPick mItem
+   get the name of the target
+   --
    put the live_MenuArray of the target into mArray
    menu_DispatchTextPick mItem, mArray
+   put the result into hKeyLine
+   --
+   hkeyLine_Deconstruct hKeyLine, hName, hType, mController
+   put the script_MenuTitles of mController into mTitle
+   --
+   if isLive is false then
+      set the menuButton_Refresh of me to "Server"
+   end if
 end menuPick
 
 on mouseDown

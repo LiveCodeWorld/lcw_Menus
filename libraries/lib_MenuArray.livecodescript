@@ -307,7 +307,8 @@ command menu_DispatchTextPick mItem, pMenuArray
    mArray_SetActiveItem mItem
    _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
    mArray_DoHkey hKey, paramValue
-   return the result
+   --
+   return hKey
 end menu_DispatchTextPick
 
 private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue

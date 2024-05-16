@@ -71,12 +71,12 @@ command _DoDoubleClick
    
    put the mouse_Target of me into mouseTarget
    put the clickText into someLine
-   --
-   put the long id of me into displayView
-   if exists (mouseTarget) is true then
-      dispatch mDoubleClick to mouseTarget with displayView,someLine
+   put the long id of me into dView
+   
+   if the optionKey is "Down" then
+      dispatch "ask_CreateMouseDoubleUpHandler" to me with mDoubleUp,dView
    else
-      dispatch mDoubleClick with displayView,someLine -- do mDoubleClick
+      dispatch mDoubleClick to mouseTarget with dView,someLine
    end if
 end _DoDoubleClick
 
