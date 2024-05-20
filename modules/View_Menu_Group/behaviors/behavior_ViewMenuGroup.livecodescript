@@ -21,6 +21,18 @@ private function _Error
    return empty
 end _Error
 
+on menuPick mItem
+   put the short name of the target into mName
+   --
+   put the live_MenuArray of the target into mArray
+   menu_DispatchTextPick mItem, mArray
+   put the result into hKeyLine
+   --
+   if Live_MenuStatus is not true then
+      set the menuButton_Refresh of me to mName
+   end if
+end menuPick
+
 getprop group_ButtonNumber
    put the long id of the target into tObject
    if word 1 of tObject is not "button" then return empty
@@ -63,21 +75,6 @@ end menuButton_Delete
 
 --> Events
 -
-on menuPick mItem
-   get the name of the target
-   --
-   put the live_MenuArray of the target into mArray
-   menu_DispatchTextPick mItem, mArray
-   put the result into hKeyLine
-   --
-   hkeyLine_Deconstruct hKeyLine, hName, hType, mController
-   put the script_MenuTitles of mController into mTitle
-   --
-   if isLive is false then
-      set the menuButton_Refresh of me to "Server"
-   end if
-end menuPick
-
 on mouseDown
    -- called when the stack menu is initiated (roled over menu)
    put the long id of the target into mButton

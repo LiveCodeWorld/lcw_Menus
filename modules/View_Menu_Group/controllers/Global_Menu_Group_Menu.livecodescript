@@ -136,6 +136,10 @@ on menu_ShowMenu mGroup
    menuBar_ToggleShowMenu mGroup
 end menu_ShowMenu
 
+on menu_RefreshLiveMenus.R mGroup
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshLiveMenus.R
+
 private on _
 end _
 
@@ -180,10 +184,6 @@ end menu_EditMenuScript
 
 private on ___
 end ___
-
-on menu_RefreshLiveMenus mGroup
-   dispatch "refresh_Menus" to mGroup
-end menu_RefreshLiveMenus
 
 on menu_ToggleEditMenus mGroup
    menuBar_ToggleEditMenus mGroup
@@ -239,7 +239,7 @@ on menu_DisplayMenubarData mGroup
    put the menubar_Data of mGroup into mBarData
    --
    put the stack_Name of mGroup into stackName
-   display_Data mBarData, stackName, "Menubar Dat"
+   display_Tool mBarData, stackName, "Menubar Data"
 end menu_DisplayMenubarData
 
 on menu_DisplayMenuArray dView
