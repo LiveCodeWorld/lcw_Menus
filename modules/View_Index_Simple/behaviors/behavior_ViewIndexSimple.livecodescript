@@ -20,6 +20,70 @@ local LocalArray
 
 --> Props
 -
+private command _DoDoubleClick
+   put the mouse_DoubleUp of me into mDoubleUp
+   -- if mDoubleClick is empty then return empty
+   
+   put the mouse_Target of me into mouseTarget
+   put the clickText into someLine
+   put the long id of me into dView
+   
+   if the optionKey is "Down" then
+      dispatch "ask_CreateMouseDoubleUpHandler" to me with mDoubleUp,dView
+   else
+      dispatch mDoubleUp to mouseTarget with dView,someLine
+   end if
+end _DoDoubleClick
+
+private function _DefaultMouseTarget
+   put the line_Controller of me into mouseTarget
+   if exists (mouseTarget) is false then
+      put the long id of me into mouseTarget
+   end if
+   return mouseTarget
+end _DefaultMouseTarget
+
+getprop mouse_DoubleUp
+   put the mouse_DoubleUp of me into mDoubleUp
+   if mDoubleUp is empty then return "mouse_DoubleUp"
+   return mDoubleUp
+end mouse_DoubleUp
+
+setprop mouse_DoubleUp [mTarget] mDoubleUp
+   set the mouse_DoubleUp of me to mDoubleUp
+end mouse_DoubleUp
+
+getprop mouse_Target
+   -- set the mouse_Target of me to empty
+   put the mouse_Target of me into mouseTarget
+   if exists (mouseTarget) is false then 
+      put _DefaultMouseTarget() into mouseTarget
+   end if
+   return mouseTarget
+end mouse_Target
+
+setprop mouse_Target mouseTarget
+   set the mouse_Target of me to mouseTarget
+end mouse_Target
+
+getprop menu_Target
+   put the menu_Target of me into mTarget
+   --
+   put the displayed_Object of me into displayedObject
+   switch 
+      case mTarget is not empty
+         return mTarget
+      case displayedObject is not empty
+         return displayedObject
+      default
+         return the long id of me
+   end switch
+end menu_Target
+
+setprop menu_Target [mTitlePath] mTarget
+   set the menu_Target of me to mTarget
+end menu_Target
+
 getprop tool_MenuBit
    -- return the tool_MenuBit name = menuBit
    get the title_Menu of me
@@ -65,21 +129,6 @@ end tool_MenuBit
 
 --> Working on
 -
-command _DoDoubleClick
-   put the mouse_DoubleUp of me into mDoubleClick
-   if mDoubleClick is empty then return empty
-   
-   put the mouse_Target of me into mouseTarget
-   put the clickText into someLine
-   put the long id of me into dView
-   
-   if the optionKey is "Down" then
-      dispatch "ask_CreateMouseDoubleUpHandler" to me with mDoubleUp,dView
-   else
-      dispatch mDoubleClick to mouseTarget with dView,someLine
-   end if
-end _DoDoubleClick
-
 private command _doFieldDown
    put word 2 of the clickline into cNum
    if the controlkey is "Down" then
@@ -210,24 +259,6 @@ setprop title_Menu mName
    set the title_Menu of me to mName
 end title_Menu
 
-getprop menu_Target [mTitlePath]
-   put the menu_Target of me into mTarget
-   --
-   put the displayed_Object of me into displayedObject
-   switch 
-      case mTarget is not empty
-         return mTarget
-      case displayedObject is not empty
-         return displayedObject
-      default
-         return the long id of me
-   end switch
-end menu_Target
-
-setprop menu_Target [mTitlePath] mTarget
-   set the menu_Target of me to mTarget
-end menu_Target
-
 getprop title_Controller
    put the title_Controller of me into mController
    if exists (mController) then
@@ -254,32 +285,8 @@ getprop mouse_Up
 end mouse_Up
 
 setprop mouse_Up mouseUpEvent
-   _SetMouseTarget mTarget
    set the mouse_Up of me to mUp
 end mouse_Up
-
-getprop mouse_DoubleUp
-   put the mouse_DoubleUp of me into mDoubleUp
-   return mDoubleUp
-end mouse_DoubleUp
-
-setprop mouse_DoubleUp [mTarget] mDoubleUp
-   _SetMouseTarget mTarget
-   set the mouse_DoubleUp of me to mDoubleUp
-end mouse_DoubleUp
-
-getprop mouse_Target
-   put the mouse_Target of me into mouseTarget
-   if mouseTarget is empty then
-      return the long id of the target
-   else
-      return mouseTarget
-   end if
-end mouse_Target
-
-setprop mouse_Target mouseTarget
-   set the mouse_Target of me to mouseTarget
-end mouse_Target
 
 
 --> Props | Menu | Model
@@ -1155,19 +1162,6 @@ end index_Field
 
 --> Private
 -
---> Events | Handlers
--
-private command _SetMouseTarget mTarget
-   switch
-      case mTarget = "me"
-         put debug_CallingObject(3) into mTarget
-         set the mouse_Target of me to mTarget
-         break
-      case exists (mTarget)
-         set the mouse_Target of me to mTarget
-   end switch
-end _SetMouseTarget
-
 private command _doFieldClick
    put the mouse_Up of me into mouseUpEvent
    if mouseUpEvent is empty then return empty
