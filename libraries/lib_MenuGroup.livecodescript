@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: lib_MenuGroup
 type: library
-version: 0.2
+version: 0.3
 
 /*
 A library to help manage and create menubars.

@@ -27,6 +27,8 @@ getprop menu_Target [tObject]
    return browserView
 end menu_Target
 
+
+/*
 getprop disabled_EditMode
    if LocalArray ["footer_IsVisible"] is true then
       return false
@@ -75,29 +77,59 @@ getprop checked_AnimationEngine [wikiView]
    return "animationEngine" is among the lines of the stacksinuse
 end checked_AnimationEngine
 
+-- on submenu_Three
+return "Global | Obeya | Studio | Three | Menu"
+end submenu_Three
+*/
+
+getprop disabled_RefreshLiveMenus [viewObject]
+   put the menuBar_View of viewObject into mGroup
+   return exists (mGroup) is false
+end disabled_RefreshLiveMenus
+
+getprop disabled_StandardMenus [viewObject]
+   put the menuBar_View of viewObject into mGroup
+   return exists (mGroup) is false
+end disabled_StandardMenus
+
 
 --> Global | Menu | Group | Tools | Menu
 -
-on submenu_Three
-   return "Global | Obeya | Studio | Three | Menu"
-end submenu_Three
+on menu_SetFileMenu viewObject
+   put the menuBar_View of viewObject into mGroup
+   --
+   -- set the ide_MenuScript ["File"] of mGroup to "default"
+   set the menu_Titles of mGroup to "rev"
+end menu_SetFileMenu
 
-on menu_SaveStack browserView
-   put the stack_Name of browserView into stackName
-   save stack stackName
-end menu_SaveStack
+on menu_StandardMenus viewObject
+   put the menuBar_View of viewObject into mGroup
+   --
+   set the ide_MenuScript ["File"] of mGroup to "default"
+   -- set the create_MenuTitles of mGroup to "default"
+end menu_StandardMenus
 
 private on _
 end _
+
+on menu_RefreshLiveMenus.R viewObject
+   put the menuBar_View of viewObject into mGroup
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshLiveMenus.R
+
+on menu_SaveStack viewObject
+   put the stack_Name of viewObject into stackName
+   save stack stackName
+end menu_SaveStack
+
+private on __
+end __
 
 on menu_FlagEvent wikiView
    set the flag_Handler of wikiView to "default"
 end menu_FlagEvent
 
-private on ____
-end ____
-
-on submenu_Tools
+-- on submenu_Tools
    get menu_DevTitle ("Global | Menu | Group | Tools | Menu")
    return it
 end submenu_Tools

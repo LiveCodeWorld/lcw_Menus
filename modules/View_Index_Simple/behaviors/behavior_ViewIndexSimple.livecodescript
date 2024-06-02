@@ -127,7 +127,7 @@ setprop tool_MenuBit [libName] menuBit
 end tool_MenuBit
 
 
---> Working on
+--> Field
 -
 private command _doFieldDown
    put word 2 of the clickline into cNum
@@ -136,7 +136,7 @@ private command _doFieldDown
       put the line_Menu of me into lineTitle
       
       # Option Edit
-      put the menu_Controller [lineTitle] of me into mController
+      put the line_Controller [lineTitle] of me into mController
       if exists (mController) is false then
          put the tool_LibName of me into libName
          ask_CreateMenuFromObject lineTitle, libName
@@ -155,6 +155,39 @@ private command _doFieldDown
       return true
    end if
 end _doFieldDown
+
+getprop line_Controller [mTitle]
+   put the line_Controller of me into mController
+   if exists (mController) then return mController
+   
+   if mTitle is empty then
+      put the line_Menu of me into lineTitle
+   end if
+   return menu_GetGlobalController (mTitle)
+end line_Controller
+
+setprop line_Controller mController
+   set the line_Controller of me to mController
+end line_Controller
+
+
+--> Button
+-
+setprop title_Menu mName
+   set the title_Menu of me to mName
+end title_Menu
+
+getprop title_Controller
+   put the title_Controller of me into mController
+   if exists (mController) then
+      return mController
+   end if
+   
+   ## Default
+   put the title_Menu of me into mTitle
+   put menu_GetGlobalController (mTitle) into mController
+   return mController
+end title_Controller
 
 private command _doButtonMenu
    put the menu_Button of me into mButton
@@ -254,22 +287,6 @@ getprop title_Menu
       return mName
    end if
 end title_Menu
-
-setprop title_Menu mName
-   set the title_Menu of me to mName
-end title_Menu
-
-getprop title_Controller
-   put the title_Controller of me into mController
-   if exists (mController) then
-      return mController
-   end if
-   
-   ## Default
-   put the title_Menu of me into mTitle
-   put menu_GetGlobalController (mTitle) into mController
-   return mController
-end title_Controller
 
 
 --> Props

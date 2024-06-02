@@ -1,9 +1,9 @@
-﻿script "Global | Menu | Group | Help | Menu"
+﻿script "Global | Menu | Group | File | Menu"
 --> MetaData
 -
 copyright: David Bovill
 license: GPLv3
-name: Global | Menu | Group | Help | Menu
+name: Global | Menu | Group | File | Menu
 type: controller
 version: 0.1
 
@@ -28,26 +28,18 @@ getprop menu_CheckTarget [dView]
 end menu_CheckTarget
 
 
---> Global | Menu | Group | Help | Menu
+--> Global | Menu | Group | File | Menu
 -
-on menu_Dictionary
-   revIDEDocumentationLoad "API", "LiveCode Script"
-end menu_Dictionary
-
-on menu_MessageWatcher
-   revIDEOpenPalette "message watcher"
-end menu_MessageWatcher
-
-on menu_SuspendDevelopmentTools
-   revIDESuspendDevelopmentTools
-end menu_SuspendDevelopmentTools
+on menu_MenuGroupFile
+ end menu_MenuGroupFile
 
 private on _
 end _
 
-on menu_PluginSettings
-   revIDEOpenPalette "plugin preferences"
-end menu_PluginSettings
+on menu_Behavior dView
+   put the behavior of dView into bObject
+   edit the script of bObject
+end menu_Behavior
 
 on menu_ModuleTools dView
    put the view_Name of dView into viewName
@@ -57,10 +49,6 @@ end menu_ModuleTools
 private on __
 end __
 
-on menu_RevMenuBarScript wikiView
-   edit the script of ide_DefaultMenuBarStack()
-end menu_RevMenuBarScript
-
 on submenu_Dev
-   return menu_DevTitle ("Global | Menu | Group | Help | Menu")
+   return menu_DevTitle ("Global | Menu | Group | File | Menu")
 end submenu_Dev

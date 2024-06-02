@@ -190,7 +190,7 @@ command menu_CreateScriptOnlyStack mName, mFolder, pControllerScript
    */
    
    ## Construct stack path
-   put project_NameToShortFolder (mName) & ".livecodescript" into shortFile -- would have been better to leave plain?
+   put lcw_PipesToUnderscore (mName) & ".livecodescript" into shortFile -- would have been better to leave plain?
    put mFolder & shortFile into mControllerPath
    
    ## Checks

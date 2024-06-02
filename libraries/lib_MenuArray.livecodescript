@@ -32,6 +32,30 @@ local LocalArray
 
 --> Working on
 -
+private function _MenuCheckFailed mTitle, mType, tObject, topMenuController, mTitleTable, mArray
+   # Error due to "menu_CheckTarget" returns false (or menu does not exist)
+   # We should just disable the menu, but now there is an issue with that that is hard to debug.
+   
+   # Gather info
+   put mTitle into errorData ["mTitle"]
+   put mType into errorData ["mType"]
+   put mType into errorData ["mType"]
+   put topMenuController into errorData ["topMenuController"]
+   put mTitleTable into errorData ["mTitleTable"]
+   put mArray into errorData ["mArray"]
+   --
+   global gLCW
+   put errorData into gLCW ["Error"]["menu_CheckTarget"]
+   
+   # Get a simple safe menu to display
+   local recursionArray
+   put mArray_FromScript ("Global | Menu | Error | Menu", tObject, tObject, recursionArray) into mArray
+   return mArray
+   
+   # Don't do this
+   -- AddScriptMenu mArray, "Global | Menu | Error | Menu", tObject, tObject, recursionArray -- error, recurses!
+end _MenuCheckFailed
+
 getprop menu_Marray [mTitle]
    -- simple tester
    local mArray, recursionArray
@@ -951,20 +975,28 @@ function mArray_FromTitleTable mTitleTable, tObject
             breakpoint
             break
          case "submenu"
-            put item 3 of mTitleLine into prettyTitle
-            if prettyTitle is empty then
-               put menu_ConstructItemText (mTitle) into prettyTitle
-            end if
-            _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, tObject, topMenuController, recursionArray
-            put the result into addedSubmenu
+            try
+               put item 3 of mTitleLine into prettyTitle
+               if prettyTitle is empty then
+                  put menu_ConstructItemText (mTitle) into prettyTitle
+               end if
+               _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, tObject, topMenuController, recursionArray
+               put the result into goodMenu
+            catch e
+               -- next repeat
+               put false into goodMenu
+            end try
             break
          default
             _AddScriptMenu mArray, mTitle, tObject, topMenuController, recursionArray
+            put the result into goodMenu
       end switch
       
-      if the result is false then
-         put _MenuCheckFailed (mTitle, mType, tObject, topMenuController, mTitleTable, mArray) into mArray
-         exit repeat -- ideally we add and loop
+      if goodMenu is false then
+         get _MenuCheckFailed (mTitle, mType, tObject, topMenuController, mTitleTable, mArray)
+         put menu_GetGlobalController ("Global | Menu | Error | Menu") into mController
+         _AddMenuItem mArray, "display_Error", mController, tObject
+         -- exit repeat -- ideally we add and loop
       end if
    end repeat
    --
@@ -972,30 +1004,6 @@ function mArray_FromTitleTable mTitleTable, tObject
    --
    return mArray
 end mArray_FromTitleTable
-
-private function _MenuCheckFailed mTitle, mType, tObject, topMenuController, mTitleTable, mArray
-   # Error due to "menu_CheckTarget" returns false (or menu does not exist)
-   # We should just disable the menu, but now there is an issue with that that is hard to debug.
-   
-   # Gather info
-   put mTitle into errorData ["mTitle"]
-   put mType into errorData ["mType"]
-   put mType into errorData ["mType"]
-   put topMenuController into errorData ["topMenuController"]
-   put mTitleTable into errorData ["mTitleTable"]
-   put mArray into errorData ["mArray"]
-   --
-   global gLCW
-   put errorData into gLCW ["Error"]["menu_CheckTarget"]
-   
-   # Get a simple safe menu to display
-   local recursionArray
-   put mArray_FromScript ("Global | Menu | Error | Menu", tObject, tObject, recursionArray) into mArray
-   return mArray
-   
-   # Don't do this
-   -- AddScriptMenu mArray, "Global | Menu | Error | Menu", tObject, tObject, recursionArray -- error, recurses!
-end _MenuCheckFailed
 
 private function _MenuLogActivated newMenuController, tObject, mTitle
    -- checks for double menus in an object
