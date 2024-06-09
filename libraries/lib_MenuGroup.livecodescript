@@ -50,7 +50,7 @@ setprop menuBar_ButtonNames newButtonNames
    end repeat
    delete char -1 of menuButtonIDs
    
-   set the menuButton_Order of mGroup to menuButtonIDs
+   set the menuBar_IdOrder of mGroup to menuButtonIDs
    return menuButtonIDs
 end menuBar_ButtonNames
 
@@ -130,7 +130,13 @@ setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
    return newButtonID
 end new_MenuButton
 
-command menuBar_CreateButton newButtonName, mGroup, pInsertBefore
+command menuBar_CreateButton newButtonName, mGroup, pInsertBeforeButtonNum
+   # If ordering
+   if pInsertBeforeButtonNum is not empty then
+      put pInsertBeforeButtonNum into mButtonNum
+      put the menuButton_IDs of mGroup into menuButtonIDs
+   end if
+   
    put menuBar_ListButtonNames (mGroup) into existingButtonNames
    if newButtonName is among the lines of existingButtonNames then
       return "Error, already a menu button:" && newButtonName && "of"  && mGroup
@@ -139,12 +145,6 @@ command menuBar_CreateButton newButtonName, mGroup, pInsertBefore
    put the stack_Name of mGroup into menuBarStackName
    set the defaultStack to menuBarStackName -- for safety
    put the menuBar of stack menuBarStackName into tOriginalMenuBar
-   
-   # If ordering
-   if pInsertBefore is not empty then
-      put the menuButton_Num [pInsertBefore] of mGroup into mButtonNum
-      put the menuButton_IDs of mGroup into menuButtonIDs
-   end if
    
    lock screen
    lock menus
@@ -166,7 +166,6 @@ command menuBar_CreateButton newButtonName, mGroup, pInsertBefore
       dispatch "LayoutControl" to mGroup
    end if
    
-   -- menuBar_RelayerMenuButtons mGroup
    --
    menuBar_Refresh tOriginalMenuBar
    unlock menus
@@ -201,54 +200,8 @@ command menuBar_RelayerMenuButtons mGroup, pMenuButtonIDs
       put the childControlIDs of mGroup into pMenuButtonIDs
    end if
    
-   set the menuButton_Order of mGroup to pMenuButtonIDs
+   set the menuBar_IdOrder of mGroup to pMenuButtonIDs
    return the result
-   
-   # Props of mGroup
-   put the stack_Name of mGroup into menuBarStackName
-   put the menuBar of stack menuBarStackName into tOriginalMenuBar
-   
-   # Relayer defaults
-   put the relayerGroupedControls into tOriginalRelayerGroupedControls
-   
-   set the defaultStack to menuBarStackName
-   --
-   # Arrange rect of btns for proper positioning in stack window
-   put 1 into tNextLeft
-   put the formattedHeight of btn 1 of mGroup into fHeight
-   --
-   repeat for each line btnID in pMenuButtonIDs
-      put the long id of btn id btnID of mGroup into btnObject
-      --
-      put the formattedWidth of btnObject into fWidth
-      -- put the formattedHeight of btnObject into fHeight
-      
-      # Work out btn rect
-      put tNextLeft + fWidth + 4 into tNextRight
-      put -1 + fHeight -2 into tNextBottom
-      put tNextLeft, -1, tNextRight, tNextBottom into bRect
-      
-      # Set Rect
-      set the rect of btnObject to bRect
-      
-      # Next
-      add the width of btnObject to tNextLeft
-   end repeat
-   
-   # Arrange layer of btns for proper positioning on MacOS menubar
-   set the relayerGroupedControls to true
-   --
-   put the num of lines in pMenuButtonIDs into tNumLines
-   put the layer of mGroup + 1 into tLayer
-   repeat with lineNum = tNumLines down to 1
-      put line lineNum of pMenuButtonIDs into btnID
-      put the long id of btn id btnID of mGroup into btnObject
-      
-      # Without removing the button from the menu group
-      set the layer of btnObject to tLayer
-   end repeat
-   --
-   set the relayerGroupedControls to tOriginalRelayerGroupedControls
 end menuBar_RelayerMenuButtons
 
 

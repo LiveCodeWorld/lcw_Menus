@@ -32,6 +32,16 @@ local LocalArray
 
 --> Working on
 -
+function menu_IsGlobal mTitle
+   set the itemdelimiter to "|"
+   if word 1 to -1 of item 1 of mTitle = "Global" \
+         AND word 1 to -1 of item -1 of mTitle = "Menu" then
+         return true
+   else
+      return false
+   end if
+end menu_IsGlobal
+
 private function _MenuCheckFailed mTitle, mType, tObject, topMenuController, mTitleTable, mArray
    # Error due to "menu_CheckTarget" returns false (or menu does not exist)
    # We should just disable the menu, but now there is an issue with that that is hard to debug.
@@ -787,11 +797,6 @@ function menu_GetGlobalButton
    put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
    return mButton
 end menu_GetGlobalButton
-
-function menu_IsGlobal mTitle
-   -- could do better check
-   return word 1 of mTitle = "Global"
-end menu_IsGlobal
 
 function menu_ConstructItemText mTitle
    set the itemdelimiter to "|"

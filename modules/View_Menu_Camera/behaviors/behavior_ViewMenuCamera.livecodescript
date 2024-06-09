@@ -1,4 +1,95 @@
 ﻿script "behavior_ViewMenuCamera"
+--> Menu | Model
+-
+getprop menubar_View
+   return the long id of me
+end menubar_View
+
+getprop menu_ButtonData [mNum]
+   if mNum is empty then return empty
+   put the menubar_Data of me into mGroupData
+   _NormaliseButtonNum mNum, mGroupData
+   
+   return mGroupData [mNum]
+end menu_ButtonData
+
+setprop menu_ButtonData [mNum] mData
+   if mNum is empty then return empty
+   put the menubar_Data of me into mGroupData
+   _NormaliseButtonNum mNum
+   
+   put mData into mGroupData [mNum]
+   set the menubar_Data of me to mGroupData
+   return mData
+end menu_ButtonData
+
+getprop menubar_Data
+   return the menubar_Data of me
+end menubar_Data
+
+setprop menubar_Data mGroupData
+   set the menubar_Data of me to mGroupData
+end menubar_Data
+
+
+--> Private
+-
+private command _SetMenuData pTitleOrController
+   local mTitle, pTopController, pMenuTarget
+   
+   put the long id of the target into mButton
+   switch
+      case word 1 of mButton is not "button"
+         breakpoint
+         return empty
+      case pTitleOrController is empty
+         put the menu_Title of me into mTitle
+         break
+      case exists (pTitleOrController)
+         put pTitleOrController into pTopController
+         put the menu_GlobalTitle of pTopController into mTitle
+         break
+      default
+         put pTitleOrController into mTitle
+   end switch
+   --
+   put _ConstructMenuData (mTitle, mButton, pTopController) into mData
+   --
+   set the menu_ButtonData of me to mData
+   return mData
+end _SetMenuData
+
+private function _ConstructMenuData mTitle, mButton, pTopController, pMenuTarget
+   # Add mTitle
+   put mTitle into mData ["mTitle"]
+   
+   # Find mTopController
+   if exists (pTopController) is false then
+      put menu_GetGlobalController (mTitle) into mTopController
+   else
+      put pTopController into mTopController
+   end if
+   put revRuggedId (mTopController) into mData ["mController"] -- this is mTopController
+   
+   # Construct mArray from mController script
+   put mArray_FromTitleTable (mTitle, pMenuTarget) into mArray -- works of mControllers from mTitle, mTarget each loop
+   put mArray into mData ["mArray"]
+   return mData
+end _ConstructMenuData
+
+private function _FindMenuTarget mButton, mTopController, pMenuTarget
+   # Find mTarget
+   if exists (pMenuTarget) is false then
+      put the card_Object of mButton into cardObject
+      put the view_Object of cardObject into tView
+      put the menu_Target [tView] of mTopController into mTarget
+      return mTarget
+   else
+      return pMenuTarget
+   end if
+end _FindMenuTarget
+
+
 --> Events
 -
 on menuPick mTitle
@@ -261,95 +352,3 @@ command _NormaliseButtonNum @mNum, mGroupData
    put 0 into mNum
    return false
 end _NormaliseButtonNum
-
-
---> Menu | Model
--
-getprop menubar_View
-   return the long id of me
-end menubar_View
-
-getprop menu_ButtonData [mNum]
-   if mNum is empty then return empty
-   put the menubar_Data of me into mGroupData
-   _NormaliseButtonNum mNum, mGroupData
-   
-   return mGroupData [mNum]
-end menu_ButtonData
-
-setprop menu_ButtonData [mNum] mData
-   if mNum is empty then return empty
-   put the menubar_Data of me into mGroupData
-   _NormaliseButtonNum mNum
-   
-   put mData into mGroupData [mNum]
-   set the menubar_Data of me to mGroupData
-   return mData
-end menu_ButtonData
-
-getprop menubar_Data
-   return the menubar_Data of me
-end menubar_Data
-
-setprop menubar_Data mGroupData
-   set the menubar_Data of me to mGroupData
-end menubar_Data
-
-
---> Private
--
-private command _SetMenuData pTitleOrController
-   local mTitle, pTopController, pMenuTarget
-   
-   put the long id of the target into mButton
-   switch
-      case word 1 of mButton is not "button"
-         breakpoint
-         return empty
-      case pTitleOrController is empty
-         put the menu_Title of me into mTitle
-         break
-      case exists (pTitleOrController)
-         put pTitleOrController into pTopController
-         put the menu_GlobalTitle of pTopController into mTitle
-         break
-      default
-         put pTitleOrController into mTitle
-   end switch
-   --
-   put _ConstructMenuData (mTitle, mButton, pTopController) into mData
-   --
-   set the menu_ButtonData of me to mData
-   return mData
-end _SetMenuData
-
-private function _ConstructMenuData mTitle, mButton, pTopController, pMenuTarget
-   # Add mTitle
-   put mTitle into mData ["mTitle"]
-   
-   # Find mTopController
-   if exists (pTopController) is false then
-      put menu_GetGlobalController (mTitle) into mTopController
-   else
-      put pTopController into mTopController
-   end if
-   put revRuggedId (mTopController) into mData ["mController"] -- this is mTopController
-   
-   # Construct mArray from mController script
-   put mArray_FromTitleTable (mTitle, pMenuTarget) into mArray -- works of mControllers from mTitle, mTarget each loop
-   put mArray into mData ["mArray"]
-   return mData
-end _ConstructMenuData
-
-private function _FindMenuTarget mButton, mTopController, pMenuTarget
-   # Find mTarget
-   if exists (pMenuTarget) is false then
-      put the card_Object of mButton into cardObject
-      put the view_Object of cardObject into tView
-      put the menu_Target [tView] of mTopController into mTarget
-      return mTarget
-   else
-      return pMenuTarget
-   end if
-end _FindMenuTarget
-

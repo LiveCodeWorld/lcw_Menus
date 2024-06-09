@@ -36,40 +36,12 @@ getprop checked_PreviewMenu
    return isPreview
 end checked_PreviewMenu
 
-getprop checked_ShowMenu [mGroup]
-   if exists (mGroup) is false then return false -- bug should not be needed
-   --
-   put the show_Menu of mGroup into sBoolean
-   return sBoolean
-end checked_ShowMenu
-
-getprop checked_ToggleEditMenus [mGroup]
-   if exists (mGroup) is false then return false -- bug should not be needed
-   
-   put the stack_Name of mGroup into stackName
-   put the editMenus of stack stackName into sBoolean
-   return sBoolean
-end checked_ToggleEditMenus
-
-getprop setMenuTitle_Params [mGroup]
-   if exists (mGroup) is false then return false -- bug should not be needed
-   
-   return the menuButton_Names of mGroup
-end setMenuTitle_Params
-
 getprop deleteMenuButton_Params [mGroup]
    if exists (mGroup) is false then return true
    --
    put menuBar_ListButtonNames (mGroup) into mButtonNames
    return mButtonNames
 end deleteMenuButton_Params
-
-getprop checked_LiveMenu [mGroup]
-   if exists (mGroup) is false then return empty
-   --
-   put the live_Menu of mGroup into sBoolean
-   return sBoolean
-end checked_LiveMenu
 
 
 --> Global | Menu | Group | Exists | Menu
@@ -86,10 +58,6 @@ on menu_DeleteMenuGroup mGroup
    set the menuBar of stack stackName to empty
    set the defaultMenuBar to tOriginalDefaultMenuBar
 end menu_DeleteMenuGroup
-
-on menu_RefreshMenubar mGroup
-   dispatch "menuBar_Refresh" to mGroup
-end menu_RefreshMenubar
 
 private on _
 end _
@@ -117,100 +85,108 @@ end menu_DeleteMenuButton
 private on __
 end __
 
-on menu_SetMenuTitle mGroup, mName
+on menu_EditMenuTitle mGroup, mName
    put the menuButton_Title [mName] of mGroup into mTitle
    put lcw_Ask ("Edit menuButton_Title...", mTitle, "Edit Menu Titles", mGroup) into mTitle
    
    set the menuButton_Title [mName] of mGroup to mTitle
-end menu_SetMenuTitle
+end menu_EditMenuTitle
+
+getprop editMenuTitle_Params [mGroup]   
+   put the menuButton_Names of mGroup into mNames
+   return mNames
+end editMenuTitle_Params
 
 on menu_EditMenuScript mGroup, mName
-   edit the script of btn mName of mGroup
+   if exists (btn mName of mGroup) then
+      edit the script of btn mName of mGroup
+   else
+      breakpoint
+   end if
 end menu_EditMenuScript
 
-getprop editMenuScript_Params [mGroup]
-   if exists (mGroup) is false then return false -- bug should not be needed
-   
-   return the menuButton_Names of mGroup
+getprop editMenuScript_Params [mGroup]   
+   get the menuButton_Names of mGroup
+   return it
 end editMenuScript_Params
 
 private on ___
 end ___
 
-on menu_LiveMenu mGroup
-   put the live_Menu of mGroup into sBoolean
-   put sBoolean is false into newStatus
-   set the live_Menu of mGroup to newStatus
-   --
-   put "The Live Menu status is now" && newStatus into sComment
-   lcw_Notify sComment
-end menu_LiveMenu
-
 on menu_ShowMenu mGroup
    menuBar_ToggleShowMenu mGroup
 end menu_ShowMenu
 
-on menu_RefreshLiveMenus.R mGroup
-   dispatch "refresh_Menus" to mGroup
-end menu_RefreshLiveMenus.R
-
-on menu_ToggleEditMenus mGroup
-   menuBar_ToggleEditMenus mGroup
-end menu_ToggleEditMenus
+getprop checked_ShowMenu [mGroup]
+   if exists (mGroup) is false then return false -- bug should not be needed
+   --
+   put the show_Menu of mGroup into sBoolean
+   return sBoolean
+end checked_ShowMenu
 
 on menu_PreviewMenu mGroup
    menubar_TogglePreview mGroup
 end menu_PreviewMenu
 
-on menu_ResetDefaultMenubar
-   ide_ResetDefaultMenubar
-end menu_ResetDefaultMenubar
-
 private on ____
 end ____
 
-on menu_ReorderMenus mGroup
-   put menuBar_ListButtonNames (mGroup) into mButtonNames
-   replace CR with comma in mButtonNames
-   
-   # Ask
-   put lcw_Ask ("Reorder these menu names...", mButtonNames, "Creat Menu", mGroup) into newButtonNames
-   
-   set the menuBar_ButtonNames of mGroup to newButtonNames
-end menu_ReorderMenus
+on menu_EditMenubarBehavior mGroup
+   put the behavior of mGroup into bObject
+   edit the script of bObject
+end menu_EditMenubarBehavior
 
-on menu_LayoutMenuButtons mGroup
-   dispatch "LayoutControl" to mGroup
-end menu_LayoutMenuButtons
+on menu_DisplayMenubarBehaviors mGroup
+   display_ModuleBehaviors mGroup
+end menu_DisplayMenubarBehaviors
+
+on menu_MenuBehavior mGroup, sName
+   -- put the behavior_Objects of mGroup -- into bObjects
+   -- edit the script of stack sName
+   if the behavior_InHierarchy [sName] of mGroup is true then
+      set the behavior_Remove of mGroup to sName
+   else
+      set the behavior_Add of mGroup to sName
+   end if
+end menu_MenuBehavior
+
+getprop menuBehavior_Param [mGroup]
+   return the behavior_StackNames of mGroup
+end menuBehavior_Param
+
+getprop menuBehavior_Params [mGroup]
+   put the template_Object of mGroup into tObject
+   put the module_BehaviorStackNames of tObject into sNames
+   return sNames
+end menuBehavior_Params
+
+on menu_RevMenubarScript
+   edit the script of stack "revMenuBar"
+end menu_RevMenubarScript
 
 private on _____
 end _____
 
-on menu_MenuManagerTools mGroup
-   display_MenuManager mGroup
-end menu_MenuManagerTools
+on menu_MenubarTitleData mGroup
+   put the stack_Name of mGroup into sName
+   display_MenuBarData sName
+end menu_MenubarTitleData
 
-on menu_MenuGroupBehavior mGroup
-   put the behavior of mGroup into bObject
-   edit the script of bObject
-end menu_MenuGroupBehavior
+on menu_RefreshLiveMenus.R mGroup
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshLiveMenus.R
 
 private on ______
 end ______
 
-on menu_DisplayMenubarData mGroup
-   put the menubar_Data of mGroup into mBarData
-   --
-   put the stack_Name of mGroup into stackName
-   display_Tool mBarData, stackName, "Menubar Data"
-end menu_DisplayMenubarData
+on menu_MenuManager mGroup
+   display_MenuManager mGroup
+end menu_MenuManager
 
-on menu_DisplayMenuArray dView
-   display_ActiveMenuArray
-end menu_DisplayMenuArray
+on menu_ResetDefaultMenubar
+   ide_ResetDefaultMenubar
+end menu_ResetDefaultMenubar
 
-on menu_MenuGroupTools mGroup
-   put the view_Name of mGroup into viewName
-   display_ModuleTools viewName
-end menu_MenuGroupTools
-
+on submenu_Dev
+   return menu_DevTitle ("Global | Menu | Group | Exists | Menu")
+end submenu_Dev

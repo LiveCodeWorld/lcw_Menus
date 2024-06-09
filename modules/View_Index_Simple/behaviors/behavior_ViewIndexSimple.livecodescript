@@ -20,6 +20,29 @@ local LocalArray
 
 --> Props
 -
+getprop line_Controller [mTitle]
+   put the line_Controller of me into mController
+   if exists (mController) then return mController
+   
+   if mTitle is empty then
+      put the line_Menu of me into mTitle
+   end if
+   put menu_GetGlobalController (mTitle) into mController
+   return mController
+end line_Controller
+
+setprop line_Controller mController
+   set the line_Controller of me to mController
+end line_Controller
+
+private function _DefaultMouseTarget
+   put the line_Controller of me into mouseTarget
+   if exists (mouseTarget) is false then
+      put the long id of me into mouseTarget
+   end if
+   return mouseTarget
+end _DefaultMouseTarget
+
 private command _DoDoubleClick
    put the mouse_DoubleUp of me into mDoubleUp
    -- if mDoubleClick is empty then return empty
@@ -34,14 +57,6 @@ private command _DoDoubleClick
       dispatch mDoubleUp to mouseTarget with dView,someLine
    end if
 end _DoDoubleClick
-
-private function _DefaultMouseTarget
-   put the line_Controller of me into mouseTarget
-   if exists (mouseTarget) is false then
-      put the long id of me into mouseTarget
-   end if
-   return mouseTarget
-end _DefaultMouseTarget
 
 getprop mouse_DoubleUp
    put the mouse_DoubleUp of me into mDoubleUp
@@ -155,20 +170,6 @@ private command _doFieldDown
       return true
    end if
 end _doFieldDown
-
-getprop line_Controller [mTitle]
-   put the line_Controller of me into mController
-   if exists (mController) then return mController
-   
-   if mTitle is empty then
-      put the line_Menu of me into lineTitle
-   end if
-   return menu_GetGlobalController (mTitle)
-end line_Controller
-
-setprop line_Controller mController
-   set the line_Controller of me to mController
-end line_Controller
 
 
 --> Button

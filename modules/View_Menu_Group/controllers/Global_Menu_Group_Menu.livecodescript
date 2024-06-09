@@ -59,6 +59,7 @@ on menu_InsertMenuGroup cardObject
    unlock screen
    --
    set the show_Menu [true] of mGroup to true
+   dispatch "Init_MenuBar" to mGroup
 end menu_InsertMenuGroup
 
 private on __

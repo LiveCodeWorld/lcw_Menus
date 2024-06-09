@@ -30,9 +30,9 @@ end menu_CheckTarget
 
 --> Global | Menus | Menu
 -
-on menu_Menus dView
-   put the params
-end menu_Menus
+on menu_TestMenuGroup dView
+   display_ModuleClone "View|Menu|Group"
+end menu_TestMenuGroup
 
 private on _
 end _

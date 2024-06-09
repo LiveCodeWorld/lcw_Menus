@@ -259,29 +259,26 @@ end checked_MessageBox
 --> Global | Menu | Group | Edit | Menu
 -
 on menu_Undo dView
-   -- actionUndo
+   ide_RevMenubarMenuPick "Redo", "Undo"
 end menu_Undo
 
 on menu_Redo dView
-   breakpoint
-   -- put the params
+   ide_RevMenubarMenuPick "Redo", "Cut"
 end menu_Redo
 
 private on _
 end _
 
 on menu_Cut.X dView
-   -- actionCut
-   -- cut
-   -- revMenubarEditMenuPick "Cut"
+   ide_RevMenubarMenuPick "Edit", "Cut"
 end menu_Cut.X
 
 on menu_Copy.C dView
-   -- copy
+   ide_RevMenubarMenuPick "Edit", "Copy"
 end menu_Copy.C
 
 on menu_Paste.V dView
-   -- paste
+   ide_RevMenubarMenuPick "Edit", "Paste"
 end menu_Paste.V
 
 private on __
@@ -289,7 +286,7 @@ end __
 
 on menu_SelectAll.A dView
    -- actionSelectAll
-   revMenubarEditMenuPick "Select All"
+   ide_RevMenubarMenuPick "Edit", "Select All"
 end menu_SelectAll.A
 
 -- on menu_Revert dView
