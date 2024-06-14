@@ -46,6 +46,10 @@ end deleteMenuButton_Params
 
 --> Global | Menu | Group | Exists | Menu
 -
+on menu_RefreshLiveMenus.R mGroup
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshLiveMenus.R
+
 on menu_DeleteMenuGroup mGroup
    put the stack_Name of mGroup into stackName
    save stack stackName
@@ -136,10 +140,6 @@ on menu_EditMenubarBehavior mGroup
    edit the script of bObject
 end menu_EditMenubarBehavior
 
-on menu_DisplayMenubarBehaviors mGroup
-   display_ModuleBehaviors mGroup
-end menu_DisplayMenubarBehaviors
-
 on menu_MenuBehavior mGroup, sName
    -- put the behavior_Objects of mGroup -- into bObjects
    -- edit the script of stack sName
@@ -160,32 +160,55 @@ getprop menuBehavior_Params [mGroup]
    return sNames
 end menuBehavior_Params
 
+private on _____
+end _____
+
 on menu_RevMenubarScript
    edit the script of stack "revMenuBar"
 end menu_RevMenubarScript
 
-private on _____
-end _____
+on menu_RevIdeScript
+   edit the script of stack "revIdeLibrary"
+end menu_RevIdeScript
+
+private on ______
+end ______
+
+on menu_MenuGroupTools mGroup
+   display_ModuleTools "View|Menu|Group"
+end menu_MenuGroupTools
+
+on menu_WikiBrowserTools mGroup
+   display_ModuleTools "View|Wiki|Browser"
+end menu_WikiBrowserTools
+
+on menu_WikiFutureTools mGroup
+   display_ModuleTools "View|Wiki|Future"
+end menu_WikiFutureTools
+
+on menu_WikiServerTools mGroup
+   display_ModuleTools "View|Wiki|Server"
+end menu_WikiServerTools
+
+private on _______
+end _______
 
 on menu_MenubarTitleData mGroup
    put the stack_Name of mGroup into sName
    display_MenuBarData sName
 end menu_MenubarTitleData
 
-on menu_RefreshLiveMenus.R mGroup
-   dispatch "refresh_Menus" to mGroup
-end menu_RefreshLiveMenus.R
-
-private on ______
-end ______
-
-on menu_MenuManager mGroup
-   display_MenuManager mGroup
-end menu_MenuManager
+on menu_DisplayMenubarBehaviors mGroup
+   display_ModuleBehaviors mGroup
+end menu_DisplayMenubarBehaviors
 
 on menu_ResetDefaultMenubar
    ide_ResetDefaultMenubar
 end menu_ResetDefaultMenubar
+
+on menu_MenuManager mGroup
+   display_MenuManager mGroup
+end menu_MenuManager
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Exists | Menu")

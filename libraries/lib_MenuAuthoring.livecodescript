@@ -28,6 +28,61 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+command menu_Create mTitle, stackName, pDevBit
+   put menu_GetGlobalController (mTitle) into mController
+   if exists (mController) then
+      lcw_Notify "Menu '[[var]]' exists already!", "menu_Create", mTitle
+      breakpoint
+      return empty
+   end if
+   
+   if exists (stack stackName) is false then
+      breakpoint
+      return empty
+   end if
+   
+   # Find mFolder
+   put the module_Folder of the target into mFolder
+   if there is not a folder mFolder then
+      put the project_Folder of the target into mFolder
+   end if
+   
+   if there is not a folder mFolder then
+      breakpoint
+      return empty
+   end if
+   
+   menu_CreateFromTitle mTitle, mFolder, pDevBit
+   put the result into mController
+   --
+   if exists (mController) is false then
+      breakpoint
+      put menu_GetGlobalController (mTitle) into mController
+      return empty
+   end if
+   
+   return mController
+end menu_Create
+
+command module_CreateMenu moduleStackName, pGlobalMenuTitle, pControllerScript
+   put the module_Folder of stack moduleStackName into moduleFolder
+   --
+   module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerScript
+   put the result into mController
+   return mController
+end module_CreateMenu
+
+command project_CreateMenu gMenuTitle, projectName, pControllerScript
+   # Quick check of projectFolder
+   put project_GetFolder (projectName) into projectFolder
+   if projectFolder is empty then return "Error, project folder does not exists for project:" && projectName
+   --
+   project_CreateMenuFromFolder projectFolder, gMenuTitle, pControllerScript
+   put the result into mController
+   --
+   return mController
+end project_CreateMenu
+
 function controller_ConstructMenuScript mTitle
    if mTitle ends with "| Dev | Menu" then
       -- must not have "on submenu_Dev" handler to avoid recusion
@@ -109,17 +164,6 @@ function menu_DevTitle pMenuTitle, pMenuFolder
    put the result into mController
    return pMenuTitle
 end menu_DevTitle
-
-function menu_CreateTitle mTitle, pDevBit, mFolder
-   # Create Menu
-   menu_CreateFromTitle mTitle, mFolder, pDevBit
-   put the result into mController
-   if exists (mController) is false then
-      put menu_GetGlobalController (mTitle) into mController
-      breakpoint
-   end if
-   return mController
-end menu_CreateTitle
 
 command menu_CreateFromTitle mTitle, mFolder, pDevBit
    # Add Dev Bit (if provided)
@@ -247,14 +291,6 @@ end custom_DeleteSet
 
 --> Menu | Create
 -
-command module_CreateMenu moduleStackName, pGlobalMenuTitle, pControllerScript
-   put the module_Folder of stack moduleStackName into moduleFolder
-   --
-   module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerScript
-   put the result into mController
-   return mController
-end module_CreateMenu
-
 command module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerScript
    set the itemdelimiter to slash
    put item -1 of moduleFolder into shortFolder
@@ -286,17 +322,6 @@ command menu_Create gMenuTitle, pStackName, pControllerScript
    put the result into mController -- a script only stack
    return mController
 end menu_Create
-
-command project_CreateMenu gMenuTitle, projectName, pControllerScript
-   # Quick check of projectFolder
-   put project_GetFolder (projectName) into projectFolder
-   if projectFolder is empty then return "Error, project folder does not exists for project:" && projectName
-   --
-   project_CreateMenuFromFolder projectFolder, gMenuTitle, pControllerScript
-   put the result into mController
-   --
-   return mController
-end project_CreateMenu
 
 command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControllerScript
    if pControllerScript is empty then put controller_ConstructMenuScript (gMenuTitle) into pControllerScript
@@ -716,9 +741,8 @@ private function text_SplitCaps someWord
 end text_SplitCaps
 
 private function text_StartsWithCaps someText
-   -- was "startsWithCaps"
    put char 1 of sometext into testChar
-   put chartonum(testChar) into someCharNum
+   put nativeCharToNum (testChar) into someCharNum
    if someCharNum >= 97 and someCharNum <= 122 then
       return false
    else

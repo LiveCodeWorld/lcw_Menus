@@ -247,13 +247,13 @@ command display_ActiveMenuArray
    return dView
 end display_ActiveMenuArray
 
-getprop disabled_MessageBox
-   return false
-end disabled_MessageBox
-
-getprop checked_MessageBox
-   return "Message Box" is among the lines of the openstacks
-end checked_MessageBox
+private function _HasCardBehavior wikiView
+   put the card_Object of wikiView into cardObject
+   --
+   put the name of stack "behavior_WikiBrowserCard" into wbObject
+   put the behavior of cardObject into bObject
+   return wbObject = bObject
+end _HasCardBehavior
 
 
 --> Global | Menu | Group | Edit | Menu
@@ -296,10 +296,28 @@ end menu_Revert
 private on ___
 end ___
 
+on menu_SetCardBehavior wikiView
+   put the card_Object of wikiView into cardObject
+   --
+   if _HasCardBehavior(wikiView) is true then
+      set the behavior of cardObject to empty
+   else
+      set the behavior of cardObject to the name of stack "behavior_WikiBrowserCard"
+   end if
+end menu_SetCardBehavior
+
+getprop checked_SetCardBehavior [wikiView]
+   return _HasCardBehavior(wikiView)
+end checked_SetCardBehavior
+
 on menu_CardScript dView
    put the card_Object of dView into cardObject
    edit the script of cardObject
 end menu_CardScript
+
+on menu_EditCardBehavior
+   edit the script of stack "behavior_WikiBrowserCard"
+end menu_EditCardBehavior
 
 on menu_WikiBehavior dView
    put the browser_View of dView into browserView
@@ -321,3 +339,11 @@ end ____
 on menu_MessageBox.M
    revIDETogglePalette "message box"
 end menu_MessageBox.M
+
+getprop disabled_MessageBox
+   return false
+end disabled_MessageBox
+
+getprop checked_MessageBox
+   return "Message Box" is among the lines of the openstacks
+end checked_MessageBox

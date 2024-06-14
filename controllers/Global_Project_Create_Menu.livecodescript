@@ -34,12 +34,13 @@ getprop menu_Target [tObject]
          put the title_Text of displayView into projectName
          return projectName
       default
-         return empty
+         return "Error"
    end switch
 end menu_Target
 
 getprop menu_CheckTarget [projectName]
-   pass menu_CheckTarget
+   -- could do a check here
+   return true
 end menu_CheckTarget
 
 
@@ -62,22 +63,6 @@ end menu_CreateModule
 private command _
 end _
 
-on menu_CreateMenu projectName
-   put scriptEditor_GetSelectedText() into gMenuTitle
-   --
-   ask_CreateProjectMenu projectName, gMenuTitle
-   put the result into controllerStackObject
-   edit the script of controllerStackObject
-   --
-   project_UpdateArray projectName
-end menu_CreateMenu
-
-on menu_CreateProjectMenu projectName
-   ask_CreateProjectMenu projectName
-   put the result into controllerStackObject
-   edit the script of controllerStackObject
-end menu_CreateProjectMenu
-
 on menu_CreateProjectLibrary projectName
    ask_CreateProjectLibrary projectName
    
@@ -99,6 +84,16 @@ on menu_CreateProjectBehavior projectName
    project_UpdateArray projectName
 end menu_CreateProjectBehavior
 
+on menu_CreateProjectMenu projectName
+   put scriptEditor_GetSelectedText() into gMenuTitle
+   --
+   ask_CreateProjectMenu projectName, gMenuTitle
+   put the result into controllerStackObject
+   edit the script of controllerStackObject
+   --
+   project_UpdateArray projectName
+end menu_CreateProjectMenu
+
 private command __
 end __
 
@@ -109,9 +104,9 @@ on menu_UpdateProjectArray projectName
    display_GitRefreshProjectName projectName
 end menu_UpdateProjectArray
 
-private command __
-end __
+-- private command ___
+end ___
 
-on submenu_Dev
+-- on submenu_Dev
    return menu_DevTitle ("Global | Project | Create | Menu")
 end submenu_Dev

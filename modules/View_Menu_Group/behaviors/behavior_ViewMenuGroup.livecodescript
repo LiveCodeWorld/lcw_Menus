@@ -52,34 +52,43 @@ private command _MenubarPick mItem
    end switch
 end _MenubarPick
 
-private command _UpdateMenuButtonTextAndArrays
+private command _UpdateMenubar pForce
    mArray_ClearActiveMenuArray
    --
    put the number of buttons of me into maxNum
    repeat with mNum = 1 to maxNum
       put the long id of btn mNum of me into mButton
       --
-      _UpdateMenuButton mButton
+      try
+         _UpdateMenuButton mButton, pForce
+      catch sError
+         put sError
+      end try
    end repeat
-end _UpdateMenuButtonTextAndArrays
+end _UpdateMenubar
 
-private command _UpdateMenuButton mButton
-   switch the menuButton_UpdateStyle of mButton
-      case "Rev"
+private command _UpdateMenuButton mButton, pForce
+   put the menuButton_UpdateStyle of mButton into updateStyle
+   switch 
+      case updateStyle = "Rev"
          put the short name of mButton into mName
          set the menuButton_RevText of mButton to mName
          set the cached_MenuArray of mButton to empty
          -- set the menuButton_RevScript of mButton to mName
          break
-      case "cached"
-         put the cached_MenuArray of mButton into mArray
-         _SetTextFromArray mButton, mArray
-         break
-      case "mTitle"
+      case pForce is true
          put the menuButton_Array of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
-      case "live"
+      case updateStyle = "cached"
+         put the cached_MenuArray of mButton into mArray
+         _SetTextFromArray mButton, mArray
+         break
+      case updateStyle = "mTitle"
+         put the menuButton_Array of mButton into mArray
+         _SetTextFromArray mButton, mArray
+         break
+      case "updateStyle = live"
          put the live_MenuArray of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
@@ -283,7 +292,7 @@ on mouseDown
       put the menuButton_Text of mButton into mText
       set the text of mButton to mText
    else
-      _UpdateMenuButtonTextAndArrays
+      _UpdateMenubar
    end if
    --
    -- _SetColour "random"
@@ -380,7 +389,7 @@ on LayoutControl
 end LayoutControl
 
 on refresh_Menus
-   _UpdateMenuButtonTextAndArrays
+   _UpdateMenubar true
    _LayoutMenuButtons
 end refresh_Menus
 
