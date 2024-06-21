@@ -19,6 +19,15 @@ That do not recurse.
 
 --> Working on
 -
+--> Init
+-
+on preOpenControl
+   -- does not seem to be called
+   set the behavior_StackNames of me to "behavior_ViewMenuGroup,behavior_MenuGroupCreate"
+   lcw_Notify "Initialised behaviors for" && the name of me
+   pass preOpenControl
+end preOpenControl
+
 private command _MenubarPick mItem
    -- _SetColour "yellow"
    put the long id of the target into mButton
@@ -270,15 +279,6 @@ setprop menuButton_Controller [numOrName] mController
    set the uOPN ["menu_Controller"] of mButton to mController
    return mButton
 end menuButton_Controller
-
-
---> Init
--
-on preOpenControl
-   -- does not seem to be called
-   set the behavior_StackNames of me to "behavior_ViewMenuGroup,behavior_MenuGroupCreate"
-   lcw_Notify the params
-end preOpenControl
 
 
 --> Events

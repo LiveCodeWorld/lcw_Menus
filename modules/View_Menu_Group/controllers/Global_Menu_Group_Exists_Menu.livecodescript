@@ -46,22 +46,13 @@ end deleteMenuButton_Params
 
 --> Global | Menu | Group | Exists | Menu
 -
+on menu_DeleteMenuGroup mGroup
+   menubar_Delete mGroup
+end menu_DeleteMenuGroup
+
 on menu_RefreshLiveMenus.R mGroup
    dispatch "refresh_Menus" to mGroup
 end menu_RefreshLiveMenus.R
-
-on menu_DeleteMenuGroup mGroup
-   put the stack_Name of mGroup into stackName
-   save stack stackName
-   --
-   put the defaultMenuBar into tOriginalDefaultMenuBar
-   set the defaultMenuBar to ide_DefaultMenuGroup()
-   --
-   delete mGroup
-   --
-   set the menuBar of stack stackName to empty
-   set the defaultMenuBar to tOriginalDefaultMenuBar
-end menu_DeleteMenuGroup
 
 private on _
 end _
@@ -85,6 +76,11 @@ on menu_DeleteMenuButton mGroup, mName
    --
    dispatch "menuButton_Delete" to mGroup with mName
 end menu_DeleteMenuButton
+
+on menu_SetModuleMenus mGroup
+   put the menubar_DefaultTitles of mGroup into moduleMenuTitles
+   set the menubar_Titles of mGroup to moduleMenuTitles
+end menu_SetModuleMenus
 
 private on __
 end __
@@ -163,52 +159,21 @@ end menuBehavior_Params
 private on _____
 end _____
 
-on menu_RevMenubarScript
-   edit the script of stack "revMenuBar"
-end menu_RevMenubarScript
-
-on menu_RevIdeScript
-   edit the script of stack "revIdeLibrary"
-end menu_RevIdeScript
-
-private on ______
-end ______
-
 on menu_MenuGroupTools mGroup
    display_ModuleTools "View|Menu|Group"
 end menu_MenuGroupTools
 
-on menu_WikiBrowserTools mGroup
-   display_ModuleTools "View|Wiki|Browser"
-end menu_WikiBrowserTools
+on menu_MenuManager mGroup
+   display_MenuManager mGroup
+end menu_MenuManager
 
-on menu_WikiFutureTools mGroup
-   display_ModuleTools "View|Wiki|Future"
-end menu_WikiFutureTools
-
-on menu_WikiServerTools mGroup
-   display_ModuleTools "View|Wiki|Server"
-end menu_WikiServerTools
-
-private on _______
-end _______
+private on ______
+end ______
 
 on menu_MenubarTitleData mGroup
    put the stack_Name of mGroup into sName
    display_MenuBarData sName
 end menu_MenubarTitleData
-
-on menu_DisplayMenubarBehaviors mGroup
-   display_ModuleBehaviors mGroup
-end menu_DisplayMenubarBehaviors
-
-on menu_ResetDefaultMenubar
-   ide_ResetDefaultMenubar
-end menu_ResetDefaultMenubar
-
-on menu_MenuManager mGroup
-   display_MenuManager mGroup
-end menu_MenuManager
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Exists | Menu")

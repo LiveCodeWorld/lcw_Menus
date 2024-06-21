@@ -26,6 +26,53 @@ on EnableStatusMenu pEnabled
 end EnableStatusMenu
 
 
+--> Display
+-
+command display_MenuManager mGroup
+   put the stack_Name of mGroup into sName
+   put the id of mGroup into menuID
+   -- put the menubar of stack sName into mName
+   put the short name of mGroup into mName
+   --   
+   set the cREVMenuID of stack "revMenuManager" to menuID
+   set the cREVDefaultStack of stack "revMenuManager" to sName
+   set the cREVMenubar of stack "revMenuManager" to mName
+   
+   go to stack "revMenuManager"
+   put menuBar_ManagerCard() into menuManagerCard
+   dispatch "revEditMenubar" to menuManagerCard
+end display_MenuManager
+
+getprop menubar_IsActive
+   put the menubar of the defaultstack into mName
+   put mName is not empty into sBoolean
+   return sBoolean
+end menubar_IsActive
+
+getprop menubar_View
+   -- default (make a local version)
+   put the card_Object of the target into cObject
+   put the childControlIDs of cObject into someIDs
+   repeat for each line someID in someIDs
+      put the long id of control id someID into testObject
+      if word 1 of testObject = "group" then
+         put the uRIP["name"] of testObject into viewName
+         if viewName = "View|Menu|Group" then
+            -- if viewName begins with "View|Menu|Group" then
+            return testObject
+         end if
+      end if
+   end repeat
+   return empty
+end menubar_View
+
+getprop menubar_Name
+   put the menubar_View of the target into mView
+   put the short name of mView into mName
+   return mName
+end menubar_Name
+
+
 --> Props | Move to behavior?
 -
 getprop menuBar_ButtonNames
@@ -64,46 +111,38 @@ function menuBar_ListButtonNames mGroup
    return mButtonNames
 end menuBar_ListButtonNames
 
-getprop menubar_Name
-   put the menubar_View of the target into mView
-   put the short name of mView into mName
-   return mName
-end menubar_Name
 
-getprop menubar_View
-   -- default
-   put the card_Object of the target into cObject
-   put the childControlIDs of cObject into someIDs
-   repeat for each line someID in someIDs
-      put the long id of control id someID into testObject
-      if word 1 of testObject = "group" then
-         put the uRIP["name"] of testObject into viewName
-         if viewName = "View|Menu|Group" then
-            -- if viewName begins with "View|Menu|Group" then
-            return testObject
-         end if
-      end if
-   end repeat
-   return empty
-end menubar_View
-
-
---> Display
+--> Menubar | Create
 -
-command display_MenuManager mGroup
-   put the stack_Name of mGroup into sName
-   put the id of mGroup into menuID
-   -- put the menubar of stack sName into mName
-   put the short name of mGroup into mName
-   --   
-   set the cREVMenuID of stack "revMenuManager" to menuID
-   set the cREVDefaultStack of stack "revMenuManager" to sName
-   set the cREVMenubar of stack "revMenuManager" to mName
+command menubar_Insert sView
+   put the menubar_View of sView into mGroup
+   if exists (mGroup) is true then
+      breakpoint
+   end if
    
-   go to stack "revMenuManager"
-   put menuBar_ManagerCard() into menuManagerCard
-   dispatch "revEditMenubar" to menuManagerCard
-end display_MenuManager
+   put the card_Object of sView into cardObject
+   lcw_Answer "Sure you want to create a menubar view on this card?", cardObject
+   --
+   view_InsertFromPath "View|Menu|Group", cardObject
+   put the result into mGroup
+   set the topleft of mGroup to 0,0
+   --
+   set the show_menu of mGroup to true
+   return mGroup
+end menubar_Insert
+
+command menubar_Delete mGroup
+   put the stack_Name of mGroup into stackName
+   save stack stackName
+   --
+   put the defaultMenuBar into tOriginalDefaultMenuBar
+   set the defaultMenuBar to ide_DefaultMenuGroup()
+   --
+   delete mGroup
+   --
+   set the menuBar of stack stackName to empty
+   set the defaultMenuBar to tOriginalDefaultMenuBar
+end menubar_Delete
 
 
 --> MenuButton | Create

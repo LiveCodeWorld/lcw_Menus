@@ -5,13 +5,68 @@ copyright: David Bovill
 license: GPLv3
 name: behavior_MenuGroupCreate
 type: behavior
-version: 0.2
+version: 0.3
 
 /*Here you make make notes as a basic form of help for this view.
 Full help text can be found on the linked wiki for the view.*/
 
 --> Create
 -
+getprop menubar_DefaultTitles
+   put the stack_Name of me into moduleName
+   --
+   put the module_ControllerStackNames of stack moduleName into mTitles
+   put the module_MenuTitle of stack moduleName into defaultMenu
+   line_Delete defaultMenu, mTitles
+   put defaultMenu & CR & mTitles into moduleMenuTitles
+   --
+   put lineOffset (" | Help | Menu", moduleMenuTitles) into lineNum
+   if lineNum > 0 then
+      put line lineNum of moduleMenuTitles into helpTitle
+      delete line lineNum of moduleMenuTitles
+      put CR & helpTitle after moduleMenuTitles
+   end if
+   return moduleMenuTitles
+end menubar_DefaultTitles
+
+setprop menubar_Titles mTitles
+   switch
+      case mTitles is empty
+         _DeleteMenuButtons
+         return empty
+      case mTitles = "rev"
+         _SetRevMenuButtonScripts "File,Edit,Tools,Help"
+         return the result
+      default
+   end switch
+   
+   put _TableFromTitles (mTitles) into mTable
+   set the menubar_Table of me to mTable
+   return mTable
+end menubar_Titles
+
+function _TableFromTitles mTitles
+   replace comma with CR in mTitles
+   put the number of lines of mTitles into maxNum
+   set the itemdelimiter to "|"
+   repeat with mNum = 1 to maxNum
+      put line mNum of mTitles into mTitle
+      put word 1 to -1 of item -2 of mTitle into mName
+      put mName & "-" & mTitle & CR after mTable
+   end repeat
+   delete char -1 of mTable
+   return mTable
+end _TableFromTitles
+
+getprop menubar_Titles
+   repeat with mNum = 1 to the number of buttons of me
+      put the uOPN ["mTitle"] of btn mNum of me into mTitle
+      put mTitle & CR after mTitles
+   end repeat
+   delete char -1 of mTitles
+   return mTitles
+end menubar_Titles
+
 setprop menubar_DefaultTable mTable
    put menubar_TableToArray (mTable) into menubarArray
    repeat with mNum = 1 to the number of buttons of me
@@ -50,12 +105,6 @@ getprop menubar_TableData
    --
    return menubarData
 end menubar_TableData
-
-function menubar_TableToArray mTable
-   replace comma with CR in mTable
-   split mTable with CR and "-"
-   return mTable
-end menubar_TableToArray
 
 setprop menubar_Table mTable
    -- put "File-Rev,Edit-Rev,Tools,Menu-Global|Menu|Group|Exists|Menu,Help-Rev" into mTable
@@ -101,6 +150,12 @@ setprop menubar_Table mTable
    --
    return mButtons
 end menubar_Table
+
+function menubar_TableToArray mTable
+   replace comma with CR in mTable
+   split mTable with CR and "-"
+   return mTable
+end menubar_TableToArray
 
 command menuButton_CreateAtEnd mName, pBeforeNum
    lock menus
@@ -644,42 +699,6 @@ function _ModuleMenuTitle mName
    put the module_MenuTitle of viewObject into mTitle
    return mTitle
 end _ModuleMenuTitle
-
-setprop menu_Titles mTitles
-   switch
-      case mTitles is empty
-         _DeleteMenuButtons
-         return empty
-      case mTitles = "rev"
-         _SetRevMenuButtonScripts "File,Edit,Tools,Help"
-         return the result
-      default
-         
-   end switch
-   
-   replace comma with CR in mTitles
-   put the number of lines of mTitles into maxNum
-   repeat with mNum = 1 to maxNum
-      get line mNum of mTitles
-      put item 1 of it into mTitle
-      put item 2 of it into mItemName
-      
-      # Set mTitle
-      _SetMenuButtonTitle mNum, mTitle, mItemName
-      put the result into mData
-      put mData into rData [mNum]
-   end repeat
-   return mNum
-end menu_Titles
-
-getprop menu_Titles
-   repeat with mNum = 1 to the number of buttons of me
-      put the uOPN ["mTitle"] of btn mNum of me into mTitle
-      put mTitle & CR after mTitles
-   end repeat
-   delete char -1 of mTitles
-   return mTitles
-end menu_Titles
 
 
 --> Create

@@ -32,6 +32,25 @@ end menu_CheckTarget
 
 --> Global | Menu | Group | Exists | Dev | Menu
 -
+on menu_RevMenubarScript
+   edit the script of stack "revMenuBar"
+end menu_RevMenubarScript
+
+on menu_RevIdeLibrary
+   edit the script of stack "revIdeLibrary"
+end menu_RevIdeLibrary
+
+on menu_DisplayMenubarBehaviors mGroup
+   display_ModuleBehaviors mGroup
+end menu_DisplayMenubarBehaviors
+
+on menu_ResetDefaultMenubar
+   ide_ResetDefaultMenubar
+end menu_ResetDefaultMenubar
+
+on _
+end _
+
 on menu_LiveMenu mGroup
    put the live_Menu of mGroup into sBoolean
    put sBoolean is false into newStatus

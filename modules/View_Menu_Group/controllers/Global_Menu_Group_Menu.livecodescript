@@ -42,13 +42,6 @@ end disabled_InsertMenuGroup
 
 --> Global | Menu | Group | Menu
 -
-on insert_Exists
-   return "Global | Menu | Group | Exists | Menu"
-end insert_Exists
-
-private on _
-end _
-
 on menu_InsertMenuGroup cardObject
    lcw_Answer "Sure you want to create a menubar view on this card?", cardObject
    --
@@ -62,12 +55,12 @@ on menu_InsertMenuGroup cardObject
    dispatch "Init_MenuBar" to mGroup
 end menu_InsertMenuGroup
 
-private on __
-end __
+private on _
+end _
 
-on menu_Help
-   -- help
-end menu_Help
+on insert_Exists
+   return "Global | Menu | Group | Exists | Menu"
+end insert_Exists
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Menu")
