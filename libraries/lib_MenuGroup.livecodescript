@@ -166,7 +166,8 @@ setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
    if mTitle is not empty then
       set the menuButton_Title [newButtonName] of mGroup to mTitle
    end if
-   return newButtonID
+   put the long id of btn id newButtonID into mButton
+   return mButton
 end new_MenuButton
 
 command menuBar_CreateButton newButtonName, mGroup, pInsertBeforeButtonNum

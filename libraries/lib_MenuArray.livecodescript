@@ -10,19 +10,6 @@ type: library
 This library is for the set of handlers that deal with new menu array format used by widgets.
 
 In order to account for menus that are directed at targets that are not related to the objects clicked on we must use a local or global variable
-
-function fetchFromUrl jsonURL
-   put url someURL into utf8JSON
-   put textDecode (jsonURL, "UTF-8") into encodedJSON
-   put json_ToArray (encodedJSON) into someArray
-   return someArray
-end fetchFromUrl
-
-command exportToUrl someArray, jsonURL
-   put json_FromArray (someArray) into encodedJSON
-   put textEncode (encodedJSON, "UTF-8") into decodedJSON
-   put decodedJSON into url someURL
-end exportToUrl
 */
 
 --> Variables
@@ -32,11 +19,92 @@ local LocalArray
 
 --> Working on
 -
+getprop menuController_Array [tObject]
+   # menuButton = menuController  and the menuButton_title is set
+   local mArray, recursionArray
+   put the long id of the target into mController
+   if exists (tObject) is false then
+      put the menuBar_Owner of mController into tObject
+   end if
+   put the menu_Target [tObject] of mController into mTarget
+   put the menuButton_title of mController into mTitle
+   --
+   _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray, mTarget
+   return mArray
+end menuController_Array
+
+function mArray_FromScript mTitle, tObject, mController, @recursionArray
+   local mArray
+   put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
+   _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
+   return mArray
+end mArray_FromScript
+
+private command _AddScriptMenu @mArray, mTitle, tObject, newMenuController, @recursionArray, mTarget
+   -- this is the one place where menu drawing happens that dispatches a message
+   -- it contains the core logic and messaging order
+   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
+   if exists (newMenuController) is false then
+      return false
+   end if
+   
+   ## Menu Target
+   if exists (mTarget) is false then
+      put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
+   end if
+   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
+   if targetOk is false then return false
+   
+   # Checks and logging
+   switch
+      case exists (newMenuController) is false
+      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
+      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
+         return false
+   end switch
+   
+   # Get Handlers
+   put _FastMenuHandlers (newMenuController) into scriptHandlers
+   --
+   repeat for each line hName in scriptHandlers       
+      if hName ends with "_" then
+         _AddDivider mArray
+         next repeat
+      end if
+      
+      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
+      switch
+         -- case isDisabled = true -- we can delete it as right now there is no graying out
+         case isDisabled = "delete"
+            next repeat
+         case hName begins with "submenu_"
+            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
+            _SetDisabled mArray, isDisabled
+            break
+         case hName begins with "insert_"
+            _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
+            _SetDisabled mArray, isDisabled
+            break
+         default
+            _AddMenuItem mArray, hName, newMenuController, mTarget
+            _SetDisabled mArray, isDisabled
+      end switch
+   end repeat
+   return true
+end _AddScriptMenu
+
+command mArray_DeconstructPicked mItemPath, mArray, @hName, @mController, @paramValue
+   _FindActiveHkey mArray, mItemPath, hkey, paramValue
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   return hKey
+end mArray_DeconstructPicked
+
 function menu_IsGlobal mTitle
    set the itemdelimiter to "|"
    if word 1 to -1 of item 1 of mTitle = "Global" \
          AND word 1 to -1 of item -1 of mTitle = "Menu" then
-         return true
+      return true
    else
       return false
    end if
@@ -65,24 +133,6 @@ private function _MenuCheckFailed mTitle, mType, tObject, topMenuController, mTi
    # Don't do this
    -- AddScriptMenu mArray, "Global | Menu | Error | Menu", tObject, tObject, recursionArray -- error, recurses!
 end _MenuCheckFailed
-
-getprop menu_Marray [mTitle]
-   -- simple tester
-   local mArray, recursionArray
-   --
-   put the long id of the target into tObject
-   put tObject into mController
-   --
-   _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray
-   --
-   return mArray
-end menu_Marray
-
-function mArray_FromScript mTitle, tObject, mController, @recursionArray
-   local mArray
-   _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray
-   return mArray
-end mArray_FromScript
 
 private command _DeconstructHandlerName hName, @propLabel, @shortCut
    set the itemdelimiter to "_"
@@ -290,7 +340,7 @@ private function _GetNewMenuController tObject, mTitle, mController
    
    switch
       case word 1 of mTitle is "Global"
-         -- prioritize global Menu
+         # Prioritize global Menu
          put menu_GetGlobalController (mTitle) into gMenuController
          
          # Simple Recursion check hack
@@ -306,18 +356,18 @@ private function _GetNewMenuController tObject, mTitle, mController
          end if
          break
       case exists (mController)
-         -- next the controller
+         # Next the controller
          put the menu_Controller [tObject] of mController into newMenuController -- overkill logic?
          if newMenuController is empty then
             return mController
          else
-            -- overriden with a getprop in the controller
+            # Overriden with a getprop in the controller
             return newMenuController
          end if
          break
       default
-         -- mController does not exist and it's not global
-         display_DebugHistory
+         # mController does not exist and it's not global
+         -- display_DebugHistory
          breakpoint
          return empty
    end switch
@@ -456,59 +506,6 @@ private function _FastMenuHandlers mController
    return hNames
 end _FastMenuHandlers
 
-private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
-   -- this is the one place where menu drawing happens that dispatches a message
-   -- it contains the core logic and messaging order
-   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
-   
-   -- guess controller
-   put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
-   
-   -- some checks and logging
-   switch
-      case exists (newMenuController) is false
-      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
-      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
-         return false
-      default
-         -- checks passed
-   end switch
-   
-   ## Set menu_Target
-   put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
-   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
-   if targetOk is false then return false
-   
-   ## Get Handlers slow or fast
-   put _FastMenuHandlers (newMenuController) into scriptHandlers
-   
-   repeat for each line hName in scriptHandlers       
-      if hName ends with "_" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
-      switch
-         -- case isDisabled = true -- we can delete it as right now there is no graying out
-         case isDisabled = "delete"
-            next repeat
-         case hName begins with "submenu_"
-            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
-            _SetDisabled mArray, isDisabled
-            break
-         case hName begins with "insert_"
-            _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
-            _SetDisabled mArray, isDisabled
-            break
-         default
-            _AddMenuItem mArray, hName, newMenuController, mTarget
-            _SetDisabled mArray, isDisabled
-      end switch
-   end repeat
-   return true
-end _AddScriptMenu
-
 
 --> Menu | Original
 -
@@ -566,8 +563,7 @@ end hKey_Do
 
 command handler_Do hName, hObject, pTarget, pValue
    if exists (hObject) is false then
-      put the params
-      display_DebugHistory hName
+      -- display_DebugHistory hName
       return "Error, hObject does not exists."
    end if
    
@@ -993,8 +989,15 @@ function mArray_FromTitleTable mTitleTable, tObject
             end try
             break
          default
-            _AddScriptMenu mArray, mTitle, tObject, topMenuController, recursionArray
-            put the result into goodMenu
+            # Guess controller
+            put _GetNewMenuController (tObject, mTitle, topMenuController) into newMenuController
+            if exists (newMenuController) is false then
+               breakpoint 
+               put false into goodMenu
+            else
+               _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
+               put the result into goodMenu
+            end if
       end switch
       
       if goodMenu is false then

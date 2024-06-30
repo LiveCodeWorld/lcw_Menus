@@ -1,33 +1,203 @@
-﻿script "behavior_MenuGroupDev" with behavior "behavior_MenuGroupCreate"
+﻿script "behavior_ViewMenuButton"
 --> MetaData
 -
 copyright: David Bovill
 license: GPLv3
-name: behavior_MenuGroupDev
+name: behavior_ViewMenuButton
 type: behavior
-version: 0.2
+version: 0.1
 
 /*Here you make make notes as a basic form of help for this view.
 Full help text can be found on the linked wiki for the view.*/
+
 
 --> Variables
 -
 local LocalArray
 
 
-getprop menuController_Array [tObject]
-   # menuButton = menuController  and the menuButton_title is set
-   local mArray, recursionArray
-   put the long id of the target into mController
-   if exists (tObject) is false then
-      put the menuBar_Owner of mController into tObject
+--> Working on
+-
+function menu_GetGlobalController mTitle
+   if exists (stack mTitle) then
+      return the name of stack mTitle
+   else
+      return empty
+      -- put menu_GetModel() into gMenuModel
+      -- put gMenuModel [gMenuTitle]["mController"] into mController
+      -- return mController
    end if
-   put the menu_Target [tObject] of mController into mTarget
-   put the menuButton_title of mController into mTitle
+end menu_GetGlobalController
+
+
+--> Props | Tidied
+-
+getprop hierarchy_ObjectAndBehaviors [pPretty]
+   put the long id of the target into tObject
+   put hierarchy_ListStackObjects (tObject, pPretty) into objectHierarchy
+   return objectHierarchy
+end hierarchy_ObjectAndBehaviors
+
+getprop hkey_Either [shortHkey]
+   -- returns public or private hkey in tObject
+   put the revAvailableHandlers of the target into hTable
+   put hTable_GetEither (shortHkey, hTable) into foundHkey
+   return foundHkey
+end hkey_Either
+
+getprop hkey_Or [shortHkey]
+   put the revAvailableHandlers of the target into hTable
+   put htable_GetOr (shortHkey, hTable) into foundHkey
+   return foundHkey
+end hkey_Or
+
+getprop hkey_StartLine [hkeyLine]
+   put the revAvailableHandlers of the target into hTable
+   put hTable_StartLine (hkeyLine, hTable) into startLineNum
+   return startLineNum
+end hkey_StartLine
+
+getprop project_Folder
+put the effective filename of the defaultstack into stackPath
+return project_FolderFromPath(stackPath)
+end project_Folder
+
+getprop walk_Hierarchy
+   put the long id of the target into tObject
+   put walk_SearchHierachy (tObject) into searchObjects
+   return searchObjects
+end walk_Hierarchy
+
+getprop behavior_Objects [useRugged]
+   put the long id of the target into tObject
+   put behavior_GetHierarchy (tObject, useRugged) into bObjects
+   return bObjects
+end behavior_Objects
+
+getprop module_BehaviorHierarchy [fromFolder]
+   put the long id of the target into tObject
    --
-   _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray, mTarget
-   return mArray
-end menuController_Array
+   put walk_GetBehaviorHierarchy (tObject) into walkHierarchy
+   return walkHierarchy
+end module_BehaviorHierarchy
+
+getprop module_Name
+   put the long id of the target into tObject
+   --
+   put module_ConstructName (tObject) into moduleName
+   return moduleName
+end module_Name
+
+getprop module_BehaviorPaths
+   put the effective filename of the defaultstack into sPath
+   put module_ListBehaviorPaths(sPath) into stackPaths
+   return stackPaths
+end module_BehaviorPaths
+
+getprop module_Behaviors
+   put the effective filename of the defaultstack into sPath
+   put module_ListBehaviors (sPath) into moduleBehaviors
+   return moduleBehaviors
+end module_Behaviors
+
+getprop menu_Controller [pMenuTitle]
+   put the long id of the target into tObject
+   --
+   put menu_GetGlobalController (pMenuTitle) into mController
+   if exists (mController) is true then return mController
+   return empty
+end menu_Controller
+
+getprop module_Folder
+   put the effective filename of the defaultstack into sPath
+   put module_ConstructFolder (sPath) into moduleFolder
+   return moduleFolder
+end module_Folder
+
+getprop module_ShortFolder
+   put the effective filename of the defaultstack into sPath
+   put module_ConstructShortFolder (sPath) into shortFolder
+   return shortFolder
+end module_ShortFolder
+
+
+--> Module | Props
+-
+getprop module_Menu
+   put the short name of the defaultstack into mName
+   if mName is empty then return empty
+   put module_ConstructGlobalMenuTitle (mName, true) into mTitle 
+   return mTitle
+end module_Menu
+
+getprop title_Menu
+   put the title_Menu of me into mName
+   if mName is empty then 
+      return "Title | Menu"
+   else
+      return mName
+   end if
+end title_Menu
+
+setprop title_Menu mName
+   set the title_Menu of me to mName
+end title_Menu
+
+
+--> Objects
+-
+getprop menu_Button
+   return the long id of me
+end menu_Button
+
+getprop view_Object
+   return the long id of me
+end view_Object
+
+
+--> Working on
+-
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
+   mArray_DoHkey hKey, paramValue
+   --
+   return hKey
+end menu_DispatchTextPick
+
+command mArray_DoHkey hKey, pValue
+   -- changed "dispatch" to "call" which keeps the context of the target
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   
+   put menu_GetTopTargetObject() into tObject
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   --
+   hKey_Do hKey, mTarget, pValue
+   return the result
+end mArray_DoHkey
+
+command hKey_Do hKey, pTarget, pValue, pQuestion
+   if the optionKey is "Down" then
+      if pQuestion is empty then
+         put "Edit script of the handler '[[var]]'?" into sQuestion
+      end if
+      --
+      put scriptEditor_GetTop() into stackObject
+      lcw_AnswerSheet sQuestion, stackObject, hKey
+      --
+      hkey_Edit hKey
+      return empty
+   end if
+   
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   handler_Do hName, hObject, pTarget, pValue
+   return the result
+end hKey_Do
 
 command hkey_Edit hKey
    if hKey is empty then
@@ -57,26 +227,68 @@ command hkey_Edit hKey
    return foundHkey
 end hkey_Edit
 
-command hKey_Do hKey, pTarget, pValue, pQuestion
-   if the optionKey is "Down" then
-      hkey_OptionEdit hKey, pQuestion
-      return empty
+command lcw_AnswerSheet someQuestion, pDisplayView, pQVar, pCancel, pOk
+   if pCancel is empty then put "Cancel" into pCancel
+   if pOk is empty then put "OK" into pOk
+
+   put lcw_Question (someQuestion, pQVar) into someQuestion
+   answer someQuestion with pCancelLabel or pOkLabel as sheet
+   if it is "Cancel" then exit to top
+   return it
+end lcw_AnswerSheet
+
+function menu_GetTopTargetObject
+   return LocalArray ["active_TopTargetObject"]
+end menu_GetTopTargetObject
+
+function menu_IsGlobal mTitle
+   set the itemdelimiter to "|"
+   if word 1 to -1 of item 1 of mTitle = "Global" \
+         AND word 1 to -1 of item -1 of mTitle = "Menu" then
+      return true
+   else
+      return false
    end if
+end menu_IsGlobal
+
+
+--> Events
+-
+on mouseDown
+   put the menu_Button of me into mButton
+   put the title_Menu of me into mTitle
+   switch
+      case the controlkey is "Down"
+         -- put "Global | Menu | Button | Menu" into mTitle
+         put the module_Menu of me into mTitle
+         mArray_PullDown mTitle, mButton
+         break
+      default
+         mArray_MouseDown mTitle, mButton
+   end switch   
+end mouseDown
+
+on menuPick menuPath
+   menu_DispatchTextPick menuPath
+end menuPick
+
+on resizeControl
+   put the rect of me into vRect
+   LayoutControl vRect
+end resizeControl
+
+command LayoutControl pRect
+   lock screen
+   if pRect is empty then put the rect of me into pRect
    
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   handler_Do hName, hObject, pTarget, pValue
-   return the result
-end hKey_Do
+   -- do your geometry here
+   set the rect of me to pRect
+   unlock screen
+end LayoutControl
 
-command hkey_OptionEdit hKey, pQuestion
-   if pQuestion is empty then
-      put "Edit script of the handler '[[var]]'?" into pQuestion
-   end if
-   put scriptEditor_GetTop() into sObject
-   lcw_AnswerSheet pQuestion, sObject, hKey
-   hkey_Edit hKey
-end hkey_OptionEdit
 
+--> Model
+-
 function hTable_StartLine hkeyLine, hTable
    put word 1 to 2 of hkeyLine into shortHkey
    repeat for each line someLine in hTable
@@ -87,15 +299,6 @@ function hTable_StartLine hkeyLine, hTable
    end repeat
    return 0
 end hTable_StartLine
-
-function module_ConstructName tObject
-   -- put the module_ShortFolder of tObject into moduleName
-   put token -1 of the long id of tObject into sPath
-   put module_ConstructShortFolder (sPath) into moduleName
-   
-   replace "_" with "|" in moduleName
-   return moduleName
-end module_ConstructName
 
 function module_ConstructName tObject
    -- put the module_ShortFolder of tObject into moduleName
@@ -125,24 +328,6 @@ function module_ConstructFolder stackPath
    return moduleFolder
 end module_ConstructFolder
 
-function module_ListBehaviorPaths sPath
-   put module_ConstructFolder (sPath) into moduleFolder
-   put moduleFolder & "behaviors/" into moduleBehaviorFolder
-   put folder_ListStackPaths (moduleBehaviorFolder) into stackPaths
-   return stackPaths
-end module_ListBehaviorPaths
-
-function module_ListBehaviors sPath
-   put module_ListBehaviorPaths (sPath) into stackPaths
-   --
-   repeat for each line stackPath in stackPaths
-      if exists (stack stackPath) is false then next repeat
-      put the name of stack stackPath & CR after moduleBehaviors
-   end repeat
-   delete char -1 of moduleBehaviors
-   return moduleBehaviors
-end module_ListBehaviors
-
 function project_FolderFromPath stackPath
    set the itemdelimiter to slash
    put env_GetRepoFolder() into repoFolder
@@ -164,6 +349,119 @@ function walk_SearchHierachy tObject
    end if
    return walkHierarchy
 end walk_SearchHierachy
+
+function hierarchy_Construct tObject, pPretty
+   -- was "object_GetHierarchy"
+   local objectHierarchy
+   put the long id of tObject into tObject
+   put pPretty is not false into pPretty
+   
+   put hierarchy_ListStackObjects (tObject, pPretty) into objectHierarchy
+   objectHierarchy, tObject, pPretty
+   return word 1 to -1 of objectHierarchy
+end hierarchy_Construct
+
+function hierarchy_ListStackObjects tObject, pPretty
+   local objectHierarchy
+   put pPretty is not false into pPretty
+   _AddObjectAndBehaviors objectHierarchy, tObject, pPretty
+   return word 1 to -1 of objectHierarchy
+end hierarchy_ListStackObjects
+
+command hierachy_AddEverything @objectHierarchy, tObject, pPretty
+   if exists (tObject) is false then return false
+   put tObject into objectOwner
+   put empty into skipThisBackgroundID
+   
+   repeat
+      switch word 1 of objectOwner
+         case "stack"
+            -- previously added a stack, check if it was a substack
+            put objectOwner into stackObject
+            put the owner of stackObject into mainStackObject
+            if exists (mainStackObject) then
+               _AddObjectAndBehaviors objectHierarchy, mainStackObject, pPretty
+            end if
+            
+            delete word 1 to 3 of objectOwner
+            if exists (objectOwner) is false then exit repeat
+            break
+         case "card"
+            -- previously added a card, so check for backgrounds
+            put objectOwner into cardObject
+            put the backgroundIDs of cardObject into bgIDs
+            -- need to add in reverse to mirror message path
+            repeat with bgNum = the number of lines of bgIDs down to 1
+               put line bgNum of bgIDs into someID
+               if someID = skipThisBackgroundID then next repeat
+               put the long ID of bg ID someID of cardObject into backgroundObject
+               _AddObjectAndBehaviors objectHierarchy, backgroundObject
+            end repeat
+            
+            # Above a card must be a stack
+            put objectOwner into stackObject
+            delete word 1 to 4 of stackObject
+            _AddObjectAndBehaviors objectHierarchy, stackObject
+            
+            exit repeat
+            break
+         case "group"
+            -- previously added a group, check to see if was a bg
+            if the backgroundbehavior of objectOwner is true then
+               -- will need to skip it's own "card" background
+               put the short ID of objectOwner into skipThisBackgroundID
+            end if
+            --
+            delete word 1 to 4 of objectOwner
+            if exists (objectOwner) is false then exit repeat
+            --
+            _AddObjectAndBehaviors objectHierarchy, objectOwner
+            break
+         default
+            -- previously added a normal control
+            delete word 1 to 4 of objectOwner
+            if exists (objectOwner) is false then exit repeat
+            --
+            _AddObjectAndBehaviors objectHierarchy, objectOwner
+      end switch
+   end repeat
+   put word 1 to -1 of objectHierarchy into objectHierarchy
+   return true
+end hierachy_AddEverything
+
+command hierarchy_AddEnv @objectHierarchy
+   put env_ScriptHierarchy (true) into externalObjects
+   if externalObjects is empty then return false
+   
+   set the wholematches to true
+   repeat for each line sObject in objectHierarchy
+      put lineOffset (sObject, externalObjects) into lineNum
+      delete line lineNum of externalObjects
+   end repeat
+   if externalObjects is empty then return false
+   
+   put CR & word 1 to -1 of externalObjects after objectHierarchy
+   put word 1 to -1 of objectHierarchy into objectHierarchy
+   return true
+end hierarchy_AddEnv
+
+function env_ScriptHierarchy pRemoveTransportBehavior
+   put env_ListFrontScripts() into frontObjects
+   -- _RemoveTransporterTools frontObjects, pRemoveTransportBehavior
+   --
+   put env_ListBackScripts() into backObjects
+   put stack_PathsToObjects (the stacksinUse) into usedStacks
+   --
+   object_AddBehaviors usedStacks
+   object_AddBehaviors frontObjects
+   object_AddBehaviors backObjects
+   --
+   if usedStacks is not empty then put usedStacks into scriptHierarchy
+   if backObjects is not empty then put backObjects & CR before scriptHierarchy
+   if frontObjects is not empty then put CR & frontObjects after scriptHierarchy
+   --
+   return scriptHierarchy
+end env_ScriptHierarchy
 
 function walk_GetBehaviorHierarchy tObject, fromFolder
    local oHierarchy, bHierarchy
@@ -187,7 +485,7 @@ function walk_GetBehaviorHierarchy tObject, fromFolder
    put word 1 to -1 of oHierarchy into oHierarchy
    
    # Rest of object hierarchy
-   hierachy_AddStackObjects bHierarchy, mObject
+   hierachy_AddEverything bHierarchy, mObject
    put oHierarchy & CR & word 1 to -1 of bHierarchy into walkHierarchy
    
    # Is this missing stack object?
@@ -197,308 +495,52 @@ function walk_GetBehaviorHierarchy tObject, fromFolder
    return walkHierarchy
 end walk_GetBehaviorHierarchy
 
-command lcw_AnswerSheet someQuestion, pDisplayView, pQVar, pCancel, pOk
-   if pCancel is empty then put "Cancel" into pCancel
-   if pOk is empty then put "OK" into pOk
-   
-   put lcw_Question (someQuestion, pQVar) into someQuestion
-   answer someQuestion with pCancel or pOk as sheet
-   if it is "Cancel" then exit to top
-   return it
-end lcw_AnswerSheet
+function module_ListBehaviorPaths sPath
+   put module_ConstructFolder (sPath) into moduleFolder
+   put moduleFolder & "behaviors/" into moduleBehaviorFolder
+   put folder_ListStackPaths (moduleBehaviorFolder) into stackPaths
+   return stackPaths
+end module_ListBehaviorPaths
 
-
---> Working on
--
-function json_ToArray pJSON, pUseMerge
-   local tArray,tKeys
-   if pJSON is empty then
-      return false
-   else if pUseMerge is false then -- not the same
-      put jsonImport (pJSON) into tArray
-      return tArray
-   end if
-   
-   try -- as otherwise an error with non-json causes script to exit
-      if pJSON is empty then return empty
-      repeat for each line tKey in mergJSONDecode(pJSON,"tArray")
-         put json_ToArray(tArray[tKey]) into tArray[tKey]
-      end repeat
-      return tArray
-   catch e
-      return empty
-   end try
-end json_ToArray
-
-function menu_GetGlobalController mTitle
-   if exists (stack mTitle) then
-      return the name of stack mTitle
-   else
-      -- put menu_GetModel() into gMenuModel
-      -- put gMenuModel [gMenuTitle]["mController"] into mController
-      -- return mController
-      return empty
-   end if
-end menu_GetGlobalController
-
-function menu_IsGlobal mTitle
-   set the itemdelimiter to "|"
-   if word 1 to -1 of item 1 of mTitle = "Global" \
-         AND word 1 to -1 of item -1 of mTitle = "Menu" then
-         return true
-   else
-      return false
-   end if
-end menu_IsGlobal
-
-
---> Menu | Controller
--
-getprop menu_Controller [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   put the uOPN ["menu_Controller"] of mButton into mController
-   if exists (mController) is false then
-      put the menuButton_Title [numOrName] of the target into mTitle
-   end if
-   return mController
-end menu_Controller
-
-setprop menuButton_Controller [numOrName] mController
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
+function module_ListBehaviors sPath
+   put module_ListBehaviorPaths (sPath) into stackPaths
    --
-   -- _SetMenuItemController mController, mButton
-   set the uOPN ["menu_Controller"] of mButton to mController
-   return mButton
-end menuButton_Controller
-
-private function _GetNewMenuController tObject, mTitle, mController
-   -- logic: global, controller (overkill logic)
-   
-   switch
-      case word 1 of mTitle is "Global"
-         # Prioritize global Menu
-         put menu_GetGlobalController (mTitle) into gMenuController
-         
-         # Simple Recursion check hack
-         if _SimpleRecursionCheck (mController, mTitle) is true then
-            -- Not sure what is going on with recursion checking in general
-            return empty
-         end if
-         
-         if exists (gMenuController) is true then
-            return gMenuController
-         else
-            return empty
-         end if
-         break
-      case exists (mController)
-         # Next the controller
-         put the menu_Controller [tObject] of mController into newMenuController -- overkill logic?
-         if newMenuController is empty then
-            return mController
-         else
-            # Overriden with a getprop in the controller
-            return newMenuController
-         end if
-         break
-      default
-         # mController does not exist and it's not global
-         -- display_DebugHistory
-         breakpoint
-         return empty
-   end switch
-end _GetNewMenuController
-
-private function _GetTopController mTitle, tObject
-   put menu_GetGlobalController (mTitle) into gMenuController
-   if exists (gMenuController) is true then return gMenuController
-   
-   -- check the local context (assumes global default can return empty)
-   put the menu_Controller [mTitle] of tObject into mController
-   if exists (mController) is true then return mController
-   
-   return tObject
-end _GetTopController
-
-
---> LocalArray | Model
--
-function menu_GetTopTargetObject
-   return LocalArray ["active_TopTargetObject"]
-end menu_GetTopTargetObject
-
-command menu_SetTopTargetObject tObject
-   put tObject into LocalArray ["active_TopTargetObject"]
-end menu_SetTopTargetObject
-
-
---> LCW | Model
--
-function lcw_FetchArray pShortFile
-   set the itemdelimiter to "."
-   if the number of items of pShortFile = 1 then put ".array" after pShortFile -- alows pretty short names
-   
-   put env_GetLcwFolder() into projectFolder
-   put model_FetchArray ("model_Library", projectFolder, pShortFile) into modelArray
-   return modelArray
-end lcw_FetchArray
-
-function model_FetchArray modelStackName, projectFolder, pShortFile 
-   put model_GetDataFolder (modelStackName, projectFolder) into modelDataFolder
-   put _ConstructModelDataFile (modelDataFolder, pShortFile) into modelArrayFile
-   put array_FromFile (modelArrayFile) into modelArray
-   return modelArray
-end model_FetchArray
-
-private function _ConstructModelDataFile modelDataFolder, pShortFile
-   -- rename / replace
-   if pShortFile is empty then
-      set the itemdelimiter to slash
-      put item -1 of modelDataFolder into modelName
-      put modelName & ".array" into pShortFile
-   end if
-   put modelDataFolder & pShortFile into modelDataFile
-   return modelDataFile
-end _ConstructModelDataFile
-
-function model_GetDataFolder modelStackName, projectFolder
-   put folder_AddShort (projectFolder, "models") into rootModelsFolder
-   put rootModelsFolder & modelStackName & slash into modelDataFolder
-   return modelDataFolder
-end model_GetDataFolder
-
-
---> MenuPick
--
-command ide_RevMenubarMenuPick mName, mItem
-   switch mName
-      case "File"
-         dispatch "revMenubarFileMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Edit"
-         dispatch "revMenubarEditMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Tools"
-         dispatch "revMenubarToolsMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Object"
-         dispatch "revMenubarObjectMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Text"
-         dispatch "revMenubarTextMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Development"
-         dispatch "revMenubarDevelopmentMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "View"
-         dispatch "revMenubarViewMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Window"
-         dispatch "revMenubarWindowMenuPick" to stack "revMenuBar" with mItem
-         break
-      case "Help"
-         dispatch "revMenubarHelpMenuPick" to stack "revMenuBar" with mItem
-         break
-   end switch
-end ide_RevMenubarMenuPick
-
-function ide_RevMenubarText mName, pContext
-   put the name of stack "revMenuBar" into revMbar
-   --
-   switch mName
-      case "File"
-         return value ("revMenubarFileMenu(pContext)" , revMbar)
-      case "Edit"
-         return value ("revMenubarEditMenu(pContext)" , revMbar)
-      case "Tools"
-         return value ("revMenubarToolsMenu(pContext)" , revMbar)
-      case "Object"
-         return value ("revMenubarObjectMenu(pContext)" , revMbar)
-      case "Text"
-         return value ("revMenubarTextMenu(pContext)" , revMbar)
-      case "Development"         
-         return value ("revMenubarDevelopmentMenu(pContext)" , revMbar)
-      case "View"
-         return value ("revMenubarViewMenu(pContext)" , revMbar)
-      case "Window"
-         return value ("revMenubarWindowMenu(pContext)" , revMbar)
-      case "Help"
-         return value ("revMenubarHelpMenu(pContext)" , revMbar)
-      default
-         break
-   end switch
-   
-   return empty
-end ide_RevMenubarText
-
-command menu_DispatchTextPick mItem, pMenuArray
-   if pMenuArray is not an array then
-      put mArray_GetActiveArray() into pMenuArray
-   end if
-   --
-   mArray_SetActiveItem mItem
-   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
-   mArray_DoHkey hKey, paramValue
-   --
-   return hKey
-end menu_DispatchTextPick
-
-private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
-   -- was "mArray_FindActiveItem"
-   -- only used by "menu_DispatchTextPick"
-   -- need to check if mItemPath is now just mItem?
-   
-   set the itemdelimiter to "|"
-   put mItemPath into subItemPath
-   repeat the number of items of mItemPath
-      put item 1 of subItemPath into itemText
-      put _FindItemArray (mArray, itemText) into nextItemArray
-      --
-      if nextItemArray is not an array then
-         -- was the last one -- probably because itemText caontained a param like "Hello|World"
-         exit repeat
-      else
-         put nextItemArray into itemArray
-      end if
-      
-      delete item 1 of subItemPath
-      --
-      put itemArray ["menu"] into subMenuArray
-      if subMenuArray is an array then
-         -- do we need to check that mItemPath is not emmpty?
-         put itemArray ["name"] into hkey
-         put subMenuArray into mArray
-      else
-         exit repeat -- at end (no more submenus)
-      end if
+   repeat for each line stackPath in stackPaths
+      if exists (stack stackPath) is false then next repeat
+      put the name of stack stackPath & CR after moduleBehaviors
    end repeat
-   --
-   put itemArray ["name"] into itemName
-   if word 1 of itemName is "param" then
-      put word 2 to -1 of itemName into paramValue
-   else
-      put itemName into hkey
-      put subItemPath into paramValue -- should be empty unless parramm contains "|"
-   end if
-end _FindActiveHkey
+   delete char -1 of moduleBehaviors
+   return moduleBehaviors
+end module_ListBehaviors
 
-private function _FindItemArray mArray, itemText
-   -- forgot why this is indexed with "01" rather thaan "1"
-   -- something to do with display sorting, but a bad solution I think
-   -- repeat with indexNum = 1 to item 2 of the extents of mArray
-   put keys (mArray) into orderedNums
-   sort numeric orderedNums
-   repeat for each line indexNum in orderedNums
-      put mArray [indexNum] into itemArray
-      if itemArray ["label"] = itemText then
-         return itemArray
+function behavior_GetHierarchy tObject, pUseRugged
+   repeat
+      put the behavior of tObject into bObject
+      if exists (bObject) is false then exit repeat
+      if pUseRugged is not false then
+         put revRuggedId (bObject) into bObject
       end if
+      put bObject & CR after bObjects
+      put bObject into tObject
    end repeat
-   return empty
-end _FindItemArray
+   delete char -1 of bObjects
+   return bObjects
+end behavior_GetHierarchy
+
+private command _AddObjectAndBehaviors @objectHierarchy, tObject, pPretty
+   if exists (tObject) is false then return empty
+   --
+   if pPretty is not false then
+      put CR & the name of tObject after objectHierarchy
+   else
+      put CR & revRuggedId (tObject) after objectHierarchy
+   end if
+   
+   put behavior_GetHierarchy (tObject) into bObjects
+   if bObjects is empty then return false
+   put CR & bObjects after objectHierarchy
+   return true
+end _AddObjectAndBehaviors
 
 
 --> Deps
@@ -554,77 +596,6 @@ private command _AddMenuItem @mArray, hName, mController, mTarget
    end if
    return true
 end _AddMenuItem
-
-private command _AddObjectAndBehaviors @objectHierarchy, tObject, pPretty
-   if exists (tObject) is false then return empty
-   
-   if pPretty is not false then
-      -- put the long id of tObject into tObject
-      put CR & the name of tObject after objectHierarchy
-   else
-      put CR & revRuggedId (tObject) after objectHierarchy
-   end if
-   
-   put the behavior_Objects of tObject into bObjects
-   if bObjects is empty then return false
-   put CR & bObjects after objectHierarchy
-   return true
-end _AddObjectAndBehaviors
-
-private command _AddScriptMenu @mArray, mTitle, tObject, newMenuController, @recursionArray, mTarget
-   -- this is the one place where menu drawing happens that dispatches a message
-   -- it contains the core logic and messaging order
-   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
-   
-   ## Menu Target
-   if exists (mTarget) is false then
-      put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
-   end if
-   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
-   if targetOk is false then return false
-   
-   # Checks and logging
-   switch
-      case exists (newMenuController) is false
-      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
-      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
-         return false
-   end switch
-   
-   # Get Handlers
-   put _FastMenuHandlers (newMenuController) into scriptHandlers
-   --
-   repeat for each line hName in scriptHandlers       
-      if hName ends with "_" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
-      switch
-         -- case isDisabled = true -- we can delete it as right now there is no graying out
-         case isDisabled = "delete"
-            next repeat
-         case hName begins with "submenu_"
-            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
-            _SetDisabled mArray, isDisabled
-            break
-         case hName begins with "insert_"
-            try
-               _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
-               _SetDisabled mArray, isDisabled
-            catch sError
-               breakpoint
-               _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
-            end try
-            break
-         default
-            _AddMenuItem mArray, hName, newMenuController, mTarget
-            _SetDisabled mArray, isDisabled
-      end switch
-   end repeat
-   return true
-end _AddScriptMenu
 
 private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
    -- this is the one place where menu drawing happens that dispatches a message
@@ -693,22 +664,6 @@ private command _AddSubmenu @mArray, mName, mLabel, mTitle, tObject, mController
    return true
 end _AddSubmenu
 
-private command _ClearBehaviors tObject
-   put the behavior of tObject into myBehavior
-   put behavior_GetHierarchy (tObject) into oObjects
-   
-   repeat for each line bObject in bObjects
-      switch
-         case exists (bObject) is false
-         case the long id of bObject = the long id of myBehavior
-            next repeat
-         default
-            set the behavior of bObject to empty
-      end switch
-   end repeat
-   return empty
-end _ClearBehaviors
-
 private function _ConstructDoScript someQuestion, pQVar, pQVar2, pQVar3
    put text_GetMergeVars (someQuestion) into mergeVars
    repeat with lineNum = 1 to the number of lines of mergeVars
@@ -724,6 +679,17 @@ private function _ConstructDoScript someQuestion, pQVar, pQVar2, pQVar3
    delete char -1 of doScript
    return doScript
 end _ConstructDoScript
+
+private function _ConstructModelDataFile modelDataFolder, pShortFile
+   -- rename / replace
+   if pShortFile is empty then
+      set the itemdelimiter to slash
+      put item -1 of modelDataFolder into modelName
+      put modelName & ".array" into pShortFile
+   end if
+   put modelDataFolder & pShortFile into modelDataFile
+   return modelDataFile
+end _ConstructModelDataFile
 
 private command _DeconstructHandlerName hName, @propLabel, @shortCut
    set the itemdelimiter to "_"
@@ -772,6 +738,91 @@ private function _FastMenuHandlers mController
    return hNames
 end _FastMenuHandlers
 
+private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
+   -- was "mArray_FindActiveItem"
+   -- only used by "menu_DispatchTextPick"
+   -- need to check if mItemPath is now just mItem?
+   
+   set the itemdelimiter to "|"
+   put mItemPath into subItemPath
+   repeat the number of items of mItemPath
+      put item 1 of subItemPath into itemText
+      put _FindItemArray (mArray, itemText) into nextItemArray
+      --
+      if nextItemArray is not an array then
+         -- was the last one -- probably because itemText caontained a param like "Hello|World"
+         exit repeat
+      else
+         put nextItemArray into itemArray
+      end if
+      
+      delete item 1 of subItemPath
+      --
+      put itemArray ["menu"] into subMenuArray
+      if subMenuArray is an array then
+         -- do we need to check that mItemPath is not emmpty?
+         put itemArray ["name"] into hkey
+         put subMenuArray into mArray
+      else
+         exit repeat -- at end (no more submenus)
+      end if
+   end repeat
+   --
+   put itemArray ["name"] into itemName
+   if word 1 of itemName is "param" then
+      put word 2 to -1 of itemName into paramValue
+   else
+      put itemName into hkey
+      put subItemPath into paramValue -- should be empty unless parramm contains "|"
+   end if
+end _FindActiveHkey
+
+private function _FindItemArray mArray, itemText
+   -- forgot why this is indexed with "01" rather thaan "1"
+   -- something to do with display sorting, but a bad solution I think
+   -- repeat with indexNum = 1 to item 2 of the extents of mArray
+   put keys (mArray) into orderedNums
+   sort numeric orderedNums
+   repeat for each line indexNum in orderedNums
+      put mArray [indexNum] into itemArray
+      if itemArray ["label"] = itemText then
+         return itemArray
+      end if
+   end repeat
+   return empty
+end _FindItemArray
+
+private function _GetNewMenuController tObject, mTitle, mController
+   -- logic: global, controller (overkill logic)
+   
+   switch
+      case word 1 of mTitle is "Global"
+         # Prioritize global Menu
+         put menu_GetGlobalController (mTitle) into gMenuController
+         
+         # Simple Recursion check hack
+         if _SimpleRecursionCheck (mController, mTitle) is true then
+            -- Not sure what is going on with recursion checking in general
+            return empty
+         end if
+         
+         if exists (gMenuController) is true then
+            return gMenuController
+         else
+            return empty
+         end if
+         break
+      case exists (mController)
+         return mController
+         break
+      default
+         # mController does not exist and it's not global
+         -- display_DebugHistory
+         breakpoint
+         return empty
+   end switch
+end _GetNewMenuController
+
 private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recursionArray
    dispatch hName to mController with mTarget
    put the result into insertMenuTitle
@@ -781,10 +832,6 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
          return false
       case menu_IsGlobal (insertMenuTitle)
          put _GetNewMenuController (tObject, insertMenuTitle, mController) into insertController
-         if exists (insertController) is false then
-            -- put _GetNewMenuController (tObject, insertMenuTitle, mController) into insertController
-            return empty
-         end if
          break
       default
          -- assume it is a non-global menu in the same mController
@@ -943,55 +990,6 @@ function array_Get someFile
    return modelArray
 end array_Get
 
-function behavior_GetHierarchy tObject, pUseRugged
-   repeat
-      put the behavior of tObject into bObject
-      if exists (bObject) is false then exit repeat
-      if pUseRugged is not false then
-         put revRuggedId (bObject) into bObject
-      end if
-      put bObject & CR after bObjects
-      put bObject into tObject
-   end repeat
-   delete char -1 of bObjects
-   return bObjects
-end behavior_GetHierarchy
-
-getprop behavior_Objects [useRugged]
-   put the long id of the target into tObject
-   put behavior_GetHierarchy (tObject, useRugged) into bObjects
-   return bObjects
-end behavior_Objects
-
-setprop behavior_StackNames stackNames
-   if stackNames is empty then return empty
-   replace comma with CR in stackNames
-   put the long id of the target into tObject
-   
-   # Clear any behaviors (or we might cause a loop)
-   _ClearBehaviors tObject
-   
-   repeat for each line stackName in stackNames
-      if exists (stack stackName) is false then next repeat
-      put the long id of stack stackName into bObject
-      if tObject = bObject then next repeat
-      
-      set the behavior of tObject to bObject
-      put bObject into tObject
-      put bObject & CR after bObjects
-   end repeat
-   delete char -1 of bObjects
-   return bObjects
-end behavior_StackNames
-
-function colour_GetRandom
-   -- was "randomColour"
-   put random(255) into item 1 of someColour
-   put random(255) into item 2 of someColour
-   put random(255) into item 3 of someColour
-   return someColour
-end colour_GetRandom
-
 function env_ConstructProjectFolder projectName, pRepoFolder
    if pRepoFolder is empty then put env_GetRepoFolder() into pRepoFolder
    --
@@ -1035,24 +1033,6 @@ function env_ListFrontScripts
    ide_FilterOutStacks longIDs
    return longIDs
 end env_ListFrontScripts
-
-function env_ScriptHierarchy pRemoveTransportBehavior
-   put env_ListFrontScripts() into frontObjects
-   -- _RemoveTransporterTools frontObjects, pRemoveTransportBehavior
-   --
-   put env_ListBackScripts() into backObjects
-   put stack_PathsToObjects (the stacksinUse) into usedStacks
-   --
-   object_AddBehaviors usedStacks
-   object_AddBehaviors frontObjects
-   object_AddBehaviors backObjects
-   --
-   if usedStacks is not empty then put usedStacks into scriptHierarchy
-   if backObjects is not empty then put backObjects & CR before scriptHierarchy
-   if frontObjects is not empty then put CR & frontObjects after scriptHierarchy
-   --
-   return scriptHierarchy
-end env_ScriptHierarchy
 
 command field_ScrollToLine lineNum, fieldObject, pSelectLine
    -- does not seem accurate for large line numbers (it's an underestimate) ???
@@ -1100,16 +1080,6 @@ function folder_ListStackPaths someFolder
    return stackFilePaths
 end folder_ListStackPaths
 
-getprop found_Hkey [shortHkey]
-   # Private and non-private handlers in targetObject
-   -- and non-private handlers in hkey_ScriptHierarchy
-   put the long id of the target into tObject
-   --
-   put the walk_Hierarchy of tObject into searchObjects
-   put hkey_FindShortHkey (shortHkey, tObject, searchObjects) into foundHkey
-   return foundHkey
-end found_Hkey
-
 command handler_Do hName, hObject, pTarget, pValue
    if exists (hObject) is false then
       -- display_DebugHistory hName
@@ -1120,103 +1090,6 @@ command handler_Do hName, hObject, pTarget, pValue
    call callCommand of hObject
    return the result
 end handler_Do
-
-command hierachy_AddStackObjects @objectHierarchy, tObject, pPretty
-   if exists (tObject) is false then return false
-   put tObject into objectOwner
-   put empty into skipThisBackgroundID
-   
-   repeat
-      switch word 1 of objectOwner
-         case "stack"
-            -- previously added a stack, check if it was a substack
-            put objectOwner into stackObject
-            put the owner of stackObject into mainStackObject
-            if exists (mainStackObject) then
-               _AddObjectAndBehaviors objectHierarchy, mainStackObject, pPretty
-            end if
-            
-            delete word 1 to 3 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            break
-         case "card"
-            -- previously added a card, so check for backgrounds
-            put objectOwner into cardObject
-            put the backgroundIDs of cardObject into bgIDs
-            -- need to add in reverse to mirror message path
-            repeat with bgNum = the number of lines of bgIDs down to 1
-               put line bgNum of bgIDs into someID
-               if someID = skipThisBackgroundID then next repeat
-               put the long ID of bg ID someID of cardObject into backgroundObject
-               _AddObjectAndBehaviors objectHierarchy, backgroundObject
-            end repeat
-            
-            # Above a card must be a stack
-            put objectOwner into stackObject
-            delete word 1 to 4 of stackObject
-            _AddObjectAndBehaviors objectHierarchy, stackObject
-            
-            exit repeat
-            break
-         case "group"
-            -- previously added a group, check to see if was a bg
-            if the backgroundbehavior of objectOwner is true then
-               -- will need to skip it's own "card" background
-               put the short ID of objectOwner into skipThisBackgroundID
-            end if
-            --
-            delete word 1 to 4 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            --
-            _AddObjectAndBehaviors objectHierarchy, objectOwner
-            break
-         default
-            -- previously added a normal control
-            delete word 1 to 4 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            --
-            _AddObjectAndBehaviors objectHierarchy, objectOwner
-      end switch
-   end repeat
-   put word 1 to -1 of objectHierarchy into objectHierarchy
-   return true
-end hierachy_AddStackObjects
-
-command hierarchy_AddEnv @objectHierarchy
-   put env_ScriptHierarchy (true) into externalObjects
-   if externalObjects is empty then return false
-   
-   set the wholematches to true
-   repeat for each line sObject in objectHierarchy
-      put lineOffset (sObject, externalObjects) into lineNum
-      delete line lineNum of externalObjects
-   end repeat
-   if externalObjects is empty then return false
-   
-   put CR & word 1 to -1 of externalObjects after objectHierarchy
-   put word 1 to -1 of objectHierarchy into objectHierarchy
-   return true
-end hierarchy_AddEnv
-
-function hierarchy_Construct tObject, pPretty
-   -- was "object_GetHierarchy"
-   local objectHierarchy
-   put the long id of tObject into tObject
-   put pPretty is not false into pPretty
-   
-   put the hierarchy_ObjectAndBehaviors [pPretty] of tObject into objectHierarchy
-   hierachy_AddStackObjects objectHierarchy, tObject, pPretty
-   return word 1 to -1 of objectHierarchy
-end hierarchy_Construct
-
-getprop hierarchy_ObjectAndBehaviors [pPretty]
-   local objectHierarchy
-   put pPretty is not false into pPretty
-   put the long id of the target into tObject
-   
-   _AddObjectAndBehaviors objectHierarchy, tObject, pPretty
-   return word 1 to -1 of objectHierarchy
-end hierarchy_ObjectAndBehaviors
 
 function hkey_Construct hName, hType, tObject
    if exists (tObject) is false then
@@ -1248,20 +1121,13 @@ command hkey_Deconstruct hKey, @hName, @hType, @hObject, @hNum
    return hkeyLine
 end hkey_Deconstruct
 
-getprop hkey_Either [shortHkey]
-   -- returns public or private hkey in tObject
-   put the revAvailableHandlers of the target into hTable
-   put hTable_GetEither (shortHkey, hTable) into foundHkey
-   return foundHkey
-end hkey_Either
-
 function hkey_Find hKey, pSearchObjects
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    put the result into shortHkey
    
    if pSearchObjects is empty then
       if exists (hObject) then
-         put the walk_Hierarchy of hObject into pSearchObjects
+         put walk_SearchHierachy (hObject) into pSearchObjects
       else
          put env_ScriptHierarchy (true) into pSearchObjects
       end if
@@ -1279,7 +1145,9 @@ function hkey_FindShortHkey shortHkey, pObject, pSearchObjects
    
    if exists (pObject) then
       # Search for private handlers
-      put the hkey_Either [shortHkey] of pObject into foundHkey
+      put the revAvailableHandlers of pObject into hTable
+      put hTable_GetEither (shortHkey, hTable) into foundHkey
+      
       if foundHkey is not empty then
          return foundHkey
       end if
@@ -1290,31 +1158,15 @@ function hkey_FindShortHkey shortHkey, pObject, pSearchObjects
    repeat for each line foundObject in pSearchObjects
       if exists (foundObject) is false then next repeat
       
-      put the hkey_Or [shortHkey] of foundObject into foundHkey
+      put the revAvailableHandlers of foundObject into hTable
+      put htable_GetOr (shortHkey, hTable) into foundHkey
+      
       if foundHkey is not empty then
          return foundHkey
       end if
    end repeat
    return empty  
 end hkey_FindShortHkey
-
-getprop hkey_Or [shortHkey]
-   put the revAvailableHandlers of the target into hTable
-   put htable_GetOr (shortHkey, hTable) into foundHkey
-   return foundHkey
-end hkey_Or
-
-getprop hkey_StartLine [hkeyLine]
-   put word 1 to 2 of hkeyLine into shortHkey
-   put the revAvailableHandlers of the target into hTable
-   repeat for each line someLine in hTable
-      if word 1 to 2 of someLine = shortHkey then
-         put word 3 of someLine into startLineNum
-         return startLineNum
-      end if
-   end repeat
-   return 0
-end hkey_StartLine
 
 function hKeyLine_AddObject hkeyLine, tObject
    -- used quite a lot
@@ -1394,23 +1246,6 @@ command htable_OrLineOffsets hName, hType, hTable, @startLineNum, @endLineNum
    return false
 end htable_OrLineOffsets
 
-function ide_DefaultMenuBarStack
-   put ide_DefaultMenubarStackName() into defaultMenubarStackName
-   put the name of stack defaultMenubarStackName into revMenuBarStack
-   return revMenuBarStack
-end ide_DefaultMenuBarStack
-
-function ide_DefaultMenubarStackName
-   put revIDEPaletteToStackName ("menubar") into revMenuBarStackName
-   return revMenuBarStackName
-end ide_DefaultMenubarStackName
-
-function ide_DefaultMenuGroup
-   put ide_DefaultMenuBarStack() into revMenuBarStack
-   put the long id of group "revMenuBar" of revMenuBarStack into revMenuGroup
-   return revMenuGroup
-end ide_DefaultMenuGroup
-
 command ide_FilterOutStacks @longIDs
    put rev_AppContentsFolder() into revAppContentsFolder
    
@@ -1425,10 +1260,39 @@ command ide_FilterOutStacks @longIDs
    put filteredObjects into longIDs
 end ide_FilterOutStacks
 
+function json_ToArray pJSON, pUseMerge
+   local tArray,tKeys
+   if pJSON is empty then
+      return false
+   else if pUseMerge is false then -- not the same
+      put jsonImport (pJSON) into tArray
+      return tArray
+   end if
+   
+   try -- as otherwise an error with non-json causes script to exit
+      if pJSON is empty then return empty
+      repeat for each line tKey in mergJSONDecode(pJSON,"tArray")
+         put json_ToArray(tArray[tKey]) into tArray[tKey]
+      end repeat
+      return tArray
+   catch e
+      return empty
+   end try
+end json_ToArray
+
 function kwote someText, pQuoteChar
    if pQuoteChar is empty then put quote into pQuoteChar
    return pQuoteChar & someText & pQuoteChar
 end kwote
+
+function lcw_FetchArray pShortFile
+   set the itemdelimiter to "."
+   if the number of items of pShortFile = 1 then put ".array" after pShortFile -- alows pretty short names
+   
+   put env_GetLcwFolder() into projectFolder
+   put model_FetchArray ("model_Library", projectFolder, pShortFile) into modelArray
+   return modelArray
+end lcw_FetchArray
 
 command lcw_Notify someMessage, pTitle, pMergeValue
    -- needs to work cross platform
@@ -1496,18 +1360,6 @@ function mArray_ConstructHkey hName, mController
    return hkeyController
 end mArray_ConstructHkey
 
-command mArray_DoHkey hKey, pValue
-   -- changed "dispatch" to "call" which keeps the context of the target
-   mArray_UnMarshal hKey
-   hkeyLine_Deconstruct hKey, hName, hType, mController
-   
-   put menu_GetTopTargetObject() into tObject
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
-   --
-   hKey_Do hKey, mTarget, pValue
-   return the result
-end mArray_DoHkey
-
 function mArray_FindMenuTarget mController, tObject
    -- logic: controller, target (called for every nested menu)
    
@@ -1549,7 +1401,7 @@ function mArray_FromTitleTable mTitleTable, tObject
          next repeat
       end if
       
-      put _GetTopController (mTitle, tObject) into topMenuController
+      put menu_GetGlobalController (mTitle) into topMenuController
       if exists (topMenuController) is false then next repeat
       
       mArray_SetTopTitle mTitle
@@ -1575,8 +1427,7 @@ function mArray_FromTitleTable mTitleTable, tObject
             end try
             break
          default
-            put _GetNewMenuController (tObject, mTitle, topMenuController) into newMenuController
-            _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
+            _AddScriptMenu mArray, mTitle, tObject, topMenuController, recursionArray
             put the result into goodMenu
       end switch
       
@@ -1636,6 +1487,52 @@ end mArray_GetParamValues
 command mArray_Marshal @hkeyController
    replace "|" with "\" in hkeyController
 end mArray_Marshal
+
+command mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   if pTargetObject is empty then
+      put the long id of the target into pTargetObject
+   end if
+   if pMenuButton is empty then
+      -- defaults to the target rather than the global menu_Button
+      put pTargetObject into pMenuButton
+   end if
+   --
+   mArray_ClearActiveMenuArray
+   menu_SetTopTargetObject pTargetObject
+   --
+   switch word 1 of pMenuButton
+      case "button"
+         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
+         put mArray_ToText (mArray) into mText
+         --
+         set the text of pMenuButton to mText
+         --
+         -- mArray_SetActive mArray, mText, mTitle
+         return mArray
+      case "widget"
+         break
+      default
+         exit to top
+   end switch
+end mArray_MouseDown
+
+command mArray_PullDown mTitle, pMenuButton, pTargetObject
+   if exists (pTargetObject) is false then
+      put the long id of the target into pTargetObject
+   end if
+   if exists (pMenuButton) is false then
+      put the long id of the target into pMenuButton
+   end if   
+   --
+   mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   put the result into mArray
+   --
+   put the bottomleft of pTargetObject into popLoc
+   add 3 to item 2 of popLoc
+   --
+   popup pMenuButton at popLoc
+   return mArray
+end mArray_PullDown
 
 command mArray_SetActiveArray mArray
    put mArray into LocalArray ["active_MenuArray"]
@@ -1728,78 +1625,54 @@ function menu_ConstructItemText mTitle
    return word 1 to -1 of mTitle
 end menu_ConstructItemText
 
-getprop module_BehaviorHierarchy [fromFolder]
-   local oHierarchy, bHierarchy
-   put the long id of the target into tObject
-   put revRuggedId (tObject) into rObject
-   --
-   put the module_Name of tObject into moduleName
-   put view_GetTemplateObject (moduleName) into mObject
-   
-   # Behaviors and object hieararchy
-   if fromFolder is not false then
-      put the module_Behaviors of mObject into oHierarchy
-   else
-      put the behavior_Objects of mObject into oHierarchy
-   end if
-   --
-   line_Delete rObject, oHierarchy
-   put rObject & CR before oHierarchy
-   put word 1 to -1 of oHierarchy into oHierarchy
-   
-   # Rest of object hierarchy
-   hierachy_AddStackObjects bHierarchy, mObject
-   put oHierarchy & CR & word 1 to -1 of bHierarchy into walkHierarchy
-   
-   # Is this missing stack object?
-   
-   # Add Env hierarchy
-   hierarchy_AddEnv walkHierarchy
-   return walkHierarchy
-end module_BehaviorHierarchy
-
-getprop module_BehaviorPaths
-   put the module_Folder of the target into moduleFolder
-   put moduleFolder & "behaviors/" into moduleBehaviorFolder
-   put folder_ListStackPaths (moduleBehaviorFolder) into stackPaths
-   return stackPaths
-end module_BehaviorPaths
-
-getprop module_Behaviors
-   put the module_BehaviorPaths of the target into stackPaths
-   repeat for each line stackPath in stackPaths
-      if exists (stack stackPath) is false then next repeat
-      put the name of stack stackPath & CR after moduleBehaviors
+command menu_NormalizeTitle @mTitle, pMakePretty
+   set the itemdelimiter to "|"
+   repeat for each item someItem in mTitle
+      if pMakePretty is true then
+         put empty into prettyItem
+         repeat for each word someWord in someItem
+            put toUpper (char 1 of someWord) into char 1 of someWord
+            put someWord & space after prettyItem
+         end repeat
+         put char 1 to -2 of prettyItem into someText
+      else
+         put word 1 to -1 of someItem into someText
+      end if
+      put space & someText & space & "|" after normalizedMenuTitle
    end repeat
-   delete char -1 of moduleBehaviors
-   return moduleBehaviors
-end module_Behaviors
+   delete char -2 to -1 of normalizedMenuTitle
+   delete char 1 of normalizedMenuTitle
+   put normalizedMenuTitle into mTitle
+end menu_NormalizeTitle
 
-getprop module_Folder
-   put the project_Folder of the target into projectFolder
-   if there is not a folder projectFolder then return empty
+command menu_SetTopTargetObject tObject
+   put tObject into LocalArray ["active_TopTargetObject"]
+end menu_SetTopTargetObject
+
+function model_FetchArray modelStackName, projectFolder, pShortFile 
+   put model_GetDataFolder (modelStackName, projectFolder) into modelDataFolder
+   put _ConstructModelDataFile (modelDataFolder, pShortFile) into modelArrayFile
+   put array_FromFile (modelArrayFile) into modelArray
+   return modelArray
+end model_FetchArray
+
+function model_GetDataFolder modelStackName, projectFolder
+   put folder_AddShort (projectFolder, "models") into rootModelsFolder
+   put rootModelsFolder & modelStackName & slash into modelDataFolder
+   return modelDataFolder
+end model_GetDataFolder
+
+function module_ConstructGlobalMenuTitle moduleStackName, pMakePretty
+   -- see "menu_GlobalTitleFromViewName"
    
-   put the effective filename of the defaultstack into sPath
-   set the itemdelimiter to slash
-   put the number of items of projectFolder into pNum
-   if item (pNum + 1) of sPath is not "Modules" then return empty
-   
-   put item 1 to (pNum + 2) of sPath & slash into moduleFolder
-   return moduleFolder
-end module_Folder
-
-getprop module_Name
-   put the module_ShortFolder of the target into moduleName
-   replace "_" with "|" in moduleName
-   return moduleName
-end module_Name
-
-getprop module_ShortFolder
-   put the module_Folder of the target into moduleFolder
-   set the itemdelimiter to slash
-   put item -1 of moduleFolder into shortFolder
-   return shortFolder
-end module_ShortFolder
+   replace "_" with "|" in moduleStackName
+   menu_NormalizeTitle moduleStackName, pMakePretty
+   set the itemdelimiter to " | "
+   if item 1 of moduleStackName is not "Global" then put "Global | " before moduleStackName
+   if item 2 of moduleStackName = "View" then delete item 2 of moduleStackName
+   if item -1 of moduleStackName is not "Menu" then put " | Menu" after moduleStackName
+   return moduleStackName
+end module_ConstructGlobalMenuTitle
 
 private command number_PadLeft @someNum, padNum
    put "%0" & padNum & "d" into fString
@@ -1820,6 +1693,13 @@ command object_AddBehaviors @objectIndex
 end object_AddBehaviors
 
 function pref_FetchArray pProjectName
+   if pProjectName is empty then put "Default" into pProjectName
+   put pref_FetchData() into dataArray
+   return dataArray [pProjectName]
+end pref_FetchArray
+
+function pref_FetchArray pProjectName
+   -- contains all the preference globals int the set with the keys as global names
    if pProjectName is empty then put "Default" into pProjectName
    put pref_FetchData() into dataArray
    return dataArray [pProjectName]
@@ -1848,20 +1728,6 @@ function pref_GetValue prefName
    global gLCW
    return gLCW ["prefsArray"][prefName]
 end pref_GetValue
-
-getprop project_Folder
-   -- latest simplest version based on naming conventions and folder structure
-   -- does not allow projects outside of the LCW reop folder  
-   
-   put the effective filename of the defaultstack into stackPath
-   --
-   set the itemdelimiter to slash
-   put env_GetRepoFolder() into repoFolder
-   put the number of items of repoFolder + 1 into itemNum
-   put item 1 to itemNum of stackPath & slash into projectFolder
-   --
-   return projectFolder
-end project_Folder
 
 function project_GetShortFolder projectFolder
    set the itemdelimiter to slash
@@ -1953,10 +1819,6 @@ function scriptEditor_GetTop
    end if
 end scriptEditor_GetTop
 
-getprop stack_Name
-   return the short name of the defaultstack
-end stack_Name
-
 function stack_PathsToObjects stackNameOrPaths
    repeat for each line stackName in stackNameOrPaths
       if exists (stack stackName) is false then next repeat
@@ -2034,18 +1896,6 @@ function text_StartsWithCaps someText
    end if
 end text_StartsWithCaps
 
-getprop top_Controls
-   get word  1 of the name of the target
-   if it is not among the items of "group,card" then return empty
-   --
-   put the childControlIDs of the target into topIDs
-   repeat for each line someID in topIDs
-      put the long id of control id someID & CR after topControls
-   end repeat
-   delete char -1 of topControls
-   return topControls
-end top_Controls
-
 function view_GetTemplateObject viewName, pRepoFolder
    view_NormalizeName viewName
    if exists (control 1 of stack viewName) then
@@ -2093,16 +1943,3 @@ command view_NormalizePiped @viewPath, pMakePretty
    end repeat
    return true
 end view_NormalizePiped
-
-getprop walk_Hierarchy
-   put the long id of the target into tObject
-   put revRuggedID (tObject) into tObject
-   --
-   if the module_Name of the target is empty then
-      put hierarchy_Construct (tObject) into walkHierarchy
-      hierarchy_AddEnv walkHierarchy
-   else
-      put the module_BehaviorHierarchy of tObject into walkHierarchy
-   end if
-   return walkHierarchy
-end walk_Hierarchy

@@ -347,3 +347,10 @@ end disabled_MessageBox
 getprop checked_MessageBox
    return "Message Box" is among the lines of the openstacks
 end checked_MessageBox
+
+on menu_StackInspector dView
+   put the browser_View of dView into wikiView
+   put the stack_Object of wikiView into sObject
+   --
+   display_ObjectProperties sObject
+end menu_StackInspector

@@ -39,7 +39,7 @@ end menu_MenubarData
 private on _
 end _
 
-on menu_DisplayNameArray dView
+-- on menu_DisplayNameArray dView
    put the displayed_Data of dView into indexArray
    -- put the view_Data of dView into indexArray
    set the view_Data of dView to indexArray

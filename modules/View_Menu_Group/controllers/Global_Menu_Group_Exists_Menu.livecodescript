@@ -27,6 +27,11 @@ end menu_Target
 getprop menu_CheckTarget [mGroup]
    if exists (mGroup) is false then return false
    --
+   put the the behavior_StackNames of mGroup into LocalArray ["behavior_StackNames"]
+   --
+   put the view_Name of mGroup into mName -- "View|Menu|Group" 
+   put module_ListBehaviorStackNames (mName) into LocalArray ["mBehavioStackNames"]
+   
    put the view_Name of mGroup into vName
    return vName = "View|Menu|Group"
 end menu_CheckTarget
@@ -67,8 +72,11 @@ on menu_NewMenuButton mGroup
    put lcw_Ask ("Create a new menu button in this stack menu...", newName, "Creat Menu", mGroup) into newButtonName
    
    # Create
-   -- menuBar_CreateButton newButtonName, mGroup
    set the new_MenuButton ["Help"] of mGroup to newButtonName
+   put the result into mButton
+   
+   # Set Title
+   set the menuButton_Title of mButton to newButtonName
 end menu_NewMenuButton
 
 on menu_DeleteMenuButton mGroup, mName
@@ -131,30 +139,64 @@ end menu_PreviewMenu
 private on ____
 end ____
 
-on menu_EditMenubarBehavior mGroup
-   put the behavior of mGroup into bObject
-   edit the script of bObject
+on menu_EditMenubarBehavior mGroup, sName
+   -- put the behavior of mGroup into bObject
+   edit the script of stack sName
 end menu_EditMenubarBehavior
 
+getprop editMenubarBehavior_Params [mGroup]
+   return LocalArray ["mBehavioStackNames"]
+end editMenubarBehavior_Params
+
 on menu_MenuBehavior mGroup, sName
-   -- put the behavior_Objects of mGroup -- into bObjects
-   -- edit the script of stack sName
    if the behavior_InHierarchy [sName] of mGroup is true then
       set the behavior_Remove of mGroup to sName
+      lcw_Notify "Removed behavior!"
    else
       set the behavior_Add of mGroup to sName
+      lcw_Notify "Added behavior!"
    end if
 end menu_MenuBehavior
 
 getprop menuBehavior_Param [mGroup]
-   return the behavior_StackNames of mGroup
+   return LocalArray ["behavior_StackNames"]
 end menuBehavior_Param
 
 getprop menuBehavior_Params [mGroup]
-   put the template_Object of mGroup into tObject
-   put the module_BehaviorStackNames of tObject into sNames
-   return sNames
+   return LocalArray ["mBehavioStackNames"]
 end menuBehavior_Params
+
+on menu_AllMenubarBehaviors mGroup
+   put the view_Name of mGroup into mName -- put "View|Menu|Group"
+   --
+   if _AllChecked(mGroup) is true then
+      put the stack_Name of mGroup into sName
+      lcw_Answer "Clear all behaviors of the menubar of stack [[var]]?", mGroup, sName
+      --
+      module_ClearDefaultBehaviors mGroup
+      --
+      lcw_Notify "Cleared all behaviors!"
+   else
+      put merge ("Set the behaviors of the menubar to all the module_Behaviors of '[[mName]]'?") into sQuestion
+      lcw_Answer sQuestion, mGroup
+      
+      set the behavior_Hierarchy of mGroup to "default"
+      --
+      put "!" into char -1 of sQuestion
+      lcw_Notify sQuestion
+   end if
+end menu_AllMenubarBehaviors
+
+getprop checked_AllMenubarBehaviors [mGroup]
+   return _AllChecked(mGroup)
+end checked_AllMenubarBehaviors
+
+private function _AllChecked mGroup
+   put the module_DefaultHierarchy of mGroup into moduleBehaviors
+   delete line 1 of moduleBehaviors
+   get the behavior_Objects of mGroup
+   return moduleBehaviors = it
+end _AllChecked
 
 private on _____
 end _____
@@ -167,6 +209,10 @@ on menu_MenuManager mGroup
    display_MenuManager mGroup
 end menu_MenuManager
 
+on menu_MenuGroupProperties mGroup
+   display_ObjectProperties mGroup
+end menu_MenuGroupProperties
+
 private on ______
 end ______
 
@@ -174,6 +220,14 @@ on menu_MenubarTitleData mGroup
    put the stack_Name of mGroup into sName
    display_MenuBarData sName
 end menu_MenubarTitleData
+
+on menu_StoreInitData mGroup
+   put the view_Name of mGroup into mName
+   put module_ListBehaviorStackNames (mName) into mBehavioStackNames
+   --
+   module_ClearBehaviors mName
+   set the behavior_DefaultStackNames of mGroup to mBehavioStackNames
+end menu_StoreInitData
 
 on submenu_Dev
    return menu_DevTitle ("Global | Menu | Group | Exists | Menu")

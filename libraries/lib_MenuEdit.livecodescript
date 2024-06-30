@@ -67,32 +67,28 @@ end menu_Edit
 --> Heky | Edit
 -
 command hkey_Edit hKey
-   -- could be done more efficiently
    if hKey is empty then
-      put debug_GetCallingHkey() into hkeyLine
-      hkey_Deconstruct hkeyLine, fName, fType, fObject, fNum
-   else
-      hkey_Deconstruct hKey, hName, hType, hObject, hNum
-      put the result into hkeyLine
-      --
-      if exists (hObject) is true then
-         put the found_Hkey [hkeyLine] of hObject into foundHkey
-      else
-         put hkey_Find (hKey) into foundHkey          
-      end if
-      --
-      hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
-      if exists (fObject) is false then return empty
+      return "Error, hkey is empty"
+      -- put debug_GetCallingHkey() into hkeyLine
+      -- hkey_Deconstruct hkeyLine, fName, fType, fObject, fNum
    end if
-   --
+   
+   # Find Hkey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the result into hkeyLine
+   if exists (hObject) is true then
+      put the found_Hkey [hkeyLine] of hObject into foundHkey
+   else
+      put hkey_Find (hKey) into foundHkey          
+   end if
+   
+   # Edit found script and scroll
+   hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
+   if exists (fObject) is false then return empty
    put the hkey_StartLine [hkeyLine] of fObject into scriptLineNum
    scriptEditor_EditAndScroll fObject, scriptLineNum, fName  
-   --
-   if hKey is empty then
-      exit to top
-   else
-      return foundHkey & CR & foundLineNum
-   end if
+   
+   return foundHkey
 end hkey_Edit
 
 

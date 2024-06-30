@@ -174,10 +174,6 @@ end _doFieldDown
 
 --> Button
 -
-setprop title_Menu mName
-   set the title_Menu of me to mName
-end title_Menu
-
 getprop title_Controller
    put the title_Controller of me into mController
    if exists (mController) then
@@ -196,7 +192,6 @@ private command _doButtonMenu
    -- set the style of mButton to "menu"
    --
    put the title_Menu of me into mTitle
-   put the menu_Button of me into mButton
    switch
       case the controlkey is "Down"
          put "Global | Index | Simple | Menu" into gMenuTitle
@@ -287,6 +282,10 @@ getprop title_Menu
    else
       return mName
    end if
+end title_Menu
+
+setprop title_Menu mName
+   set the title_Menu of me to mName
 end title_Menu
 
 
