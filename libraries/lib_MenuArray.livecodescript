@@ -33,6 +33,57 @@ getprop menuController_Array [tObject]
    return mArray
 end menuController_Array
 
+
+--> Menu | Introspection
+-
+getprop menu_HandlerNames
+   put the long id of the target into mController
+   put the menu_Controller of the target into mController
+   return _MenuHandlerNames (mController)
+end menu_HandlerNames
+
+private function _MenuHandlerNames mController
+   local hNames
+   /*
+   Assumes only one menu and all named "menu_"
+   */
+   
+   put the revAvailableHandlers of mController into hTable
+   sort numeric hTable by word 3 of each
+   -- filter hTable with "M menu_*"
+   repeat for each line hLine in hTable
+      put word 1 to 2 of hLine into shortKey
+      put word 2 of hLine into hName
+      --
+      switch
+         case shortKey = "M submenu_Dev"
+            if the shiftKey is "Down" then
+               put hName & CR after hNames
+            end if
+            break
+         case hName = "menu_Init"
+            break
+         case hName ends with "_"
+            ## Divider is a command ending with "_"
+            put "_" & CR after hNames
+            break
+         case hLine begins with "M submenu_"
+         case hLine begins with "M insert_"
+         case hLine begins with "M menu_"
+            put word 2 of hLine into hName
+            put hName & CR after hNames
+            break
+         default
+            -- not a menu
+      end switch
+   end repeat
+   delete char -1 of hNames
+   return hNames
+end _MenuHandlerNames
+
+
+--> mArray
+-
 function mArray_FromScript mTitle, tObject, mController, @recursionArray
    local mArray
    put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
@@ -64,7 +115,7 @@ private command _AddScriptMenu @mArray, mTitle, tObject, newMenuController, @rec
    end switch
    
    # Get Handlers
-   put _FastMenuHandlers (newMenuController) into scriptHandlers
+   put _MenuHandlerNames (newMenuController) into scriptHandlers
    --
    repeat for each line hName in scriptHandlers       
       if hName ends with "_" then
@@ -92,6 +143,55 @@ private command _AddScriptMenu @mArray, mTitle, tObject, newMenuController, @rec
    end repeat
    return true
 end _AddScriptMenu
+
+private command _CaseParamBit @mArray, hName, mController, tObject, @recursionArray, mTarget
+   # SubmenuTitle from menu-item handler name
+   dispatch hName to mController with mTarget
+   put the result into subMenuTitle
+   if subMenuTitle is empty then return false
+   
+   # Refigure mController (check how this works?)
+   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
+   put menu_CommandToText (hName) into mLabel
+   --
+   put _CaseParamSubmenuArray() into subMenuArray
+   --
+   _AddNextItem mArray, subMenuArray, hName, mLabel
+   --
+   return true
+end _CaseParamBit
+
+function _CaseParamSubmenuArray hName, mController
+   mArray_Marshal mController
+   put hkey_Construct (hName, "M", mController) into hKey
+   --
+   put "false" into subMenuArray ["01"]["checked"]
+   put "First Item" into subMenuArray ["01"]["label"]
+   put hKey into subMenuArray ["01"]["name"]
+   put empty into subMenuArray ["01"]["shortCut"]
+   --
+   put "false" into subMenuArray ["01"]["checked"]
+   put "Second Item" into subMenuArray ["01"]["label"]
+   put hKey into subMenuArray ["01"]["name"]
+   put empty into subMenuArray ["01"]["shortCut"]
+end _CaseParamSubmenuArray
+
+private command _AddSubmenu @mArray, mName, mLabel, mTitle, tObject, mController, @recursionArray
+   put mArray_FromScript (mTitle, tObject, mController, recursionArray) into subMenuArray
+   if subMenuArray is not an array then
+      return false
+   end if
+   --
+   _AddNextItem mArray, subMenuArray, mName, mLabel
+   return true
+end _AddSubmenu
+
+private command _AddNextItem @mArray, subMenuArray, mName, mLabel
+   put _NextIndexNum (mArray) into indexNum
+   put subMenuArray into mArray [indexNum]["menu"]
+   put mName into mArray [indexNum]["name"]
+   put mLabel into mArray [indexNum]["label"]
+end _AddNextItem
 
 command mArray_DeconstructPicked mItemPath, mArray, @hName, @mController, @paramValue
    _FindActiveHkey mArray, mItemPath, hkey, paramValue
@@ -465,48 +565,6 @@ command mArray_DoHkey hKey, pValue
 end mArray_DoHkey
 
 
---> Menu | Introspection
--
-private function _FastMenuHandlers mController
-   local hNames
-   /*
-   Assumes only one menu and all named "menu_"
-   */
-   
-   put the revAvailableHandlers of mController into hTable
-   sort numeric hTable by word 3 of each
-   -- filter hTable with "M menu_*"
-   repeat for each line hLine in hTable
-      put word 1 to 2 of hLine into shortKey
-      put word 2 of hLine into hName
-      --
-      switch
-         case shortKey = "M submenu_Dev"
-            if the shiftKey is "Down" then
-               put hName & CR after hNames
-            end if
-            break
-         case hName = "menu_Init"
-            break
-         case hName ends with "_"
-            ## Divider is a command ending with "_"
-            put "_" & CR after hNames
-            break
-         case hLine begins with "M submenu_"
-         case hLine begins with "M insert_"
-         case hLine begins with "M menu_"
-            put word 2 of hLine into hName
-            put hName & CR after hNames
-            break
-         default
-            -- not a menu
-      end switch
-   end repeat
-   delete char -1 of hNames
-   return hNames
-end _FastMenuHandlers
-
-
 --> Menu | Original
 -
 command menu_PopUp pMenuTitle, pLocation, pTargetObject
@@ -753,7 +811,7 @@ end _SetMenuObjectDefaults
 -
 getprop script_MenuHandlers [mTitle]
    put the long id of the target into mController
-   put _FastMenuHandlers (mController) into hNames
+   put _MenuHandlerNames (mController) into hNames
    return hNames
 end script_MenuHandlers
 
@@ -781,7 +839,7 @@ end menu_Button
 
 getprop menu_Handlers
    put the long id of the target into mController
-   put _FastMenuHandlers (mController) into hNames
+   put _MenuHandlerNames (mController) into hNames
    return hNames
 end menu_Handlers
 
@@ -1027,20 +1085,6 @@ private function _MenuLogActivated newMenuController, tObject, mTitle
    end if
    return mInitialised
 end _MenuLogActivated
-
-private command _AddSubmenu @mArray, mName, mLabel, mTitle, tObject, mController, @recursionArray
-   put mArray_FromScript (mTitle, tObject, mController, recursionArray) into subMenuArray
-   if subMenuArray is not an array then
-      return false
-   end if
-   --
-   put _NextIndexNum (mArray) into indexNum
-   --
-   put subMenuArray into mArray [indexNum]["menu"]
-   put mName into mArray [indexNum]["name"]
-   put mLabel into mArray [indexNum]["label"]
-   return true
-end _AddSubmenu
 
 private command _AddMenu @mArray, mTitle, mController, tObject, mTarget, @recursionArray
    put mArray_FromScript (mTitle, tObject, mController, recursionArray) into addMenuArray

@@ -28,6 +28,31 @@ while making it compatible with more complex indexing.
 
 --> Working on
 -
+getprop menuItem_CaseParams [theParams]
+   -- put the menuItem_CaseParams [the params] of me
+   put the short name of the target into mTitle -- requires correctly named mController
+   return menuItem_GetCaseParams (theParams, mTitle)
+end menuItem_CaseParams
+
+function menuItem_GetCaseParams theParams, pMenuTitle
+   if pMenuTitle is empty then put menu_MyTitle() into pMenuTitle
+   
+   set the itemdelimiter to "_"
+   put word 1 of theParams into gName
+   put "menu_" & item 1 of gName into hName
+   put "M" && hName into shortHkey -- "menu_Show"
+   --
+   get the hkey_CaseConditions [shortHkey] of stack pMenuTitle
+   return it
+end menuItem_GetCaseParams
+
+function menu_MyTitle
+   -- called from correctly named mController
+   put debug_CallingObject() into mController
+   put the short name of mController into mTitle
+   return mTitle
+end menu_MyTitle
+
 command menu_Create mTitle, stackName, pDevBit
    put menu_GetGlobalController (mTitle) into mController
    if exists (mController) then
