@@ -23,21 +23,10 @@ getprop menu_Target [tObject]
       put the displayed_Object of dView into dObject
       if exists (dObject) then
          return the card_Object of dObject
-      else
-         return false
       end if
    end if
-   
    return the card_Object of tObject
 end menu_Target
-
-getprop disabled_InsertMenuGroup [cardObject]
-   put the menuBar_View of cardObject into mGroup
-   if exists (mGroup) then return true
-   
-   put the top_View ["View|Menu|Group"] of cardObject into mGroup
-   return exists (mGroup)
-end disabled_InsertMenuGroup
 
 
 --> Global | Menu | Group | Menu
@@ -54,6 +43,18 @@ on menu_InsertMenuGroup cardObject
    set the show_Menu [true] of mGroup to true
    dispatch "Init_MenuBar" to mGroup
 end menu_InsertMenuGroup
+
+getprop disabled_InsertMenuGroup [cardObject]
+   put the menuBar_View of cardObject into mGroup
+   if exists (mGroup) then return true
+   
+   put the top_View ["View|Menu|Group"] of cardObject into mGroup
+   return exists (mGroup)
+end disabled_InsertMenuGroup
+
+on menu_ToggleProxyFarm.4
+   toggle_ProxyFarm
+end menu_ToggleProxyFarm.4
 
 private on _
 end _

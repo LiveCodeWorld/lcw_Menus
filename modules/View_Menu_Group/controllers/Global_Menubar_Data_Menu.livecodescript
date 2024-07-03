@@ -31,10 +31,17 @@ end menu_CheckTarget
 -
 on menu_MenubarData dView
    put the displayed_Object of dView into mGroup
+   --
    put the menubar_TableData of mGroup into menubarData
    --
    put keys (menubarData)
 end menu_MenubarData
+
+on menu_RefreshMenuBar dView
+   put the displayed_Object of dView into mGroup
+   --
+   dispatch "refresh_Menus" to mGroup
+end menu_RefreshMenuBar
 
 private on _
 end _

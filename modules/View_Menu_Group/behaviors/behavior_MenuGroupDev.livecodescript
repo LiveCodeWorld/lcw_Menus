@@ -5,16 +5,19 @@ copyright: David Bovill
 license: GPLv3
 name: behavior_MenuGroupDev
 type: behavior
-version: 0.2
+version: 0.3
 
 /*Here you make make notes as a basic form of help for this view.
-Full help text can be found on the linked wiki for the view.*/
+Full help text can be found on the linked wiki for the view.
+*/
 
 --> Variables
 -
 local LocalArray
 
 
+--> MenuController
+-
 getprop menuController_Array [tObject]
    # menuButton = menuController  and the menuButton_title is set
    local mArray, recursionArray
@@ -23,12 +26,110 @@ getprop menuController_Array [tObject]
       put the menuBar_Owner of mController into tObject
    end if
    put the menu_Target [tObject] of mController into mTarget
-   put the menuButton_title of mController into mTitle
+   put the menuButton_Title of mController into mTitle
    --
    _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray, mTarget
    return mArray
 end menuController_Array
 
+getprop menu_Controller [mTitle]
+   put the long id of the target into tObject
+   put _MenuTitleController (mTitle, tObject) into mController
+   return mController
+end menu_Controller
+
+setprop menu_Controller [pMenuTitle] mController
+   put _MenuButton() into mButton
+   --
+   set the uOPN ["menu_Controller"] of mButton to mController
+end menu_Controller
+
+function _MenuTitleController mTitle, tObject
+   -- was "_GetTopController" but changed to be logical (mButton instead of tObject)
+   -- put the menu_Button of tObject into mButton
+   put _MenuButton() into mButton -- Local version
+   
+   # Stored custom property (ie for script fork)
+   put the uOPN ["menu_Controller"] of mButton into mController
+   if exists (mController) then return mController
+   
+   # Default to stack name mTitle
+   put menu_GetGlobalController (mTitle) into mController
+   if exists (mController) is true then return mController
+   
+   return mButton
+end _MenuTitleController
+
+function menu_GetGlobalController mTitle
+   if there is a stack mTitle then
+      return the name of stack mTitle
+   else
+      return empty
+   end if
+end menu_GetGlobalController
+
+function mArray_FromTitleTable mTitleTable, tObject
+   local mArray, recursionArray
+   --
+   replace comma with tab in mTitleTable
+   set the itemdelimiter to tab
+   repeat for each line mTitleLine in mTitleTable
+      -- tables are not often used
+      put item 1 of mTitleLine into mTitle
+      
+      put item 2 of mTitleLine into mType
+      if mTitle = "-" then
+         _AddDivider mArray
+         next repeat
+      end if
+      
+      put _MenuTitleController (mTitle, tObject) into topMenuController
+      if exists (topMenuController) is false then next repeat
+      
+      mArray_SetTopTitle mTitle
+      -- mArray_SetActiveTitle mTitle
+      dispatch "menu_Init" to topMenuController with tObject -- top only
+      
+      -- insert has not been done for tables yet
+      switch mType
+         case "insert"
+            breakpoint
+            break
+         case "submenu"
+            try
+               put item 3 of mTitleLine into prettyTitle
+               if prettyTitle is empty then
+                  put menu_ConstructItemText (mTitle) into prettyTitle
+               end if
+               _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, tObject, topMenuController, recursionArray
+               put the result into goodMenu
+            catch e
+               -- next repeat
+               put false into goodMenu
+            end try
+            break
+         default
+            put _MenuTitleController (tObject, mTitle) into newMenuController
+            _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
+            put the result into goodMenu
+      end switch
+      
+      if goodMenu is false then
+         get _MenuCheckFailed (mTitle, mType, tObject, topMenuController, mTitleTable, mArray)
+         put menu_GetGlobalController ("Global | Menu | Error | Menu") into mController
+         _AddMenuItem mArray, "display_Error", mController, tObject
+         -- exit repeat -- ideally we add and loop
+      end if
+   end repeat
+   --
+   mArray_SetActiveArray mArray
+   --
+   return mArray
+end mArray_FromTitleTable
+
+
+--> Working on
+-
 command hkey_Edit hKey
    if hKey is empty then
       return "Error, hkey is empty"
@@ -56,17 +157,6 @@ command hkey_Edit hKey
    
    return foundHkey
 end hkey_Edit
-
-command hKey_Do hKey, pTarget, pValue, pQuestion
-   if the optionKey is "Down" then
-      hkey_OptionEdit hKey, pQuestion
-      return empty
-   end if
-   
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   handler_Do hName, hObject, pTarget, pValue
-   return the result
-end hKey_Do
 
 command hkey_OptionEdit hKey, pQuestion
    if pQuestion is empty then
@@ -245,83 +335,11 @@ function menu_IsGlobal mTitle
    set the itemdelimiter to "|"
    if word 1 to -1 of item 1 of mTitle = "Global" \
          AND word 1 to -1 of item -1 of mTitle = "Menu" then
-         return true
+      return true
    else
       return false
    end if
 end menu_IsGlobal
-
-
---> Menu | Controller
--
-getprop menu_Controller [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   put the uOPN ["menu_Controller"] of mButton into mController
-   if exists (mController) is false then
-      put the menuButton_Title [numOrName] of the target into mTitle
-   end if
-   return mController
-end menu_Controller
-
-setprop menuButton_Controller [numOrName] mController
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   --
-   -- _SetMenuItemController mController, mButton
-   set the uOPN ["menu_Controller"] of mButton to mController
-   return mButton
-end menuButton_Controller
-
-private function _GetNewMenuController tObject, mTitle, mController
-   -- logic: global, controller (overkill logic)
-   
-   switch
-      case word 1 of mTitle is "Global"
-         # Prioritize global Menu
-         put menu_GetGlobalController (mTitle) into gMenuController
-         
-         # Simple Recursion check hack
-         if _SimpleRecursionCheck (mController, mTitle) is true then
-            -- Not sure what is going on with recursion checking in general
-            return empty
-         end if
-         
-         if exists (gMenuController) is true then
-            return gMenuController
-         else
-            return empty
-         end if
-         break
-      case exists (mController)
-         # Next the controller
-         put the menu_Controller [tObject] of mController into newMenuController -- overkill logic?
-         if newMenuController is empty then
-            return mController
-         else
-            # Overriden with a getprop in the controller
-            return newMenuController
-         end if
-         break
-      default
-         # mController does not exist and it's not global
-         -- display_DebugHistory
-         breakpoint
-         return empty
-   end switch
-end _GetNewMenuController
-
-private function _GetTopController mTitle, tObject
-   put menu_GetGlobalController (mTitle) into gMenuController
-   if exists (gMenuController) is true then return gMenuController
-   
-   -- check the local context (assumes global default can return empty)
-   put the menu_Controller [mTitle] of tObject into mController
-   if exists (mController) is true then return mController
-   
-   return tObject
-end _GetTopController
 
 
 --> LocalArray | Model
@@ -440,11 +458,48 @@ command menu_DispatchTextPick mItem, pMenuArray
    end if
    --
    mArray_SetActiveItem mItem
-   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
-   mArray_DoHkey hKey, paramValue
+   put menu_GetTopTargetObject() into tObject
+   
+   _FindActiveHkey pMenuArray, mItem, hKey, paramValue
+   
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   if exists (mController) is false then
+      breakpoint
+      return "Error, mController does not exist:" && mController
+   end if
+   
+   -- put mArray_FindMenuTarget (mController, tObject) into mTarget -- overkill
+   put the menu_Target [tObject] of mController into mTarget
    --
-   return hKey
+   if the optionKey is "Down" then
+      hkey_OptionEdit hKey
+      return empty
+   else
+      handler_Do hName, mController, mTarget, paramValue
+      return hKey
+   end if
 end menu_DispatchTextPick
+
+function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target (called for every nested menu)
+   
+   if exists (tObject) is false then
+      put menu_GetTopTargetObject() into tObject -- bug: should exist
+   end if
+   --
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   --
+   put the menu_Target [tObject] of tObject into mTarget
+   if mTarget is empty then
+      return tObject
+   else
+      return mTarget
+   end if
+end mArray_FindMenuTarget
 
 private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
    -- was "mArray_FindActiveItem"
@@ -626,59 +681,6 @@ private command _AddScriptMenu @mArray, mTitle, tObject, newMenuController, @rec
    return true
 end _AddScriptMenu
 
-private command _AddScriptMenu @mArray, mTitle, tObject, mController, @recursionArray
-   -- this is the one place where menu drawing happens that dispatches a message
-   -- it contains the core logic and messaging order
-   -- messaging logic: menu_Target, menu_CheckTarget, menu_Init
-   
-   -- guess controller
-   put _GetNewMenuController (tObject, mTitle, mController) into newMenuController
-   
-   -- some checks and logging
-   switch
-      case exists (newMenuController) is false
-      case _RecursionCheck (recursionArray, tObject, newMenuController, mTitle) is false
-      case _MenuLogActivated (newMenuController, tObject, mTitle) is true
-         return false
-      default
-         -- checks passed
-   end switch
-   
-   ## Set menu_Target
-   put mArray_FindMenuTarget (newMenuController, tObject) into mTarget
-   put the menu_CheckTarget [mTarget] of newMenuController into targetOK
-   if targetOk is false then return false
-   
-   ## Get Handlers slow or fast
-   put _FastMenuHandlers (newMenuController) into scriptHandlers
-   
-   repeat for each line hName in scriptHandlers       
-      if hName ends with "_" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put mArray_GetDisabled (hName, newMenuController, mTarget) into isDisabled
-      switch
-         -- case isDisabled = true -- we can delete it as right now there is no graying out
-         case isDisabled = "delete"
-            next repeat
-         case hName begins with "submenu_"
-            _SubmenuBit mArray, hName, newMenuController, tObject, recursionArray, mTarget
-            _SetDisabled mArray, isDisabled
-            break
-         case hName begins with "insert_"
-            _InsertBit mArray, hName, newMenuController, tObject, mTarget, recursionArray
-            _SetDisabled mArray, isDisabled
-            break
-         default
-            _AddMenuItem mArray, hName, newMenuController, mTarget
-            _SetDisabled mArray, isDisabled
-      end switch
-   end repeat
-   return true
-end _AddScriptMenu
-
 private command _AddSubmenu @mArray, mName, mLabel, mTitle, tObject, mController, @recursionArray
    put mArray_FromScript (mTitle, tObject, mController, recursionArray) into subMenuArray
    if subMenuArray is not an array then
@@ -780,9 +782,9 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
       case insertMenuTitle is empty
          return false
       case menu_IsGlobal (insertMenuTitle)
-         put _GetNewMenuController (tObject, insertMenuTitle, mController) into insertController
+         put _MenuTitleController (tObject, insertMenuTitle) into insertController
          if exists (insertController) is false then
-            -- put _GetNewMenuController (tObject, insertMenuTitle, mController) into insertController
+            -- put _MenuTitleController (tObject, insertMenuTitle) into insertController
             return empty
          end if
          break
@@ -910,7 +912,7 @@ private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArra
    if subMenuTitle is empty then return false
    --
    -- mArray_SetActiveTitle subMenuTitle
-   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
+   put _MenuTitleController (tObject, subMenuTitle) into newMenuController
    put menu_CommandToText (hName) into mLabel
    _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
    --
@@ -1496,102 +1498,11 @@ function mArray_ConstructHkey hName, mController
    return hkeyController
 end mArray_ConstructHkey
 
-command mArray_DoHkey hKey, pValue
-   -- changed "dispatch" to "call" which keeps the context of the target
-   mArray_UnMarshal hKey
-   hkeyLine_Deconstruct hKey, hName, hType, mController
-   
-   put menu_GetTopTargetObject() into tObject
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
-   --
-   hKey_Do hKey, mTarget, pValue
-   return the result
-end mArray_DoHkey
-
-function mArray_FindMenuTarget mController, tObject
-   -- logic: controller, target (called for every nested menu)
-   
-   if exists (tObject) is false then
-      put menu_GetTopTargetObject() into tObject -- bug: should exist
-   end if
-   --
-   if exists (mController) is true then
-      put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
-   end if
-   --
-   put the menu_Target [tObject] of tObject into mTarget
-   if mTarget is empty then
-      return tObject
-   else
-      return mTarget
-   end if
-end mArray_FindMenuTarget
-
 function mArray_FromScript mTitle, tObject, mController, @recursionArray
    local mArray
    _AddScriptMenu mArray, mTitle, tObject, mController, recursionArray
    return mArray
 end mArray_FromScript
-
-function mArray_FromTitleTable mTitleTable, tObject
-   local mArray, recursionArray
-   --
-   replace comma with tab in mTitleTable
-   set the itemdelimiter to tab
-   repeat for each line mTitleLine in mTitleTable
-      -- tables are not often used
-      put item 1 of mTitleLine into mTitle
-      
-      put item 2 of mTitleLine into mType
-      if mTitle = "-" then
-         _AddDivider mArray
-         next repeat
-      end if
-      
-      put _GetTopController (mTitle, tObject) into topMenuController
-      if exists (topMenuController) is false then next repeat
-      
-      mArray_SetTopTitle mTitle
-      -- mArray_SetActiveTitle mTitle
-      dispatch "menu_Init" to topMenuController with tObject -- top only
-      
-      -- insert has not been done for tables yet
-      switch mType
-         case "insert"
-            breakpoint
-            break
-         case "submenu"
-            try
-               put item 3 of mTitleLine into prettyTitle
-               if prettyTitle is empty then
-                  put menu_ConstructItemText (mTitle) into prettyTitle
-               end if
-               _AddSubmenu mArray, prettyTitle, prettyTitle, mTitle, tObject, topMenuController, recursionArray
-               put the result into goodMenu
-            catch e
-               -- next repeat
-               put false into goodMenu
-            end try
-            break
-         default
-            put _GetNewMenuController (tObject, mTitle, topMenuController) into newMenuController
-            _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
-            put the result into goodMenu
-      end switch
-      
-      if goodMenu is false then
-         get _MenuCheckFailed (mTitle, mType, tObject, topMenuController, mTitleTable, mArray)
-         put menu_GetGlobalController ("Global | Menu | Error | Menu") into mController
-         _AddMenuItem mArray, "display_Error", mController, tObject
-         -- exit repeat -- ideally we add and loop
-      end if
-   end repeat
-   --
-   mArray_SetActiveArray mArray
-   --
-   return mArray
-end mArray_FromTitleTable
 
 function mArray_GetActiveArray
    return LocalArray ["active_MenuArray"]

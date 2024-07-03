@@ -23,9 +23,6 @@ function menu_GetGlobalController mTitle
       return the name of stack mTitle
    else
       return empty
-      -- put menu_GetModel() into gMenuModel
-      -- put gMenuModel [gMenuTitle]["mController"] into mController
-      -- return mController
    end if
 end menu_GetGlobalController
 
@@ -58,8 +55,8 @@ getprop hkey_StartLine [hkeyLine]
 end hkey_StartLine
 
 getprop project_Folder
-put the effective filename of the defaultstack into stackPath
-return project_FolderFromPath(stackPath)
+   put the effective filename of the defaultstack into stackPath
+   return project_FolderFromPath(stackPath)
 end project_Folder
 
 getprop walk_Hierarchy
@@ -163,7 +160,7 @@ command menu_DispatchTextPick mItem, pMenuArray
    end if
    --
    mArray_SetActiveItem mItem
-   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
    mArray_DoHkey hKey, paramValue
    --
    return hKey
@@ -230,7 +227,7 @@ end hkey_Edit
 command lcw_AnswerSheet someQuestion, pDisplayView, pQVar, pCancel, pOk
    if pCancel is empty then put "Cancel" into pCancel
    if pOk is empty then put "OK" into pOk
-
+   
    put lcw_Question (someQuestion, pQVar) into someQuestion
    answer someQuestion with pCancelLabel or pOkLabel as sheet
    if it is "Cancel" then exit to top
@@ -738,11 +735,8 @@ private function _FastMenuHandlers mController
    return hNames
 end _FastMenuHandlers
 
-private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
-   -- was "mArray_FindActiveItem"
-   -- only used by "menu_DispatchTextPick"
-   -- need to check if mItemPath is now just mItem?
-   
+command mArray_FindActive mArray, mItemPath, @hkey, @paramValue
+   -- only used by "menu_DispatchTextPick" (was "_FindActiveHkey")
    set the itemdelimiter to "|"
    put mItemPath into subItemPath
    repeat the number of items of mItemPath
@@ -775,7 +769,7 @@ private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
       put itemName into hkey
       put subItemPath into paramValue -- should be empty unless parramm contains "|"
    end if
-end _FindActiveHkey
+end mArray_FindActive
 
 private function _FindItemArray mArray, itemText
    -- forgot why this is indexed with "01" rather thaan "1"

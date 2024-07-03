@@ -11,8 +11,208 @@ version: 0.4
 This behavior displays and updates a dynamic cross-platform menubar.
 */
 
+--> Check
+-
+setprop add_Menu [mName] mTitle
+   put the long id of the target into tObject
+   
+   # Normalize mTitle
+   _NormTargetTitle mTitle, mName, tObject
+   if item 1 of the result = "Error" then return empty
+   
+   # Check if menu exists
+   put the menuButton_Names of me into mNames
+   if mName is among the lines of mNames then return empty
+   
+   if "Help" = line -1 of mNames then
+      menuButton_CreateAtEnd mName, -1
+   else
+      menuButton_CreateAtEnd mName
+   end if
+   put the result into mButton
+   --
+   set the menuButton_Title [mName] of mButton to mTitle
+   return mButton
+end add_Menu
+
+
 --> Working on
 -
+getprop menuButton_Title [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   --  
+   put the uOPN ["mTitle"] of mButton into mTitle
+   return mTitle
+end menuButton_Title
+
+setprop menuButton_Title [mName] mTitle
+   -- Must be called on menuButton
+   put the long id of the target into tObject
+   put the menuButton_Object of tObject into mButton
+   if exists (mButton) is false then return empty
+   
+   # Normalize mTitle
+   _NormTargetTitle mTitle, mName, mButton
+   if item 1 of the result = "Error" then return empty
+   
+   # Set Menu Button Name
+   if mName is not empty then
+      set the menuButton_Name of mButton to mName
+   end if
+   
+   # Experimental Rev
+   if mTitle = "Rev" then
+      set the menuButton_RevScript of mButton to mName
+      put the result into mText
+      return mText
+   end if
+   
+   # Live Array
+   set the uOPN ["mUpdateStyle"] of mButton to "mTitle"
+   
+   -- was set the menuButton_TextFromTitle of mButton to mTitle
+   put _MenuTarget (mTitle, tObject) into mTarget 
+   put _LiveMenuArray (mTitle, mTarget, tObject) into mArray
+   
+   # Store Menu Title
+   if mArray is not an array then
+      set the uOPN ["mTitle"] of mButton to empty
+      return empty  
+   end if
+   set the uOPN ["mTitle"] of mButton to mTitle
+   
+   # Set Menu Text
+   put mArray_ToText (mArray) into mText
+   set the text of mButton to mText
+   --
+   set the menuButton_CachedArray of mButton to mArray
+   set the script of mButton to empty
+   --
+   return mData
+end menuButton_Title
+
+private function _MenuTarget mTitle, tObject
+   -- put the menuButton_Target of tObject into mTarget
+   put _MenuTitleController (mTitle, tObject) into mController
+   if exists (mController) is false then
+      breakpoint
+      return empty
+   end if
+   put the menu_Target [tObject] of mController into mTarget
+   if exists (mTarget) is false then
+      edit the script of mController
+      exit to top
+      
+      put the menu_Target [tObject] of mController into mTarget
+      put the long id of me into mTarget
+   end if
+   return mTarget
+end _MenuTarget
+
+getprop norm_Title [mTitle]
+   put the normalized_TitleArray [mTitle] of the target into normArray
+   return normArray ["mTitle"]
+end norm_Title
+
+getprop normalized_TitleArray [mTitle]
+   if mTitle is "Default" then put empty into mTitle
+   
+   # Check target module for controller
+   put the module_Controller [mTitle] of the target into mController
+   if exists (mController) then
+      put revRuggedID (mController) into normArray ["mController"]
+      put "Module" into normArray ["mUpdateStyle"]
+      put the module_Name of the target into normArray ["moduleName"]
+      put menu_TitleFromController (mController) into normArray ["mTitle"]
+      return normArray
+   end if
+   
+   # Check menu module for controller
+   put "View|Menu|Group" into mStackName
+   put the module_Controller [mTitle] of stack mStackName into mController
+   if exists (mController) then
+      put revRuggedID (mController) into normArray ["mController"]
+      put "Module" into normArray ["mUpdateStyle"]
+      put the module_Name of stack mStackName into normArray ["moduleName"]
+      put menu_TitleFromController (mController) into normArray ["mTitle"]
+      return normArray
+   end if
+   
+   # Check Rev labled menu
+   if the number of words of mTitle = 2 \ 
+         AND word -1 of mTitle = "Rev" \
+         AND rev_CheckMenuName (mTitle) is true \
+         THEN
+      put "Rev" into normArray ["mUpdateStyle"]
+      put mTitle into normArray ["mTitle"]
+   end if
+   
+   # Check Normalized Global Menu
+   if mTitle contains "|" then
+      menu_NormalizeGlobalTitle mTitle
+      --
+      put menu_GetGlobalController(mTitle) into mController
+      if exists (mController) then
+         put "Rev" into normArray ["mUpdateStyle"]
+         put mTitle into normArray ["mTitle"]
+         put mController into normArray ["mController"]
+         --
+         return normArray
+      end if
+   end if
+   
+   # Lastly Rev Menu
+   if rev_CheckMenuName (mTitle) is true then
+      put "Rev" into normArray ["mUpdateStyle"]
+      put mTitle into normArray ["mTitle"]
+   end if
+   
+   # Can't find
+   return normArray
+end normalized_TitleArray
+
+private command _NormTargetTitle @mTitle, @newName, tObject
+   put newName into oldName
+   --
+   switch
+      case mTitle = "Rev"
+      case word 2 of newName = "Rev"
+         put word 1 of newName into newName
+         if rev_CheckMenuName (newName) is false then
+            return "Error, newName is not rev menu"
+         end if
+         put "Rev" into mTitle
+         break
+      default
+         put the normalized_TitleArray [mTitle] of tObject into normArray
+         put normArray ["mTitle"] into mTitle
+         if mTitle is empty then return "Error, mTitle is empty"
+         put _NameFrom (newName, mTitle) into newName
+   end switch
+   --
+   return oldName
+end _NormTargetTitle
+
+private function _NameFrom numOrName, mTitle
+   switch
+      case numOrName is empty
+         -- put mTitle into mName
+         set the itemdelimiter to "|"
+         put word 1 to -1 of item -2 of mTitle into mName
+         break
+      case numOrName is a number
+         put empty into numOrName
+         break
+         -- case (the number of words of numOrName = 2) AND (word -1 of numOrName = "Rev")
+         -- put word 1 of numOrName into mName
+         -- break
+      default
+         put numOrName into mName
+   end switch
+   return mName
+end _NameFrom
+
 private command _UpdateMenubar pForce
    mArray_ClearActiveMenuArray
    --
@@ -32,29 +232,61 @@ private command _UpdateMenubar pForce
 end _UpdateMenubar
 
 
+--> Init
+-
+getprop menuButton_Text [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   
+   switch the menuButton_UpdateStyle of mButton
+      case "Rev"
+      case "cached"
+         return the text of mButton
+      case "mTitle"
+      case "live"
+      default
+         mArray_ClearActiveMenuArray
+         put the live_MenuArray of mButton into mArray
+         if mArray is not an array then return empty
+         put mArray_ToText (mArray) into mText
+   end switch
+   return mText
+end menuButton_Text
+
+getprop menuButton_LiveText [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   
+   put the live_MenuArray of mButton into mArray
+   if mArray is not an array then return empty
+   --
+   put mArray_ToText (mArray) into mText
+   return mText
+end menuButton_LiveText
+
+
 --> Live
 -
 getprop live_MenuArray
-   -- put the menuButton_Object [numOrName] of the target into mButton
-   -- if exists (mButton) is false then return empty
    put the long id of the target into mButton
-   if word 1 of mButton is not "button" then
-      breakpoint
-      return empty
-   end if
+   put the menuBar_Owner of me into tObject
+   if word 1 of mButton is not "button" then return empty
+   put the menuButton_Target of mButton into mTarget
    
    put the menuButton_Title of mButton into mTitle
    if mTitle is empty then return empty
    
-   put the menuBar_Owner of me into tObject
-   put the menuButton_Target of mButton into mTarget
-   
+   put _LiveMenuArray(mTitle, mTarget, tObject) into mArray
+   return mArray
+end live_MenuArray
+
+private function _LiveMenuArray mTitle, mTarget, tObject
    # Get live mData
    mArray_ClearActiveMenuArray
    menu_SetTopTargetObject tObject
    put mArray_FromTitleTable (mTitle, mTarget) into mArray
    return mArray
-end live_MenuArray
+end _LiveMenuArray
 
 
 --> Module
@@ -109,14 +341,10 @@ end module_ConstructGlobalMenuTitle
 --> MenuPick
 -
 command menuButton_ScriptTextPick mItemPath, mButton
-   -- put the module_View of mButton into tObject
-   -- put the menu_Target [tObject] of mButton into mTarget
-   
    put the menuButton_Title of mButton into mTitle
    put the menuBar_Owner of mButton into tObject
    put the menuButton_Target of mButton into mTarget
    
-   -- put the live_MenuArray of mButton into mArray -- not using forked menu controller code
    put the menuController_Array [tObject] of mButton into mArray
    
    mArray_DeconstructPicked mItemPath, mArray, hName, mController, paramValue
@@ -185,7 +413,7 @@ getprop menuButton_Target [numOrName]
    
    put the uOPN ["mTarget"] of mButton into mTarget
    if exists (mTarget) is false then
-      put _DefaultTarget() into mTarget
+      put _DefaultMenuTarget() into mTarget
    end if
    return mTarget
 end menuButton_Target
@@ -198,13 +426,13 @@ setprop menuButton_Target [numOrName] mTarget
    return the result
 end menuButton_Target
 
-private function _DefaultTarget
+private function _DefaultMenuTarget
    put the top_Sister of me into sTarget
    if exists (sTarget) is false then
       put the long id of the owner of me into sTarget
    end if
    return sTarget
-end _DefaultTarget
+end _DefaultMenuTarget
 
 getprop top_Sister
    put the long id of me into tObject
@@ -217,14 +445,6 @@ getprop top_Sister
    end repeat
    return empty
 end top_Sister
-
-getprop menuButton_Title [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   --  
-   put the uOPN ["mTitle"] of mButton into mTitle
-   return mTitle
-end menuButton_Title
 
 
 --> Init
@@ -389,51 +609,6 @@ on refresh_Menus
    _UpdateMenubar true
    _LayoutMenuButtons
 end refresh_Menus
-
-
---> Init
--
-getprop menuButton_Text [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   switch the menuButton_UpdateStyle of mButton
-      case "Rev"
-      case "cached"
-         return the text of mButton
-      case "mTitle"
-      case "live"
-      default
-         mArray_ClearActiveMenuArray
-         put the menuButton_MenuArray of mButton into mArray
-         if mArray is not an array then return empty
-         put mArray_ToText (mArray) into mText
-   end switch
-   return mText
-end menuButton_Text
-
-getprop menuButton_MenuArray [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   if the use_Cached of mButton is true then
-      put the menuButton_CachedArray of mButton into mArray
-   else
-      put the live_MenuArray of mButton into mArray
-   end if
-   return mArray
-end menuButton_MenuArray
-
-getprop menuButton_LiveText [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   put the live_MenuArray of mButton into mArray
-   if mArray is not an array then return empty
-   --
-   put mArray_ToText (mArray) into mText
-   return mText
-end menuButton_LiveText
 
 
 --> Props
@@ -606,7 +781,7 @@ private command _UpdateMenuButton mButton, pForce
          -- set the menuButton_RevScript of mButton to mName
          break
       case pForce is true
-         put the menuButton_MenuArray of mButton into mArray
+         put the live_MenuArray of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
       case updateStyle = "cached"
@@ -614,7 +789,7 @@ private command _UpdateMenuButton mButton, pForce
          _SetTextFromArray mButton, mArray
          break
       case updateStyle = "mTitle"
-         put the menuButton_MenuArray of mButton into mArray
+         put the live_MenuArray of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
       case "updateStyle = live"
@@ -758,7 +933,7 @@ private command _NormalizeClickTarget @tObject
    if exists (tObject) then
       return true
    else
-      put _DefaultTarget() into tObject
+      put _DefaultMenuTarget() into tObject
       return false
    end if
 end _NormalizeClickTarget

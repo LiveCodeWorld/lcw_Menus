@@ -18,9 +18,12 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   put display_MenuTarget (tObject) into sView
+   -- put display_MenuTarget (tObject) into sView
+   put the displayed_Object of tObject into sView
+   if exists (sView) is false then return tObject
    --
-   put the menubar_View of sView into mGroup
+   put the card_Object of sView into cardObject
+   put the menubar_View of cardObject into mGroup
    return mGroup
 end menu_Target
 
@@ -31,9 +34,8 @@ getprop menu_CheckTarget [mGroup]
    --
    put the view_Name of mGroup into mName -- "View|Menu|Group" 
    put module_ListBehaviorStackNames (mName) into LocalArray ["mBehavioStackNames"]
-   
-   put the view_Name of mGroup into vName
-   return vName = "View|Menu|Group"
+   --
+   return mName = "View|Menu|Group"
 end menu_CheckTarget
 
 getprop checked_PreviewMenu

@@ -194,7 +194,7 @@ private command _AddNextItem @mArray, subMenuArray, mName, mLabel
 end _AddNextItem
 
 command mArray_DeconstructPicked mItemPath, mArray, @hName, @mController, @paramValue
-   _FindActiveHkey mArray, mItemPath, hkey, paramValue
+   mArray_FindActive mArray, mItemPath, hkey, paramValue
    mArray_UnMarshal hKey
    hkeyLine_Deconstruct hKey, hName, hType, mController
    return hKey
@@ -507,17 +507,14 @@ command menu_DispatchTextPick mItem, pMenuArray
    end if
    --
    mArray_SetActiveItem mItem
-   _FindActiveHkey pMenuArray, mItem, hKey, paramValue   
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
    mArray_DoHkey hKey, paramValue
    --
    return hKey
 end menu_DispatchTextPick
 
-private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
-   -- was "mArray_FindActiveItem"
-   -- only used by "menu_DispatchTextPick"
-   -- need to check if mItemPath is now just mItem?
-   
+command mArray_FindActive mArray, mItemPath, @hkey, @paramValue
+   -- only used by "menu_DispatchTextPick" (was "_FindActiveHkey")
    set the itemdelimiter to "|"
    put mItemPath into subItemPath
    repeat the number of items of mItemPath
@@ -550,7 +547,7 @@ private command _FindActiveHkey mArray, mItemPath, @hkey, @paramValue
       put itemName into hkey
       put subItemPath into paramValue -- should be empty unless parramm contains "|"
    end if
-end _FindActiveHkey
+end mArray_FindActive
 
 command mArray_DoHkey hKey, pValue
    -- changed "dispatch" to "call" which keeps the context of the target
