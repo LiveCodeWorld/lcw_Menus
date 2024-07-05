@@ -509,7 +509,7 @@ command menu_DefaultTableLine mVersion, comLine, mCommand, mSuffix, customParam,
    put "disabled_" & mSuffix into mFormatProp
    
    put "G" && mFormatProp into shortHkeyLine
-   put hkeyLine_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler  -- doing this twice
+   put htable_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler  -- doing this twice
    if getpropHandler is empty then put empty into mFormatProp
    -- if script_GetGetProp (mFormatProp, someScript) is empty then put empty into mFormatProp
    
@@ -574,7 +574,7 @@ command menu_ConstructParamProp someScript, hTable, mCommand, customParam, mCont
          put token 1 of submenuProp into getPropName
          
          put "G" && getPropName into shortHkeyLine
-         put hkeyLine_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
+         put htable_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
          
          if getpropHandler is not empty then
             -- there is a getprop submenuProp handler in the mController script
@@ -596,7 +596,7 @@ command menu_ConstructParamProp someScript, hTable, mCommand, customParam, mCont
          
          -- is there a "case" statement in the script?
          put "M" && mCommand into shortHkeyLine
-         put hkeyLine_GetHandler (shortHkeyLine, hTable, someScript) into menuHandler
+         put htable_GetHandler (shortHkeyLine, hTable, someScript) into menuHandler
          -- put script_GetCommand (mCommand, someScript) into menuHandler
          
          put handler_ExtractCaseConditions (menuHandler) into fixedSubMenu
@@ -792,7 +792,7 @@ private function _constructDisabledGetpropName mSuffix, someScript, hTable
    
    -- put script_GetGetProp (mFormatProp, someScript) into getpropHandler
    put "G" && mFormatProp into shortHkeyLine
-   put hkeyLine_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
+   put htable_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
    
    if getpropHandler is empty then put empty into mFormatProp
    return mFormatProp
@@ -826,7 +826,7 @@ private command _extractInsertedTitle mCommand, mController, someScript, hTable,
       
       -- put script_GetCommand (mCommand, someScript) into menuHandler
       put "M" && mCommand into shortHkeyLine
-      put hkeyLine_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
+      put htable_GetHandler (shortHkeyLine, hTable, someScript) into getpropHandler
       
       
       set the wholematches to true

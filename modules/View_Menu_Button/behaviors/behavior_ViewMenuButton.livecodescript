@@ -5,10 +5,10 @@ copyright: David Bovill
 license: GPLv3
 name: behavior_ViewMenuButton
 type: behavior
-version: 0.1
+version: 0.2
 
-/*Here you make make notes as a basic form of help for this view.
-Full help text can be found on the linked wiki for the view.*/
+/* A standalone script for creating lcw-menus.
+.*/
 
 
 --> Variables

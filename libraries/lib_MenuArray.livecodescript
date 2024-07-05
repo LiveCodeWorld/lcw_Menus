@@ -1047,7 +1047,6 @@ function mArray_FromTitleTable mTitleTable, tObject
             # Guess controller
             put _GetNewMenuController (tObject, mTitle, topMenuController) into newMenuController
             if exists (newMenuController) is false then
-               breakpoint 
                put false into goodMenu
             else
                _AddScriptMenu mArray, mTitle, tObject, newMenuController, recursionArray
