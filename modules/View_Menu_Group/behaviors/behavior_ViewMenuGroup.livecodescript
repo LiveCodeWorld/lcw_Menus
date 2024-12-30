@@ -13,6 +13,24 @@ This behavior displays and updates a dynamic cross-platform menubar.
 
 --> Check
 -
+private function _MenuTarget mTitle, tObject
+   -- put the menuButton_Target of tObject into mTarget
+   put _MenuTitleController (tObject, mTitle) into mController -- in behavior_MenuGroupDev
+   if exists (mController) is false then
+      breakpoint
+      return empty
+   end if
+   put the menu_Target [tObject] of mController into mTarget
+   if exists (mTarget) is false then
+      edit the script of mController
+      exit to top
+      
+      put the menu_Target [tObject] of mController into mTarget
+      put the long id of me into mTarget
+   end if
+   return mTarget
+end _MenuTarget
+
 setprop add_Menu [mName] mTitle
    put the long id of the target into tObject
    
@@ -43,6 +61,9 @@ getprop menuButton_Title [numOrName]
    if exists (mButton) is false then return empty
    --  
    put the uOPN ["mTitle"] of mButton into mTitle
+   if mTitle is empty then
+      -- put the short name of mButton into mTitle
+   end if
    return mTitle
 end menuButton_Title
 
@@ -91,24 +112,6 @@ setprop menuButton_Title [mName] mTitle
    --
    return mData
 end menuButton_Title
-
-private function _MenuTarget mTitle, tObject
-   -- put the menuButton_Target of tObject into mTarget
-   put _MenuTitleController (mTitle, tObject) into mController
-   if exists (mController) is false then
-      breakpoint
-      return empty
-   end if
-   put the menu_Target [tObject] of mController into mTarget
-   if exists (mTarget) is false then
-      edit the script of mController
-      exit to top
-      
-      put the menu_Target [tObject] of mController into mTarget
-      put the long id of me into mTarget
-   end if
-   return mTarget
-end _MenuTarget
 
 getprop norm_Title [mTitle]
    put the normalized_TitleArray [mTitle] of the target into normArray
@@ -393,7 +396,7 @@ on menuPick mItemPath
          if mArray is not an array then
             #  lets try and re-index and cache again
             put the menuButton_Name of mButton into mName
-            lcw_AnswerSheet "Somethign went wrong. Re-index menu '[[var]]'?", mButton, mName
+            lcw_AnswerSheet "Something went wrong. Re-index menu '[[var]]'?", mButton, mName
             --
             breakpoint
             put the live_MenuArray of mButton into mArray
@@ -780,24 +783,17 @@ private command _UpdateMenuButton mButton, pForce
          set the menuButton_CachedArray of mButton to empty
          -- set the menuButton_RevScript of mButton to mName
          break
-      case pForce is true
-         put the live_MenuArray of mButton into mArray
-         _SetTextFromArray mButton, mArray
-         break
       case updateStyle = "cached"
          put the menuButton_CachedArray of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
       case updateStyle = "mTitle"
-         put the live_MenuArray of mButton into mArray
-         _SetTextFromArray mButton, mArray
-         break
       case "updateStyle = live"
+      case pForce is true
+      default
          put the live_MenuArray of mButton into mArray
          _SetTextFromArray mButton, mArray
          break
-      default
-         -- do nothing
    end switch
 end _UpdateMenuButton
 

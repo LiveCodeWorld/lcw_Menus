@@ -89,6 +89,18 @@ command menu_Create mTitle, stackName, pDevBit
    return mController
 end menu_Create
 
+command menu_Create gMenuTitle, pStackName, pControllerScript
+   if exists (stack pStackName) is false then
+      put "lcw_Menus" into projectName
+   else
+      put the project_Name of stack pStackName into projectName
+   end if
+   --
+   project_CreateMenu gMenuTitle, projectName, pControllerScript
+   put the result into mController -- a script only stack
+   return mController
+end menu_Create
+
 command module_CreateMenu moduleStackName, pGlobalMenuTitle, pControllerScript
    put the module_Folder of stack moduleStackName into moduleFolder
    --
@@ -335,18 +347,6 @@ command module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerS
    --
    return controllerStackObject
 end module_CreateMenuFromFolder
-
-command menu_Create gMenuTitle, pStackName, pControllerScript
-   if exists (stack pStackName) is false then
-      put "lcw_Menus" into projectName
-   else
-      put the project_Name of stack pStackName into projectName
-   end if
-   --
-   project_CreateMenu gMenuTitle, projectName, pControllerScript
-   put the result into mController -- a script only stack
-   return mController
-end menu_Create
 
 command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControllerScript
    if pControllerScript is empty then put controller_ConstructMenuScript (gMenuTitle) into pControllerScript

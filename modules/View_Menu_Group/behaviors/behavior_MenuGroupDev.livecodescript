@@ -16,6 +16,47 @@ Full help text can be found on the linked wiki for the view.
 local LocalArray
 
 
+--> Working on
+-
+function mArray_GetParamValues propLabel, mController, mTarget
+   put propLabel & "_Params" & "[" & mTarget & "]" into mProperty
+   try
+      put the mProperty of mController into paramValues
+      return paramValues
+   catch e
+      -- edit the script of mController
+      lcw_Notify the params
+      breakpoint
+      put the mProperty of mController into paramValues
+   end try
+end mArray_GetParamValues
+
+setprop menu_Controller [pMenuTitle] mController
+   -- put _MenuButton() into mButton -- should not use
+   put the menu_Button of the target into mButton
+   breakpoint
+   --
+   set the uOPN ["menu_Controller"] of mButton to mController
+end menu_Controller
+
+function _MenuTitleController tObject, mTitle
+   -- changed param order
+   -- put _MenuButton() into mButton -- should not use
+   
+   put the menu_Button of tObject into mButton
+   
+   # Stored custom property (ie for script fork)
+   put the uOPN ["menu_Controller"] of mButton into mController
+   if exists (mController) then return mController
+   
+   # Default to stack name mTitle
+   put menu_GetGlobalController (mTitle) into mController
+   if exists (mController) is true then return mController
+   
+   return mButton
+end _MenuTitleController
+
+
 --> MenuController
 -
 getprop menuController_Array [tObject]
@@ -34,31 +75,9 @@ end menuController_Array
 
 getprop menu_Controller [mTitle]
    put the long id of the target into tObject
-   put _MenuTitleController (mTitle, tObject) into mController
+   put _MenuTitleController (tObject, mTitle) into mController
    return mController
 end menu_Controller
-
-setprop menu_Controller [pMenuTitle] mController
-   put _MenuButton() into mButton
-   --
-   set the uOPN ["menu_Controller"] of mButton to mController
-end menu_Controller
-
-function _MenuTitleController mTitle, tObject
-   -- was "_GetTopController" but changed to be logical (mButton instead of tObject)
-   -- put the menu_Button of tObject into mButton
-   put _MenuButton() into mButton -- Local version
-   
-   # Stored custom property (ie for script fork)
-   put the uOPN ["menu_Controller"] of mButton into mController
-   if exists (mController) then return mController
-   
-   # Default to stack name mTitle
-   put menu_GetGlobalController (mTitle) into mController
-   if exists (mController) is true then return mController
-   
-   return mButton
-end _MenuTitleController
 
 function menu_GetGlobalController mTitle
    if there is a stack mTitle then
@@ -83,7 +102,7 @@ function mArray_FromTitleTable mTitleTable, tObject
          next repeat
       end if
       
-      put _MenuTitleController (mTitle, tObject) into topMenuController
+      put _MenuTitleController (tObject, mTitle) into topMenuController
       if exists (topMenuController) is false then next repeat
       
       mArray_SetTopTitle mTitle
@@ -784,7 +803,6 @@ private command _InsertBit @mArray, hName, mController, tObject, mTarget, @recur
       case menu_IsGlobal (insertMenuTitle)
          put _MenuTitleController (tObject, insertMenuTitle) into insertController
          if exists (insertController) is false then
-            -- put _MenuTitleController (tObject, insertMenuTitle) into insertController
             return empty
          end if
          break
@@ -1532,17 +1550,6 @@ function mArray_GetDisabled hName, mController, mTarget
    put the mProperty of mController into isDisabled
    return isDisabled
 end mArray_GetDisabled
-
-function mArray_GetParamValues propLabel, mController, mTarget
-   put propLabel & "_Params" & "[" & mTarget & "]" into mProperty
-   try
-      put the mProperty of mController into paramValues
-      return paramValues
-   catch e
-      -- edit the script of mController
-      lcw_Notify the params
-   end try
-end mArray_GetParamValues
 
 command mArray_Marshal @hkeyController
    replace "|" with "\" in hkeyController
