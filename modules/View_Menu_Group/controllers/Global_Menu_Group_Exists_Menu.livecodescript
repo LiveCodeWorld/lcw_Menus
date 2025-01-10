@@ -88,8 +88,11 @@ on menu_DeleteMenuButton mGroup, mName
 end menu_DeleteMenuButton
 
 on menu_SetModuleMenus mGroup
-   put the menubar_DefaultTitles of mGroup into moduleMenuTitles
-   set the menubar_Titles of mGroup to moduleMenuTitles
+   put the menubar_DefaultTitles of mGroup into mTitles
+   -- put lcw_Ask ("Set the menubar_Titles of this module to...", mTitles, mGroup) into mTitles
+   lcw_Answer "Set the menubar_Titles of this module to [[mTitles]]?", mGroup, mTitles
+   --
+   set the menubar_Titles of mGroup to mTitles
 end menu_SetModuleMenus
 
 private on __

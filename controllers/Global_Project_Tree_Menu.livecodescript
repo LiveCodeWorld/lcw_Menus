@@ -93,16 +93,23 @@ on menu_RevealProjectFolder projectName
    finder_Reveal projectFolder
 end menu_RevealProjectFolder
 
+private on __
+end __
+
+on menu_ProjectReadme projectName
+   display_Readme projectName
+end menu_ProjectReadme
+
 on submenu_Git
    return "Global | GIT | Simple | Menu"
 end submenu_Git
 
+-- on menu_ProjectHelp projectName
+launch_OrCreateProject projectName
+end menu_ProjectHelp
+
 private on ___
 end ___
-
--- on menu_ProjectHelp projectName
-   launch_OrCreateProject projectName
-end menu_ProjectHelp
 
 on submenu_Dev
    return menu_DevTitle ("Global | Project | Tree | Menu")

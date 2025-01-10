@@ -93,8 +93,8 @@ function _TableFromNames mNames, pForceFirst
    put 1 into btnNum
    if pForceFirst is not false then
       put the module_MenuTitle of me into mTitle
-      -- put word 1 to -1 of item -2 of mTitle into mName
-      put line 1 of mNames into mName
+      put word 1 to -1 of item -2 of mTitle into mName
+      -- put line 1 of mNames into mName
       put mName & ":" && mTitle & CR into mTable
       delete line 1 of mNames
       add 1 to btnNum
@@ -373,7 +373,7 @@ getprop menubar_DefaultTitles
       delete line lineNum of moduleMenuTitles
       put CR & helpTitle after moduleMenuTitles
    end if
-   return moduleMenuTitles
+   return word 1 to -1 of moduleMenuTitles
 end menubar_DefaultTitles
 
 setprop menubar_DefaultTable mTable
