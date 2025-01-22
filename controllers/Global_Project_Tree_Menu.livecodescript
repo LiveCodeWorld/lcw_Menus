@@ -53,6 +53,10 @@ end disabled_DisplayGitStatus
 
 --> Global | Project | Tree | Menu
 -
+on submenu_Git
+   return "Global | GIT | Simple | Menu"
+end submenu_Git
+
 on menu_StartProject projectName
    put env_ProjectIsActive (projectName) is true into isActive
    if isActive is true then
@@ -63,10 +67,6 @@ on menu_StartProject projectName
    --
    display_Environment true
 end menu_StartProject
-
-on menu_UpdateProjectArray projectName
-   display_ProjectArray projectName, true
-end menu_UpdateProjectArray
 
 private on _
 end _
@@ -88,6 +88,10 @@ on menu_EditProjectHome projectName
    edit the script of stack homeStackPath
 end menu_EditProjectHome
 
+on menu_UpdateProjectArray projectName
+   display_ProjectArray projectName, true
+end menu_UpdateProjectArray
+
 on menu_RevealProjectFolder projectName
    put the project_Folder of stack projectName into projectFolder
    finder_Reveal projectFolder
@@ -100,16 +104,14 @@ on menu_ProjectReadme projectName
    display_Readme projectName
 end menu_ProjectReadme
 
-on submenu_Git
-   return "Global | GIT | Simple | Menu"
-end submenu_Git
+getprop checked_ProjectReadme [projectName]
+   put project_ConstructReadMeFile (projectName) into readMeFile
+   return there is a file readMeFile
+end checked_ProjectReadme
 
 -- on menu_ProjectHelp projectName
 launch_OrCreateProject projectName
 end menu_ProjectHelp
-
-private on ___
-end ___
 
 on submenu_Dev
    return menu_DevTitle ("Global | Project | Tree | Menu")
