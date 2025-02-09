@@ -241,7 +241,8 @@ end menuButton_Array
 -
 setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
    put the menuBar_View of the target into mGroup
-   --
+   
+   # Set newButtonName and mTitle
    if mTitleOrButtonName contains "|" then
       set the itemdelimiter to "|"
       put mTitleOrButtonName into mTitle
@@ -250,14 +251,20 @@ setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
       put mTitleOrButtonName into newButtonName
       put empty into mTitle
    end if
+   
+   # Tidy
    put word 1 to -1 of newButtonName into newButtonName
    
+   # Create
    menuBar_CreateButton newButtonName, mGroup, pInsertBefore
    put the result into newButtonID
    
+   # Maybe set menuButton_Title
    if mTitle is not empty then
       set the menuButton_Title [newButtonName] of mGroup to mTitle
    end if
+   
+   # Return something useful
    put the long id of btn id newButtonID into mButton
    return mButton
 end new_MenuButton

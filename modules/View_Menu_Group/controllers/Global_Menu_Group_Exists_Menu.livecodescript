@@ -20,9 +20,12 @@ local LocalArray
 getprop menu_Target [tObject]
    -- put display_MenuTarget (tObject) into sView
    put the displayed_Object of tObject into sView
-   if exists (sView) is false then return tObject
+   if exists (sView) is false then
+      put the card_Object of tObject into cardObject
+   else
+      put the card_Object of sView into cardObject
+   end if
    --
-   put the card_Object of sView into cardObject
    put the menubar_View of cardObject into mGroup
    return mGroup
 end menu_Target
@@ -35,7 +38,7 @@ getprop menu_CheckTarget [mGroup]
    put the view_Name of mGroup into mName -- "View|Menu|Group" 
    put module_ListBehaviorStackNames (mName) into LocalArray ["mBehavioStackNames"]
    --
-   return mName = "View|Menu|Group"
+   return mName begins with "View|Menu|"
 end menu_CheckTarget
 
 getprop checked_PreviewMenu
@@ -86,6 +89,17 @@ on menu_DeleteMenuButton mGroup, mName
    --
    dispatch "menuButton_Delete" to mGroup with mName
 end menu_DeleteMenuButton
+
+on menu_StandardModuleMenu mGroup
+   put "Global | Guide | Menu" into mTitle
+   
+   # Create
+   set the new_MenuButton [1] of mGroup to mTitle
+   put the result into mButton
+   
+   # Set Title
+   set the menuButton_Title of mButton to mTitle
+end menu_StandardModuleMenu
 
 on menu_SetModuleMenus mGroup
    put the menubar_DefaultTitles of mGroup into mTitles
@@ -222,8 +236,7 @@ private on ______
 end ______
 
 on menu_MenubarTitleData mGroup
-   put the stack_Name of mGroup into sName
-   display_MenuBarData sName
+   display_MenuBarData mGroup
 end menu_MenubarTitleData
 
 on menu_StoreInitData mGroup

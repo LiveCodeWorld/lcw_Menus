@@ -41,6 +41,15 @@ getprop menu_Controller [pMenuTitle]
    return empty
 end menu_Controller
 
+function menu_Exists gMenuTitle
+   return there is a stack gMenuTitle
+   
+   # Using Global Database
+   put menu_GetGlobalController (gMenuTitle) into mController
+   put exists (mController) into controllerExists
+   return controllerExists
+end menu_Exists
+
 
 --> Menu | Names
 -
@@ -210,15 +219,8 @@ getprop view_MenuTitle [pNotGlobal]
 end view_MenuTitle
 
 
---> Menu | Exists
+--> Menu | Naming
 -
-function menu_Exists gMenuTitle
-   -- only checking for global menus
-   put menu_GetGlobalController (gMenuTitle) into mController
-   put exists (mController) into controllerExists
-   return controllerExists
-end menu_Exists
-
 function menu_GlobalTitleFromViewName vName
    put "Global |" && menu_TitleFromViewName (vName) into globalMenuTitle
    return globalMenuTitle

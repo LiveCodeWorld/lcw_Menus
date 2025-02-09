@@ -52,10 +52,6 @@ getprop disabled_InsertMenuGroup [cardObject]
    return exists (mGroup)
 end disabled_InsertMenuGroup
 
-on menu_ToggleProxyFarm.4
-   toggle_ProxyFarm
-end menu_ToggleProxyFarm.4
-
 private on _
 end _
 

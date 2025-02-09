@@ -170,14 +170,28 @@ setprop new_MenuButton [pInsertBefore] mTitleOrButtonName
    return mButton
 end new_MenuButton
 
-command menuBar_CreateButton newButtonName, mGroup, pInsertBeforeButtonNum
+command menuBar_CreateButton newButtonName, mGroup, pInsertBefore
+   put menuBar_ListButtonNames (mGroup) into existingButtonNames
+   put the menuButton_IDs of mGroup into menuButtonIDs -- before creating
+   
    # If ordering
-   if pInsertBeforeButtonNum is not empty then
-      put pInsertBeforeButtonNum into mButtonNum
-      put the menuButton_IDs of mGroup into menuButtonIDs
+   switch
+      case pInsertBefore is a number
+         put pInsertBefore into mButtonNum
+         break
+      case pInsertBefore is not empty
+         put lineOffset (pInsertBefore, existingButtonNames) into mButtonNum
+         if mButtonNum = 0 then
+            put empty into pInsertBefore
+         end if
+         break
+   end switch
+   
+   put the number of lines of existingButtonNames into maxNum
+   if pInsertBefore > maxNum then
+      put maxNum into mButtonNum
    end if
    
-   put menuBar_ListButtonNames (mGroup) into existingButtonNames
    if newButtonName is among the lines of existingButtonNames then
       return "Error, already a menu button:" && newButtonName && "of"  && mGroup
    end if

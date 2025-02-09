@@ -34,6 +34,48 @@ getprop menuItem_CaseParams [theParams]
    return menuItem_GetCaseParams (theParams, mTitle)
 end menuItem_CaseParams
 
+function menu_CheckStack mStackName
+   if exists (stack mStackName) is false then return false
+   
+   # Introspect mTitle from script metadata
+   put the script_MetaData of stack mStackName into mData
+   --
+   if mData ["type"] is not among the items of "controller,menu" then return empty
+   put mData ["name"] into mTitle
+   return mTitle = mStackName
+end menu_CheckStack
+
+getprop menu_CreateTitle [pExtraBit]
+   put the stack_Name of the target into mTitle
+   --
+   # Add Menu
+   menu_AddLastPath mTitle, pExtraBit
+   
+   # Return menu exists
+   if menu_CheckStack (mTitle) is true then
+      return mTitle
+   end if
+   
+   # If module then create module menu
+   put the module_Name of the target into moduleName
+   if moduleName is not empty then
+      ask_CreateModuleMenu moduleName, mTitle
+      put the result into mController
+      return mTitle
+   end if
+   
+   # Create Project menu
+   put the project_Name of the target into projectName
+   if projectName is empty then
+      breakpoint
+      put "lcw_Tools" into projectName -- outside of LCW
+   end if
+   ask_CreateProjectMenu projectName, mTitle
+   put the result into mController
+   
+   return mTitle
+end menu_CreateTitle
+
 function menuItem_GetCaseParams theParams, pMenuTitle
    if pMenuTitle is empty then put menu_MyTitle() into pMenuTitle
    
@@ -171,6 +213,10 @@ function menu_Bit mTitle
    return word 1 to -1 of middleBit
 end menu_Bit
 
+command menu_AddLastPath @mTitle, pExtraMenuWord
+   put word 1 of pExtraMenuWord && "| " before word -1 of mTitle
+end menu_AddLastPath
+
 function menu_DevTitle pMenuTitle, pMenuFolder
    put the long name of target into mController
    
@@ -191,7 +237,8 @@ function menu_DevTitle pMenuTitle, pMenuFolder
    end if
    
    # Create Dev Menu
-   put "Dev | " before word -1 of pMenuTitle
+   -- put "Dev | " before word -1 of pMenuTitle
+   menu_AddLastPath pMenuTitle, "Dev"
    put menu_GetGlobalController (pMenuTitle) into testController
    if exists (testController) is true then return pMenuTitle
    
@@ -338,7 +385,9 @@ command module_CreateMenuFromFolder moduleFolder, pGlobalMenuTitle, pControllerS
    else
       put pGlobalMenuTitle into gMenuTitle
    end if
-   if pControllerScript is empty then put controller_ConstructMenuScript (gMenuTitle) into pControllerScript
+   if pControllerScript is empty then
+      put controller_ConstructMenuScript (gMenuTitle) into pControllerScript
+   end if
    --
    project_CreateMenuFromFolder moduleFolder, gMenuTitle, pControllerScript
    put the result into controllerStackObject
@@ -749,21 +798,29 @@ private function text_InitialCaps someText
    return someText
 end text_InitialCaps
 
-private function text_SplitCaps someWord
-   -- was "capsSplit"
+private function text_SplitCaps sWord, pDelimChar
+   put word_SplitCaps (sWord, pDelimChar) into sText
+   put text_InitialCaps (word 1 of sText) into word 1 of sText
+   return sText
+end text_SplitCaps
+
+private function word_SplitCaps sWord, pDelimChar
+   if pDelimChar is empty then put space into pDelimChar
+   --
    put 1 into charNum
-   repeat the number of chars of someWord
-      put char charNum of someWord into someChar
-      if text_StartsWithCaps (someChar) is true then
-         put space before char charNum of someWord
+   repeat the number of chars of sWord
+      put char charNum of sWord into sChar
+      if text_StartsWithCaps (sChar) is true then
+         put pDelimChar before char charNum of sWord
          add 2 to charNum
       else
          add 1 to charNum
       end if
    end repeat
-   put text_InitialCaps (word 1 of someWord) into word 1 of someWord
-   return word 1 to -1 of someWord
-end text_SplitCaps
+   put the number of chars of pDelimChar into maxNum
+   delete char 1 to maxNum of sWord
+   return sWord
+end word_SplitCaps
 
 private function text_StartsWithCaps someText
    put char 1 of sometext into testChar

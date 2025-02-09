@@ -101,7 +101,7 @@ private on __
 end __
 
 on menu_ProjectReadme projectName
-   display_Readme projectName
+   display_ProjectReadme projectName
 end menu_ProjectReadme
 
 getprop checked_ProjectReadme [projectName]

@@ -19,6 +19,21 @@ local LocalArray
 
 --> Working on
 -
+function mArray_ActiveItemPath
+   -- shourld get cleared after use ideally?
+   return LocalArray ["active_MenuItemPath"]
+end mArray_ActiveItemPath
+
+function mArray_GetActiveItem
+   -- rename?
+   return LocalArray ["active_MenuItemPath"]
+end mArray_GetActiveItem
+
+command mArray_SetActiveItem mItem
+   -- used, but needed?
+   put mItem into LocalArray ["active_MenuItemPath"]
+end mArray_SetActiveItem
+
 getprop menuController_Array [tObject]
    # menuButton = menuController  and the menuButton_title is set
    local mArray, recursionArray
@@ -941,10 +956,6 @@ end mArray_Do
 
 --> mArray | Active | Set
 -
-command  mArray_SetActiveItem mItem
-   put mItem into LocalArray ["active_MenuItemPath"]
-end mArray_SetActiveItem
-
 command mArray_SetActiveArray mArray
    put mArray into LocalArray ["active_MenuArray"]
 end mArray_SetActiveArray
@@ -974,10 +985,6 @@ end mArray_GetTopController
 function mArray_GetActiveArray
    return LocalArray ["active_MenuArray"]
 end mArray_GetActiveArray
-
-function mArray_GetActiveItem
-   return LocalArray ["active_MenuItemPath"]
-end mArray_GetActiveItem
 
 function mArray_ActiveControllerExists mTitle
    put mArray_GetActiveMenuController (mTitle) into mController
@@ -1193,21 +1200,29 @@ end number_PadLeft
 
 --> Deps
 -
-function text_SplitCaps someWord
-   -- was "capsSplit"
+private function text_SplitCaps sWord, pDelimChar
+   put word_SplitCaps (sWord, pDelimChar) into sText
+   put text_InitialCaps (word 1 of sText) into word 1 of sText
+   return sText
+end text_SplitCaps
+
+private function word_SplitCaps sWord, pDelimChar
+   if pDelimChar is empty then put space into pDelimChar
+   --
    put 1 into charNum
-   repeat the number of chars of someWord
-      put char charNum of someWord into someChar
-      if text_StartsWithCaps(someChar) is true then
-         put space before char charNum of someWord
+   repeat the number of chars of sWord
+      put char charNum of sWord into sChar
+      if text_StartsWithCaps (sChar) is true then
+         put pDelimChar before char charNum of sWord
          add 2 to charNum
       else
          add 1 to charNum
       end if
    end repeat
-   put text_InitialCaps(word 1 of someWord) into word 1 of someWord
-   return word 1 to -1 of someWord
-end text_SplitCaps
+   put the number of chars of pDelimChar into maxNum
+   delete char 1 to maxNum of sWord
+   return sWord
+end word_SplitCaps
 
 function text_InitialCaps someText
    repeat with wordNum = 1 to the number of words of someText

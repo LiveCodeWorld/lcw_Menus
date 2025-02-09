@@ -18,6 +18,18 @@ local LocalArray
 
 --> Working on
 -
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
+   mArray_DoHkey hKey, paramValue
+   --
+   return hKey
+end menu_DispatchTextPick
+
 function menu_GetGlobalController mTitle
    if exists (stack mTitle) then
       return the name of stack mTitle
@@ -152,20 +164,8 @@ getprop view_Object
 end view_Object
 
 
---> Working on
+-->mArray | Do
 -
-command menu_DispatchTextPick mItem, pMenuArray
-   if pMenuArray is not an array then
-      put mArray_GetActiveArray() into pMenuArray
-   end if
-   --
-   mArray_SetActiveItem mItem
-   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
-   mArray_DoHkey hKey, paramValue
-   --
-   return hKey
-end menu_DispatchTextPick
-
 command mArray_DoHkey hKey, pValue
    -- changed "dispatch" to "call" which keeps the context of the target
    mArray_UnMarshal hKey

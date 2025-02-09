@@ -57,7 +57,8 @@ on menu_Refresh dView
    put the title_Text of viewObject into sName
    put the stack_Name of viewObject into sName
    --
-   display_MenuBarData sName, dView
+   put the menubar_View of viewObject into mGroup
+   display_MenuBarData mGroup
 end menu_Refresh
 
 private on __

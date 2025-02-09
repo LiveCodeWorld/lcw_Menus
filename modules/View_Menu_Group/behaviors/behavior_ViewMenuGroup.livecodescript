@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: behavior_ViewMenuGroup
 type: behavior
-version: 0.4
+version: 0.5
 
 /*
 This behavior displays and updates a dynamic cross-platform menubar.
@@ -13,6 +13,40 @@ This behavior displays and updates a dynamic cross-platform menubar.
 
 --> Check
 -
+function _MenuButton mTitle
+   -- private causes diff problem???
+   if exists (btn mTitle of me) then
+      return the long id of btn mTitle of me
+   else
+      return empty
+   end if
+end _MenuButton
+
+private function _GroupButtonNumber numOrName
+   return _MenuButton (numOrName)
+   
+   -- too complex (just use names?)
+   if exists (btn numOrName of me) is false then return empty
+   put the short id of btn numOrName of me into btnID
+   --
+   repeat with btnNum = 1 to the number of buttons of me
+      put the short id of btn btnNum of me into testID
+      if testID = btnID then
+         return btnNum
+      end if
+   end repeat
+   return empty -- should not happen
+end _GroupButtonNumber
+
+getprop menuButton_NumFromName [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   --
+   put the short name of mButton into mName
+   put _GroupButtonNumber (mName) into mNum
+   return mNum
+end menuButton_NumFromName
+
 private function _MenuTarget mTitle, tObject
    -- put the menuButton_Target of tObject into mTarget
    put _MenuTitleController (tObject, mTitle) into mController -- in behavior_MenuGroupDev
@@ -56,6 +90,29 @@ end add_Menu
 
 --> Working on
 -
+getprop menu_Button
+   put the long id of the target into mButton
+   if word 1 of the target is not "button" then
+      return empty
+   end if
+   return mButton
+end menu_Button
+
+getprop menuButton_Object [numOrName]
+   -- too complex (just use names?)
+   if numOrName is empty then
+      return the menu_Button of the target
+   else
+      return _MenuButton (numOrName)
+      
+      put _GroupButtonNumber (numOrName) into mNum
+      if mNum is empty then return empty
+      --
+      put the long id of button mNum of me into mButton
+   end if
+   return mButton
+end menuButton_Object
+
 getprop menuButton_Title [numOrName]
    put the menuButton_Object [numOrName] of the target into mButton
    if exists (mButton) is false then return empty
@@ -238,7 +295,8 @@ end _UpdateMenubar
 --> Init
 -
 getprop menuButton_Text [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
+   put the long id of the target into tObject
+   put the menuButton_Object [numOrName] of tObject into mButton
    if exists (mButton) is false then return empty
    
    switch the menuButton_UpdateStyle of mButton
@@ -385,30 +443,37 @@ on menuPick mItemPath
          put the short name of mButton into mName
          ide_RevMenubarMenuPick mName, mItemPath
          break
-      case "mTitle"
-         put the live_MenuArray of mButton into mArray
+      case "cached"
+         put the menuButton_CachedArray of mButton into mArray
          menu_DispatchTextPick mItemPath, mArray
          put the result into hKeyLine
          break
-      case "cached"
+      case "mTitle"
       default
-         put the menuButton_CachedArray of mButton into mArray
-         if mArray is not an array then
-            #  lets try and re-index and cache again
-            put the menuButton_Name of mButton into mName
-            lcw_AnswerSheet "Something went wrong. Re-index menu '[[var]]'?", mButton, mName
-            --
-            breakpoint
-            put the live_MenuArray of mButton into mArray
-            set the menuButton_CachedArray of mButton to mArray
-         end if
-         
-         menu_DispatchTextPick mItemPath, mArray
-         --
          put the live_MenuArray of mButton into mArray
-         set the menuButton_CachedArray of mButton to mArray
+         --
+         menu_DispatchTextPick mItemPath, mArray
+         put the result into hKeyLine
    end switch
 end menuPick
+
+private command wasDefault
+   put the menuButton_CachedArray of mButton into mArray
+   if mArray is not an array then
+      #  lets try and re-index and cache again
+      put the menuButton_Name of mButton into mName
+      lcw_AnswerSheet "Something went wrong. Re-index menu '[[var]]'?", mButton, mName
+      --
+      breakpoint
+      put the live_MenuArray of mButton into mArray
+      set the menuButton_CachedArray of mButton to mArray
+   end if
+   
+   menu_DispatchTextPick mItemPath, mArray
+   --
+   put the live_MenuArray of mButton into mArray
+   set the menuButton_CachedArray of mButton to mArray
+end wasDefault
 
 getprop menuButton_Target [numOrName]
    put the menuButton_Object [numOrName] of the target into mButton
@@ -694,15 +759,6 @@ end menu_Text
 
 --> Props | mButton
 -
-getprop menuButton_NumFromName [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   --
-   put the short name of mButton into mName
-   put _GroupButtonNumber (mName) into mNum
-   return mNum
-end menuButton_NumFromName
-
 getprop menuButton_Num
    put the long id of the target into tObject
    if word 1 of tObject is not "button" then return empty
@@ -756,21 +812,6 @@ getprop view_Object
    return the long id of me
 end view_Object
 
-getprop menuButton_Object [numOrName]
-   if numOrName is empty then
-      put the long id of the target into mButton
-      if word 1 of the target is not "button" then
-         return empty
-      end if
-   else
-      put _GroupButtonNumber (numOrName) into mNum
-      if mNum is empty then return empty
-      --
-      put the long id of button mNum of me into mButton
-   end if
-   return mButton
-end menuButton_Object
-
 
 --> Private
 -
@@ -796,19 +837,6 @@ private command _UpdateMenuButton mButton, pForce
          break
    end switch
 end _UpdateMenuButton
-
-private function _GroupButtonNumber numOrName
-   if exists (btn numOrName of me) is false then return empty
-   put the short id of btn numOrName of me into btnID
-   --
-   repeat with btnNum = 1 to the number of buttons of me
-      put the short id of btn btnNum of me into testID
-      if testID = btnID then
-         return btnNum
-      end if
-   end repeat
-   return empty -- should not happen
-end _GroupButtonNumber
 
 private command _SetTextFromArray mButton, mArray
    if mArray is not an array then return false
