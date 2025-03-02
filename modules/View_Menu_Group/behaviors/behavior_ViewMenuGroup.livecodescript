@@ -733,15 +733,13 @@ setprop show_Menu [pRefresh] sBoolean
    else
       set the menubar of stack sName to empty
    end if
-   dispatch "LayoutCard"
    
    if pRefresh is true then
       menuBar_Refresh
    end if
-   
-   # Hack to force geometry
-   choose pointer tool
-   choose browse tool
+   --
+   -- dispatch "LayoutCard"
+   send "LayoutCard" to me in 2 ticks
    --
    set the lockscreen to false
    unlock menus

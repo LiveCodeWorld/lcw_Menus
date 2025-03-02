@@ -21,23 +21,25 @@ local LocalArray
 getprop menu_Target [tObject]
    put the display_View of tObject into displayView
    put the stack_Name of tObject into stackName
-   put the displayed_Object of displayView into displayedObject
    --
    switch
       case word 1 of stackName = "revNewScriptEditor"
          put scriptEditor_Object() into sObject
+         if exists (sObject) is false then return "Error"
          put the project_Name of sObject into projectName
          return projectName
-      case exists (displayView)
-         put the title_Text of displayView into projectName
-         return projectName
-      case exists (displayedObject)
-         breakpoint
-         put the displayed_Object of displayView into sObject
-         put the project_Name of sObject into projectName
-         return projectName
-      default
+      case exists (displayView) is false
          return "Error"
+      default
+         -- put the displayed_Object of displayView into displayedObject
+         put the uOPN ["displayed_Object"] of displayView into displayedObject
+         if exists (displayedObject) then
+            put the project_Name of displayedObject into projectName
+            return projectName
+         else
+            put the title_Text of displayView into projectName
+            return projectName
+         end if
    end switch
 end menu_Target
 
