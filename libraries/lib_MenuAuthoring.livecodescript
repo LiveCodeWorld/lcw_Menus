@@ -201,9 +201,13 @@ function menu_Bit mTitle
    set the itemdelimiter to "|"
    put mTitle into middleBit
    put word 1 to -1 of item 1 of mTitle into firstBit
-   if firstBit = "Global" then
-      delete item 1 of middleBit
-   end if
+   switch firstBit
+      case "View"
+      case "Layout"
+      case "Global"
+         delete item 1 of middleBit
+         break
+   end switch
    --
    put word 1 to -1 of item -1 of mTitle into lastBit
    if lastBit = "Menu" then

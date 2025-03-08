@@ -21,6 +21,28 @@ getprop menu_Target [tObject]
    return shortFolder
 end menu_Target
 
+on mDoubleUp_ProjectTree displayView, stackName
+   if the optionkey is "Down" then breakpoint
+   --
+   put the selected_Path of displayView into sPath
+   switch item 1 of sPath
+      case "Modules"
+         -- display_StackDeps the name of stack stackName
+         display_ModuleTools stackName
+         break
+      case "README.html"
+         
+         break
+      default
+         if the scriptonly of stack stackName is true then
+            edit the script of stack stackName 
+         else
+            show stack stackName
+            toplevel stack stackName
+         end if
+   end switch
+end mDoubleUp_ProjectTree
+
 private function _GetStackName
    put LocalArray ["displayView"] into displayView
    -- put the selected_Line of displayView into stackName

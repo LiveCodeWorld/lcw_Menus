@@ -60,9 +60,9 @@ on menu_DeleteMenuGroup mGroup
    menubar_Delete mGroup
 end menu_DeleteMenuGroup
 
-on menu_RefreshLiveMenus.R mGroup
+on menu_RefreshLiveMenus mGroup
    dispatch "refresh_Menus" to mGroup
-end menu_RefreshLiveMenus.R
+end menu_RefreshLiveMenus
 
 private on _
 end _

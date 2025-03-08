@@ -20,6 +20,17 @@ local LocalArray
 
 --> Props
 -
+getprop formatted_Width
+   put _fieldObject() into fObject
+   put the formattedwidth of fObject into fWidth
+   put the scrollbarWidth of fObject into sWidth
+   add sWidth to fWidth
+   add 8 to fWidth
+   
+   put the formattedwidth of _titleView() into bWidth
+   return max (fWidth,bWidth)
+end formatted_Width
+
 getprop line_Controller [mTitle]
    put the line_Controller of me into mController
    if exists (mController) then return mController
