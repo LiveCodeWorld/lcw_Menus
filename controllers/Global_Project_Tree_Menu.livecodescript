@@ -111,7 +111,11 @@ end checked_ProjectReadme
 
 -- on menu_ProjectHelp projectName
 launch_OrCreateProject projectName
-end menu_ProjectHelp
+ menu_ProjectHelp
+
+on menu_Refresh projectName
+   display_Project projectName
+end menu_Refresh
 
 on submenu_Dev
    return menu_DevTitle ("Global | Project | Tree | Menu")

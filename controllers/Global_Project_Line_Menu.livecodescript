@@ -21,29 +21,61 @@ getprop menu_Target [tObject]
    return shortFolder
 end menu_Target
 
-on mDoubleUp_ProjectTree displayView, stackName
+on mDoubleUp_ProjectTree displayView, shortFile
    if the optionkey is "Down" then breakpoint
    --
    put the selected_Path of displayView into sPath
-   switch item 1 of sPath
-      case "Modules"
-         -- display_StackDeps the name of stack stackName
-         display_ModuleTools stackName
+   put _StackPath (displayView, sPath) into sFile
+   --
+   set the itemDelimiter to "."
+   put item -1 of sFile into fExt
+   set the itemDelimiter to comma
+   
+   switch
+      case fExt = "json"
+         display_JsonFile sFile
+         put the result into dView
+      case shortFile = "README.html"
+         display_TiddlyFile sFile
          break
-      case "README.html"
+      case item 1 of sPath = "Modules"
+         put shortFile into stackName
+         --
+         display_ModuleTools stackName
          
+         show stack stackName
+         toplevel stack stackName
+         
+         if the shiftKey is "Down" then
+            put the name of stack stackName into sObject
+            display_StackDeps sObject
+         end if
          break
       default
-         if the scriptonly of stack stackName is true then
-            edit the script of stack stackName 
+         if exists (stack sFile) is false then
+            lcw_AnswerWarning "Stack does not exist!", displayView
+         end if
+         
+         if the scriptonly of stack sFile is true then
+            edit the script of stack sFile 
          else
-            show stack stackName
-            toplevel stack stackName
+            show stack sFile
+            toplevel stack sFile
          end if
    end switch
 end mDoubleUp_ProjectTree
 
+private function _StackPath displayView, sPath
+   put the title_Text of displayView into projectName
+   replace comma with slash in sPath
+   put project_GetFolder (projectName) into projectFolder
+   put projectFolder & sPath into stackPath
+   return stackPath
+end _StackPath
+
 private function _GetStackName
+   breakpoint
+   
    put LocalArray ["displayView"] into displayView
    -- put the selected_Line of displayView into stackName
    put the selected_Path of displayView into sPath
@@ -116,29 +148,9 @@ on insert_Behavior
    return _GetNewMenu ("Behavior")
 end insert_Behavior
 
-private command _
+private on _
 end _
 
--- on submenu_ModuleTools
-return "Global | Modules | Tree | Line | Menu"
-end submenu_ModuleTools
-
-on menu_GoAndShow
-   put _GetStackName() into stackName
-   go to stack stackName
-   show stack stackName
-   --
-   menu_BringHere
-end menu_GoAndShow
-
-on menu_BringHere
-   put LocalArray ["displayView"] into displayView
-   put the stack_Name of displayView into dStackName
-   put _GetStackName() into stackName
-   --
-   put the mouseloc into gLoc
-   put the right of stack dStackName into dRight
-   put dRight into item 1 of gLoc
-   --
-   set the topleft of stack stackName to gLoc
-end menu_BringHere
+on menu_Edit
+   edit the script of me
+end menu_Edit

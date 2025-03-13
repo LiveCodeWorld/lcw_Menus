@@ -19,6 +19,168 @@ local LocalArray
 
 --> Working on
 -
+on menu_Dispatch mItem
+   -- "menu_Dispatch mItem" placed in the mButton target
+   mArray_SetActiveItem mItem
+   put the long id of the target into tObject
+   switch word 1 of tObject
+      case "widget"
+         breakpoint
+         break
+      default
+         menu_DispatchTextPick mItem
+   end switch
+end menu_Dispatch
+
+command menu_DispatchTextPick mItem, pMenuArray, pMenuButton
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue  
+   
+   put menu_GetTopTargetObject() into tObject
+   get the name of tObject
+   mArray_DoHkey hKey, paramValue, tObject
+   --
+   return hKey
+end menu_DispatchTextPick
+
+command mArray_DoHkey hKey, pValue, tObject
+   -- changed "dispatch" to "call" which keeps the context of the target
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   --
+   hKey_Do hKey, mTarget, pValue
+   return the result
+end mArray_DoHkey
+
+function mArray_FindMenuTarget mController, tObject
+   -- logic: target, controller, defaults to tObject
+   
+   if exists (tObject) is false then
+      put menu_GetTopTargetObject() into tObject -- bug: should exist
+   end if
+   --
+   put the menu_Target of tObject into mTarget
+   if mTarget is not empty then
+      return mTarget
+   end if
+   --
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   
+   return tObject
+end mArray_FindMenuTarget
+
+function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target (called for every nested menu)
+   
+   if exists (tObject) is false then
+      put menu_GetTopTargetObject() into tObject -- bug: should exist
+   end if
+   --
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   --
+   put the menu_Target [tObject] of tObject into mTarget
+   if mTarget is empty then
+      return tObject
+   else
+      return mTarget
+   end if
+end mArray_FindMenuTarget
+
+function mArray_FindMenuTarget mController, tObject
+   if exists (tObject) then
+      put the menu_Target of tObject into mTarget
+      if mTarget is not empty then
+         return mTarget
+      end if
+   end if
+   
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   
+   return tObject
+end mArray_FindMenuTarget
+
+command mArray_FindActive mArray, mItemPath, @hkey, @paramValue
+   -- only used by "menu_DispatchTextPick" (was "_FindActiveHkey")
+   set the itemdelimiter to "|"
+   put mItemPath into subItemPath
+   repeat the number of items of mItemPath
+      put item 1 of subItemPath into itemText
+      put _FindItemArray (mArray, itemText) into nextItemArray
+      --
+      if nextItemArray is not an array then
+         -- was the last one -- probably because itemText caontained a param like "Hello|World"
+         exit repeat
+      else
+         put nextItemArray into itemArray
+      end if
+      
+      delete item 1 of subItemPath
+      --
+      put itemArray ["menu"] into subMenuArray
+      if subMenuArray is an array then
+         -- do we need to check that mItemPath is not emmpty?
+         put itemArray ["name"] into hkey
+         put subMenuArray into mArray
+      else
+         exit repeat -- at end (no more submenus)
+      end if
+   end repeat
+   --
+   put itemArray ["name"] into itemName
+   if word 1 of itemName is "param" then
+      put word 2 to -1 of itemName into paramValue
+   else
+      put itemName into hkey
+      put subItemPath into paramValue -- should be empty unless parramm contains "|"
+   end if
+end mArray_FindActive
+
+private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
+   -- bug: can recurse
+   dispatch hName to mController with mTarget
+   put the result into subMenuTitle
+   if subMenuTitle is empty then return false
+   --
+   put the submenu_Target [hName] of mController into submenuTarget
+   if submenuTarget is empty then
+      # By default we set the tObject of submenus to the mTarget of the menu
+      -- put the menu_Target [tObject] of mController into tObject -- recurses ???
+      if exists (mTarget) then
+         put mTarget into tObject
+         menu_SetTopTargetObject tObject
+      else
+         breakpoint
+      end if
+   else
+      put submenuTarget into tObject
+      menu_SetTopTargetObject tObject
+   end if
+   
+   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
+   put menu_CommandToText (hName) into mLabel
+   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
+   --
+   return true
+end _SubmenuBit
+
+
+--> mArray | Active
+-
 function mArray_ActiveItemPath
    -- shourld get cleared after use ideally?
    return LocalArray ["active_MenuItemPath"]
@@ -412,43 +574,9 @@ end _SetDisabled
 
 --> mTarget
 -
-function mArray_FindMenuTarget mController, tObject
-   -- logic: controller, target (called for every nested menu)
-   
-   if exists (tObject) is false then
-      put menu_GetTopTargetObject() into tObject -- bug: should exist
-   end if
-   --
-   if exists (mController) is true then
-      put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
-   end if
-   --
-   put the menu_Target [tObject] of tObject into mTarget
-   if mTarget is empty then
-      return tObject
-   else
-      return mTarget
-   end if
-end mArray_FindMenuTarget
-
 command mArray_ClearActiveMenuArray
    delete variable LocalArray
 end mArray_ClearActiveMenuArray
-
-private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArray, mTarget
-   -- bug: can recurse
-   dispatch hName to mController with mTarget
-   put the result into subMenuTitle
-   if subMenuTitle is empty then return false
-   --
-   -- mArray_SetActiveTitle subMenuTitle
-   put _GetNewMenuController (tObject, subMenuTitle, mController) into newMenuController
-   put menu_CommandToText (hName) into mLabel
-   _AddSubmenu mArray, hName, mLabel, subMenuTitle, tObject, newMenuController, recursionArray
-   --
-   return true
-end _SubmenuBit
 
 private function _GetNewMenuController tObject, mTitle, mController
    -- logic: global, controller (overkill logic)
@@ -516,66 +644,6 @@ private function _GetTopController mTitle, tObject
    return tObject
 end _GetTopController
 
-command menu_DispatchTextPick mItem, pMenuArray
-   if pMenuArray is not an array then
-      put mArray_GetActiveArray() into pMenuArray
-   end if
-   --
-   mArray_SetActiveItem mItem
-   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
-   mArray_DoHkey hKey, paramValue
-   --
-   return hKey
-end menu_DispatchTextPick
-
-command mArray_FindActive mArray, mItemPath, @hkey, @paramValue
-   -- only used by "menu_DispatchTextPick" (was "_FindActiveHkey")
-   set the itemdelimiter to "|"
-   put mItemPath into subItemPath
-   repeat the number of items of mItemPath
-      put item 1 of subItemPath into itemText
-      put _FindItemArray (mArray, itemText) into nextItemArray
-      --
-      if nextItemArray is not an array then
-         -- was the last one -- probably because itemText caontained a param like "Hello|World"
-         exit repeat
-      else
-         put nextItemArray into itemArray
-      end if
-      
-      delete item 1 of subItemPath
-      --
-      put itemArray ["menu"] into subMenuArray
-      if subMenuArray is an array then
-         -- do we need to check that mItemPath is not emmpty?
-         put itemArray ["name"] into hkey
-         put subMenuArray into mArray
-      else
-         exit repeat -- at end (no more submenus)
-      end if
-   end repeat
-   --
-   put itemArray ["name"] into itemName
-   if word 1 of itemName is "param" then
-      put word 2 to -1 of itemName into paramValue
-   else
-      put itemName into hkey
-      put subItemPath into paramValue -- should be empty unless parramm contains "|"
-   end if
-end mArray_FindActive
-
-command mArray_DoHkey hKey, pValue
-   -- changed "dispatch" to "call" which keeps the context of the target
-   mArray_UnMarshal hKey
-   hkeyLine_Deconstruct hKey, hName, hType, mController
-   
-   put menu_GetTopTargetObject() into tObject
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
-   --
-   hKey_Do hKey, mTarget, pValue
-   return the result
-end mArray_DoHkey
-
 
 --> Menu | Original
 -
@@ -601,19 +669,6 @@ end menu_PullDown
 
 --> Menu | Dispatch | Working on
 -
-on menu_Dispatch mItem
-   -- "menu_Dispatch mItem" placed in the mButton target
-   mArray_SetActiveItem mItem
-   put the long id of the target into tObject
-   switch word 1 of tObject
-      case "widget"
-         breakpoint
-         break
-      default
-         menu_DispatchTextPick mItem
-   end switch
-end menu_Dispatch
-
 command hKey_Do hKey, pTarget, pValue, pQuestion
    if the optionKey is "Down" then
       put scriptEditor_GetTop() into stackObject
@@ -814,7 +869,11 @@ private command _SetMenuObjectDefaults @tObject, @mButton
    end if
    if exists (mButton) is false then
       -- defaults to the target rather than the global menu_Button
-      put the long id of the target into mButton
+      if exists (the menubutton) then
+         put the long id of the menubutton into mButton
+      else
+         put the long id of the target into mButton
+      end if
    end if
 end _SetMenuObjectDefaults
 

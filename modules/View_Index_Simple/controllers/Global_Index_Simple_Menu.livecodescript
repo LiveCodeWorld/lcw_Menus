@@ -67,6 +67,50 @@ on menu_SetHeaderHeight indexView
    set the header_Height of indexView to sHeight
 end menu_SetHeaderHeight
 
+on menu_FormattedWidth dView
+   put the formatted_Width of dView into fWidth
+   set the stack_Width of dView to fWidth
+end menu_FormattedWidth
+
+on menu_FormattedHeight dView
+   put the formatted_Height of dView into fHeight
+   set the stack_Height of dView to fHeight
+end menu_FormattedHeight
+
+private on __
+end __
+
+on menu_ChangeTitleMenu indexView
+   put the title_Menu of indexView into mTitle   
+   put lcw_Ask ("Set the title_Menu to...", mTitle) into mTitle
+   set the title_Menu of indexView to mTitle   
+end menu_ChangeTitleMenu
+
+on menu_TitleMenuScript indexView
+   put the title_Menu of indexView into mTitles     
+   set the itemdelimiter to tab
+   repeat for each line titleLine in mTitles
+      if titleLine = "-" then next repeat
+      put item 1 of titleLine into mTitle
+      --
+      menu_Edit mTitle
+   end repeat
+end menu_TitleMenuScript
+
+on menu_ChangeLineMenu indexView
+   put the line_Menu of indexView into mTitle   
+   put lcw_Ask ("Set the line_Menu to...", mTitle) into mTitle
+   set the line_Menu of indexView to mTitle   
+end menu_ChangeLineMenu
+
+on menu_LineMenuScript indexView
+   put the line_Menu of indexView into mTitle
+   menu_Edit mTitle
+end menu_LineMenuScript
+
+private on ___
+end ___
+
 on menu_ChangeDoubleClick indexView
    put the mouse_DoubleUp of indexView into mDoubleUp
    put lcw_Ask ("Edit the mouse_DoubleUp of indexView", mDoubleUp) into mDoubleUp
@@ -91,40 +135,6 @@ on menu_FindDoubleClickHandler indexView
       hkey_Edit hKey
    end if
 end menu_FindDoubleClickHandler
-
-private on __
-end __
-
-on menu_ChangeTitleMenu indexView
-   put the title_Menu of indexView into mTitle   
-   put lcw_Ask ("Set the title_Menu to...", mTitle) into mTitle
-   set the title_Menu of indexView to mTitle   
-end menu_ChangeTitleMenu
-
-on menu_TitleMenuScript indexView
-   put the title_Menu of indexView into mTitles     
-   set the itemdelimiter to tab
-   repeat for each line titleLine in mTitles
-      if titleLine = "-" then next repeat
-      put item 1 of titleLine into mTitle
-      --
-      menu_Edit mTitle
-   end repeat
-end menu_TitleMenuScript
-
-private on ___
-end ___
-
-on menu_ChangeLineMenu indexView
-   put the line_Menu of indexView into mTitle   
-   put lcw_Ask ("Set the line_Menu to...", mTitle) into mTitle
-   set the line_Menu of indexView to mTitle   
-end menu_ChangeLineMenu
-
-on menu_LineMenuScript indexView
-   put the line_Menu of indexView into mTitle
-   menu_Edit mTitle
-end menu_LineMenuScript
 
 private on ____
 end ____

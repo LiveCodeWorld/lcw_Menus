@@ -18,6 +18,26 @@ local LocalArray
 
 --> Working on
 -
+-- function mArray_FindMenuTarget mController, tObject
+   -- logic: controller, target (called for every nested menu)
+   
+   if exists (tObject) is false then
+      put menu_GetTopTargetObject() into tObject -- bug: should exist
+   end if
+   --
+   if exists (mController) is true then
+      put the menu_Target [tObject] of mController into mTarget
+      if mTarget is not empty then return mTarget
+   end if
+   --
+   put the menu_Target [tObject] of tObject into mTarget
+   if mTarget is empty then
+      return tObject
+   else
+      return mTarget
+   end if
+end mArray_FindMenuTarget
+
 command menu_DispatchTextPick mItem, pMenuArray
    if pMenuArray is not an array then
       put mArray_GetActiveArray() into pMenuArray
@@ -1353,26 +1373,6 @@ function mArray_ConstructHkey hName, mController
    mArray_Marshal hkeyController
    return hkeyController
 end mArray_ConstructHkey
-
-function mArray_FindMenuTarget mController, tObject
-   -- logic: controller, target (called for every nested menu)
-   
-   if exists (tObject) is false then
-      put menu_GetTopTargetObject() into tObject -- bug: should exist
-   end if
-   --
-   if exists (mController) is true then
-      put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
-   end if
-   --
-   put the menu_Target [tObject] of tObject into mTarget
-   if mTarget is empty then
-      return tObject
-   else
-      return mTarget
-   end if
-end mArray_FindMenuTarget
 
 function mArray_FromScript mTitle, tObject, mController, @recursionArray
    local mArray

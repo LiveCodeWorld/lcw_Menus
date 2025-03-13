@@ -18,8 +18,118 @@ For instance the ScriptEditor menus use the "menuPick" handler below.
 local LocalArray
 
 
+--> Working on
+-
+command toggle_Title
+   set the title_Colour of me to colour_GetRandom()
+   put the stack_Style of me into oStyle
+   switch oStyle
+      case "toplevel"
+         set the stack_Style of me to "palette"
+         break
+      case "palette"
+         set the stack_Style of me to "toplevel"
+         break
+      default
+         put oStyle
+         breakpoint
+   end switch
+end toggle_Title
+
+
+--> Events
+-
+on preOpenControl
+   local headerHeight
+   _setDefaultHeight headerHeight
+   if there is a stack "behavior_ViewIndexFiles" then
+      put the name of stack "behavior_ViewIndexFiles" into bObject
+      set the behavior of stack "behavior_ViewIndexSimple" to bObject
+   end if
+   pass preOpenControl
+end preOpenControl
+
+on mouseDown
+   switch word 1 of the name of the target
+      case "button"
+         if the optionKey is "Down" then
+            toggle_Title -- ugly as can't block menu with this method
+         else
+            _doButtonMenu
+         end if
+         break
+      case "field"
+         _doFieldDown
+         break
+   end switch
+end mouseDown
+
+on mouseUp
+   switch word 1 of the name of the target
+      case "button"
+         pass mouseUp
+      case "field"
+         _doFieldClick
+   end switch
+end mouseUp
+
+on mouseDoubleUp
+   put the long id of the target into tObject
+   --
+   switch word 1 of tObject
+      case "button"
+         -- always caught by menu?
+         break
+      case "field"
+         _DoDoubleClick
+   end switch
+end mouseDoubleUp
+
+on resizeControl
+   put the rect of me into viewRect
+   LayoutControl viewRect
+end resizeControl
+
+on menuPick menuPath
+   menu_DispatchTextPick menuPath
+end menuPick
+
+
 --> Props
 -
+getprop title_Height
+   put the height of _titleView() into titleHeight
+   return titleHeight
+end title_Height
+
+setprop title_Height
+   lock screen
+   switch
+      case titleHeight is a number
+         set the height of _titleView() to titleHeight
+         LayoutControl       
+         break
+      case titleHeight is "auto"
+         put the formattedheight of _titleView() into titleHeight
+         add 8 to titleHeight
+         set the height of _titleView() to titleHeight
+         LayoutControl      
+         break
+      default
+   end switch 
+   unlock screen
+   return titleHeight
+end title_Height
+
+getprop formatted_Height [titleHeight]
+   put _fieldObject() into fObject
+   put the formattedheight of fObject into fHeight
+   add 4 to fHeight
+   
+   put the title_Height of me into titleHeight
+   return fHeight + titleHeight
+end formatted_Height
+
 getprop formatted_Width
    put _fieldObject() into fObject
    put the formattedwidth of fObject into fWidth
@@ -227,61 +337,8 @@ private function _fieldObject
 end _fieldObject
 
 
---> Events
--
-on preOpenControl
-   local headerHeight
-   _setDefaultHeight headerHeight
-   if there is a stack "behavior_ViewIndexFiles" then
-      put the name of stack "behavior_ViewIndexFiles" into bObject
-      set the behavior of stack "behavior_ViewIndexSimple" to bObject
-   end if
-   pass preOpenControl
-end preOpenControl
-
-on mouseDown
-   switch word 1 of the name of the target
-      case "button"
-         _doButtonMenu
-         break
-      case "field"
-         _doFieldDown
-         break
-   end switch
-end mouseDown
-
-on mouseUp
-   switch word 1 of the name of the target
-      case "button"
-         pass mouseUp
-      case "field"
-         _doFieldClick
-   end switch
-end mouseUp
-
-on mouseDoubleUp
-   put the long id of the target into tObject
-   --
-   switch word 1 of tObject
-      case "button"
-         break
-      case "field"
-         _DoDoubleClick
-   end switch
-end mouseDoubleUp
-
-on resizeControl
-   put the rect of me into viewRect
-   LayoutControl viewRect
-end resizeControl
-
-
 --> Title | Menu
 -
-on menuPick menuPath
-   menu_DispatchTextPick menuPath
-end menuPick
-
 getprop menu_Button
    return _titleView()
 end menu_Button

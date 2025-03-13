@@ -68,15 +68,12 @@ private on _
 end _
 
 on menu_NewMenuButton mGroup
-   put menuBar_ListButtonNames (mGroup) into mButtonNames
-   put the number of lines of mButtonNames into newNum
-   add 1 to newNum
-   put "Item" && newNum into newName
+   put "Global | TiddlyWiki | Plugins | Menu" into newName
    
    # Ask
    put lcw_Ask ("Create a new menu button in this stack menu...", newName, "Creat Menu", mGroup) into newButtonName
    
-   # Create
+   # Create before Help
    set the new_MenuButton ["Help"] of mGroup to newButtonName
    put the result into mButton
    
@@ -89,17 +86,6 @@ on menu_DeleteMenuButton mGroup, mName
    --
    dispatch "menuButton_Delete" to mGroup with mName
 end menu_DeleteMenuButton
-
-on menu_StandardModuleMenu mGroup
-   put "Global | Guide | Menu" into mTitle
-   
-   # Create
-   set the new_MenuButton [1] of mGroup to mTitle
-   put the result into mButton
-   
-   # Set Title
-   set the menuButton_Title of mButton to mTitle
-end menu_StandardModuleMenu
 
 on menu_SetModuleMenus mGroup
    put the menubar_DefaultTitles of mGroup into mTitles
@@ -238,6 +224,34 @@ end ______
 on menu_MenubarTitleData mGroup
    display_MenuBarData mGroup
 end menu_MenubarTitleData
+
+on menu_LayoutMenuButtons mGroup
+   dispatch "LayoutControl" to mGroup
+   switch the result
+      breakpoint
+end switch
+end menu_LayoutMenuButtons
+
+on menu_TestAddButton mGroup
+   menuButton_Add mGroup, "Global | Guide | Menu", 1
+end menu_TestAddButton
+
+on menu_MenubarTable mGroup
+   put _TestMenuTitles() into mTitles
+   put the menubar_Table [mTitles] of mGroup
+end menu_MenubarTable
+
+function _TestMenuTitles
+   return "TiddlyWiki,Global | Caddy | Menu,Plugins"
+end _TestMenuTitles
+
+on menu_SetTiddlyTitles mGroup
+   set the menubar_Titles of mGroup to _TestMenuTitles()
+end menu_SetTiddlyTitles
+
+on menu_ClearTiddlyTitles mGroup
+   set the menubar_Titles of mGroup to empty
+end menu_ClearTiddlyTitles
 
 on menu_StoreInitData mGroup
    put the view_Name of mGroup into mName

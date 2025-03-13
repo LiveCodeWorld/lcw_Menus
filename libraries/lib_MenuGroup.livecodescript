@@ -25,6 +25,16 @@ on EnableStatusMenu pEnabled
    end if
 end EnableStatusMenu
 
+command menuButton_Add mGroup, mTitle, pInsertBefore
+   # Create
+   set the new_MenuButton [pInsertBefore] of mGroup to mTitle
+   put the result into mButton
+   
+   # Set Title
+   set the menuButton_Title of mButton to mTitle
+   return mButton
+end menuButton_Add
+
 
 --> Display
 -
@@ -83,6 +93,7 @@ getprop menuBar_ButtonNames
 end menuBar_ButtonNames
 
 setprop menuBar_ButtonNames newButtonNames
+   breakpoint
    put the menubar_View of the target into mGroup
    replace comma with CR in newButtonNames
    put menuBar_ListButtonNames (mGroup) into oButtonNames

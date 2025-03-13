@@ -1,4 +1,4 @@
-﻿script "behavior_ViewMenuGroup" with behavior "behavior_MenuGroupDev"
+﻿script "behavior_ViewMenuGroup" with behavior "behavior_MenuGroupCreate"
 --> MetaData
 -
 copyright: David Bovill
@@ -10,6 +10,163 @@ version: 0.5
 /*
 This behavior displays and updates a dynamic cross-platform menubar.
 */
+
+--> Working on
+-
+getprop menuButton_Title [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   --  
+   put the uOPN ["mTitle"] of mButton into mTitle
+   return mTitle
+end menuButton_Title
+
+
+--> Init
+-
+getprop behavior_DefaultStackNames
+   -- put "behavior_ViewMenuGroup,behavior_MenuGroupCreate" into mBehavioStackNames
+   put the behavior_DefaultStackNames of me into mBehavioStackNames
+   return mBehavioStackNames
+end behavior_DefaultStackNames
+
+setprop behavior_DefaultStackNames mBehavioStackNames
+   set the behavior_DefaultStackNames of me to mBehavioStackNames
+   init_Module
+end behavior_DefaultStackNames
+
+command init_Module
+   put the behavior_DefaultStackNames of me into bStackNames
+   set the behavior_StackNames of me to bStackNames
+   lcw_Notify "Initialised behaviors for" && the name of me
+end init_Module
+
+
+--> Events
+-
+on preOpenControl
+   init_Module
+   pass preOpenControl
+end preOpenControl
+
+on mouseDown
+   # When the menu is initiated (roled over menu)
+   -- no longer sent to menu-button
+   put the long id of the target into mButton   
+   --
+   if word 1 of mButton is "button" then
+      put the menuButton_Text of mButton into mText
+      set the text of mButton to mText
+   else
+      _UpdateMenubar
+   end if
+end mouseDown
+
+on resizeControl
+   _LayoutMenuButtons
+end resizeControl
+
+on menuPick mItemPath
+   put the long id of the target into mButton
+   --
+   put the menuButton_UpdateStyle of mButton into updateStyle
+   switch updateStyle
+      case "script"
+         menuButton_ScriptTextPick mItemPath, mButton
+         break
+      case "rev"
+         put the short name of mButton into mName
+         ide_RevMenubarMenuPick mName, mItemPath
+         break
+      case "cached"
+         put the menuButton_CachedArray of mButton into mArray
+         menu_DispatchTextPick mItemPath, mArray, mButton
+         put the result into hKeyLine
+         break
+      case "mTitle"
+      default
+         put the live_MenuArray of mButton into mArray
+         --
+         menu_DispatchTextPick mItemPath, mArray, mButton
+         put the result into hKeyLine
+   end switch
+end menuPick
+
+
+--> Layout
+-
+on LayoutControl
+   _LayoutMenuButtons
+end LayoutControl
+
+on refresh_Menus
+   _UpdateMenubar true
+   _LayoutMenuButtons
+end refresh_Menus
+
+private command _LayoutMenuButtons pMenuButtonIDs
+   lock screen
+   set the topleft of me to "0,0"
+   
+   # Layout buttons from left to right according to order in Menu Buttons field
+   if pMenuButtonIDs is empty then
+      put the childControlIDs of me into pMenuButtonIDs
+      if pMenuButtonIDs is empty then return empty
+   end if
+   if exists (btn 1 of me) is false then return empty
+   put the long id of btn 1 of me into firstbutton
+   
+   # Props of me
+   put the stack_Name of me into menuBarStackName
+   put the menuBar of stack menuBarStackName into tOriginalMenuBar
+   
+   # Relayer defaults
+   put the relayerGroupedControls into tOriginalRelayerGroupedControls
+   
+   set the defaultStack to menuBarStackName
+   --
+   # Arrange rect of btns for proper positioning in stack window
+   put 1 into tNextLeft
+   put the formattedHeight of firstbutton into fHeight
+   --
+   repeat for each line btnID in pMenuButtonIDs
+      put the long id of btn id btnID of me into btnObject
+      --
+      put the formattedWidth of btnObject into fWidth
+      -- put the formattedHeight of btnObject into fHeight
+      
+      # Work out btn rect
+      put tNextLeft + fWidth + 4 into tNextRight
+      put -1 + fHeight -2 into tNextBottom
+      put tNextLeft, -1, tNextRight, tNextBottom into bRect
+      
+      # Set Rect
+      set the rect of btnObject to bRect
+      
+      # Next
+      add the width of btnObject to tNextLeft
+   end repeat
+   
+   # Arrange layer of btns for proper positioning on MacOS menubar
+   set the relayerGroupedControls to true
+   --
+   put the num of lines in pMenuButtonIDs into tNumLines
+   put the layer of me + 1 into tLayer
+   repeat with lineNum = tNumLines down to 1
+      put line lineNum of pMenuButtonIDs into btnID
+      put the long id of btn id btnID of me into btnObject
+      
+      # Without removing the button from the menu group
+      set the layer of btnObject to tLayer
+   end repeat
+   --
+   set the relayerGroupedControls to tOriginalRelayerGroupedControls
+   set the topleft of me to "0,0"
+   --
+   unlock screen
+   return pMenuButtonIDs
+end _LayoutMenuButtons
+
 
 --> Check
 -
@@ -24,18 +181,6 @@ end _MenuButton
 
 private function _GroupButtonNumber numOrName
    return _MenuButton (numOrName)
-   
-   -- too complex (just use names?)
-   if exists (btn numOrName of me) is false then return empty
-   put the short id of btn numOrName of me into btnID
-   --
-   repeat with btnNum = 1 to the number of buttons of me
-      put the short id of btn btnNum of me into testID
-      if testID = btnID then
-         return btnNum
-      end if
-   end repeat
-   return empty -- should not happen
 end _GroupButtonNumber
 
 getprop menuButton_NumFromName [numOrName]
@@ -47,49 +192,6 @@ getprop menuButton_NumFromName [numOrName]
    return mNum
 end menuButton_NumFromName
 
-private function _MenuTarget mTitle, tObject
-   -- put the menuButton_Target of tObject into mTarget
-   put _MenuTitleController (tObject, mTitle) into mController -- in behavior_MenuGroupDev
-   if exists (mController) is false then
-      breakpoint
-      return empty
-   end if
-   put the menu_Target [tObject] of mController into mTarget
-   if exists (mTarget) is false then
-      edit the script of mController
-      exit to top
-      
-      put the menu_Target [tObject] of mController into mTarget
-      put the long id of me into mTarget
-   end if
-   return mTarget
-end _MenuTarget
-
-setprop add_Menu [mName] mTitle
-   put the long id of the target into tObject
-   
-   # Normalize mTitle
-   _NormTargetTitle mTitle, mName, tObject
-   if item 1 of the result = "Error" then return empty
-   
-   # Check if menu exists
-   put the menuButton_Names of me into mNames
-   if mName is among the lines of mNames then return empty
-   
-   if "Help" = line -1 of mNames then
-      menuButton_CreateAtEnd mName, -1
-   else
-      menuButton_CreateAtEnd mName
-   end if
-   put the result into mButton
-   --
-   set the menuButton_Title [mName] of mButton to mTitle
-   return mButton
-end add_Menu
-
-
---> Working on
--
 getprop menu_Button
    put the long id of the target into mButton
    if word 1 of the target is not "button" then
@@ -104,71 +206,8 @@ getprop menuButton_Object [numOrName]
       return the menu_Button of the target
    else
       return _MenuButton (numOrName)
-      
-      put _GroupButtonNumber (numOrName) into mNum
-      if mNum is empty then return empty
-      --
-      put the long id of button mNum of me into mButton
    end if
-   return mButton
 end menuButton_Object
-
-getprop menuButton_Title [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   --  
-   put the uOPN ["mTitle"] of mButton into mTitle
-   if mTitle is empty then
-      -- put the short name of mButton into mTitle
-   end if
-   return mTitle
-end menuButton_Title
-
-setprop menuButton_Title [mName] mTitle
-   -- Must be called on menuButton
-   put the long id of the target into tObject
-   put the menuButton_Object of tObject into mButton
-   if exists (mButton) is false then return empty
-   
-   # Normalize mTitle
-   _NormTargetTitle mTitle, mName, mButton
-   if item 1 of the result = "Error" then return empty
-   
-   # Set Menu Button Name
-   if mName is not empty then
-      set the menuButton_Name of mButton to mName
-   end if
-   
-   # Experimental Rev
-   if mTitle = "Rev" then
-      set the menuButton_RevScript of mButton to mName
-      put the result into mText
-      return mText
-   end if
-   
-   # Live Array
-   set the uOPN ["mUpdateStyle"] of mButton to "mTitle"
-   
-   -- was set the menuButton_TextFromTitle of mButton to mTitle
-   put _MenuTarget (mTitle, tObject) into mTarget 
-   put _LiveMenuArray (mTitle, mTarget, tObject) into mArray
-   
-   # Store Menu Title
-   if mArray is not an array then
-      set the uOPN ["mTitle"] of mButton to empty
-      return empty  
-   end if
-   set the uOPN ["mTitle"] of mButton to mTitle
-   
-   # Set Menu Text
-   put mArray_ToText (mArray) into mText
-   set the text of mButton to mText
-   --
-   set the menuButton_CachedArray of mButton to mArray
-   set the script of mButton to empty
-   --
-   return mData
-end menuButton_Title
 
 getprop norm_Title [mTitle]
    put the normalized_TitleArray [mTitle] of the target into normArray
@@ -231,47 +270,6 @@ getprop normalized_TitleArray [mTitle]
    # Can't find
    return normArray
 end normalized_TitleArray
-
-private command _NormTargetTitle @mTitle, @newName, tObject
-   put newName into oldName
-   --
-   switch
-      case mTitle = "Rev"
-      case word 2 of newName = "Rev"
-         put word 1 of newName into newName
-         if rev_CheckMenuName (newName) is false then
-            return "Error, newName is not rev menu"
-         end if
-         put "Rev" into mTitle
-         break
-      default
-         put the normalized_TitleArray [mTitle] of tObject into normArray
-         put normArray ["mTitle"] into mTitle
-         if mTitle is empty then return "Error, mTitle is empty"
-         put _NameFrom (newName, mTitle) into newName
-   end switch
-   --
-   return oldName
-end _NormTargetTitle
-
-private function _NameFrom numOrName, mTitle
-   switch
-      case numOrName is empty
-         -- put mTitle into mName
-         set the itemdelimiter to "|"
-         put word 1 to -1 of item -2 of mTitle into mName
-         break
-      case numOrName is a number
-         put empty into numOrName
-         break
-         -- case (the number of words of numOrName = 2) AND (word -1 of numOrName = "Rev")
-         -- put word 1 of numOrName into mName
-         -- break
-      default
-         put numOrName into mName
-   end switch
-   return mName
-end _NameFrom
 
 private command _UpdateMenubar pForce
    mArray_ClearActiveMenuArray
@@ -337,7 +335,7 @@ getprop live_MenuArray
    put the menuButton_Title of mButton into mTitle
    if mTitle is empty then return empty
    
-   put _LiveMenuArray(mTitle, mTarget, tObject) into mArray
+   put _LiveMenuArray (mTitle, mTarget, tObject) into mArray
    return mArray
 end live_MenuArray
 
@@ -430,33 +428,6 @@ command menuButton_ScriptTextPick mItemPath, mButton
    end switch
 end menuButton_ScriptTextPick
 
-on menuPick mItemPath
-   -- put "script" into updateStyle
-   put the long id of the target into mButton
-   
-   put the menuButton_UpdateStyle of mButton into updateStyle
-   switch updateStyle
-      case "script"
-         menuButton_ScriptTextPick mItemPath, mButton
-         break
-      case "rev"
-         put the short name of mButton into mName
-         ide_RevMenubarMenuPick mName, mItemPath
-         break
-      case "cached"
-         put the menuButton_CachedArray of mButton into mArray
-         menu_DispatchTextPick mItemPath, mArray
-         put the result into hKeyLine
-         break
-      case "mTitle"
-      default
-         put the live_MenuArray of mButton into mArray
-         --
-         menu_DispatchTextPick mItemPath, mArray
-         put the result into hKeyLine
-   end switch
-end menuPick
-
 private command wasDefault
    put the menuButton_CachedArray of mButton into mArray
    if mArray is not an array then
@@ -513,26 +484,6 @@ getprop top_Sister
    end repeat
    return empty
 end top_Sister
-
-
---> Init
--
-getprop behavior_DefaultStackNames
-   -- put "behavior_ViewMenuGroup,behavior_MenuGroupCreate" into mBehavioStackNames
-   put the behavior_DefaultStackNames of me into mBehavioStackNames
-   return mBehavioStackNames
-end behavior_DefaultStackNames
-
-setprop behavior_DefaultStackNames mBehavioStackNames
-   set the behavior_DefaultStackNames of me to mBehavioStackNames
-   init_Module
-end behavior_DefaultStackNames
-
-command init_Module
-   put the behavior_DefaultStackNames of me into bStackNames
-   set the behavior_StackNames of me to bStackNames
-   lcw_Notify "Initialised behaviors for" && the name of me
-end init_Module
 
 
 --> Deps | MenuButton
@@ -641,46 +592,6 @@ getprop menuButton_UpdateStyles
    return "rev,cached,mTitle,live"
 end menuButton_UpdateStyles
 
-
---> Events
--
-on preOpenControl
-   init_Module
-   pass preOpenControl
-end preOpenControl
-
-on mouseDown
-   # When the menu is initiated (roled over menu)
-   -- no longer sent to menu-button
-   put the long id of the target into mButton   
-   --
-   if word 1 of mButton is "button" then
-      put the menuButton_Text of mButton into mText
-      set the text of mButton to mText
-   else
-      _UpdateMenubar
-   end if
-end mouseDown
-
-on resizeControl
-   _LayoutMenuButtons
-end resizeControl
-
-
---> Layout
--
-on LayoutControl
-   _LayoutMenuButtons
-end LayoutControl
-
-on refresh_Menus
-   _UpdateMenubar true
-   _LayoutMenuButtons
-end refresh_Menus
-
-
---> Props
--
 getprop use_Cached
    put the long id of the target into mButton
    put the uOPN ["use_Cached"] of mButton into someBoolean
@@ -865,76 +776,6 @@ private command _SetColour sColour
    set the backgroundcolor of this cd to sColour
    -- end if
 end _SetColour
-
-private command _LayoutMenuButtons pMenuButtonIDs
-   # Layout buttons from left to right according to order in Menu Buttons field
-   if pMenuButtonIDs is empty then
-      put the childControlIDs of me into pMenuButtonIDs
-   end if
-   
-   # Props of me
-   put the stack_Name of me into menuBarStackName
-   put the menuBar of stack menuBarStackName into tOriginalMenuBar
-   
-   # Relayer defaults
-   put the relayerGroupedControls into tOriginalRelayerGroupedControls
-   
-   set the defaultStack to menuBarStackName
-   --
-   # Arrange rect of btns for proper positioning in stack window
-   put 1 into tNextLeft
-   put the formattedHeight of btn 1 of me into fHeight
-   --
-   repeat for each line btnID in pMenuButtonIDs
-      put the long id of btn id btnID of me into btnObject
-      --
-      put the formattedWidth of btnObject into fWidth
-      -- put the formattedHeight of btnObject into fHeight
-      
-      # Work out btn rect
-      put tNextLeft + fWidth + 4 into tNextRight
-      put -1 + fHeight -2 into tNextBottom
-      put tNextLeft, -1, tNextRight, tNextBottom into bRect
-      
-      # Set Rect
-      set the rect of btnObject to bRect
-      
-      # Next
-      add the width of btnObject to tNextLeft
-   end repeat
-   
-   # Arrange layer of btns for proper positioning on MacOS menubar
-   set the relayerGroupedControls to true
-   --
-   put the num of lines in pMenuButtonIDs into tNumLines
-   put the layer of me + 1 into tLayer
-   repeat with lineNum = tNumLines down to 1
-      put line lineNum of pMenuButtonIDs into btnID
-      put the long id of btn id btnID of me into btnObject
-      
-      # Without removing the button from the menu group
-      set the layer of btnObject to tLayer
-   end repeat
-   --
-   set the relayerGroupedControls to tOriginalRelayerGroupedControls
-   return pMenuButtonIDs
-end _LayoutMenuButtons
-
-private function _NameToNum mName
-   if mName is a number then return mName
-   
-   put the childControlIDs of me into mButtonIDs
-   put 1 into mButtonNum
-   repeat for each line btnID in mButtonIDs
-      put the short name of btn ID btnID of me into testName
-      if testName = mName then
-         return mButtonNum
-      else
-         add 1 to mButtonNum
-      end if
-   end repeat
-   return empty
-end _NameToNum
 
 private command _NormaliseButtonNum @mNum, mBarData
    if mNum is a number then return true
