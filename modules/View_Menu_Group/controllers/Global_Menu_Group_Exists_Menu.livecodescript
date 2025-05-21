@@ -258,7 +258,7 @@ on menu_StoreInitData mGroup
    put module_ListBehaviorStackNames (mName) into mBehavioStackNames
    --
    module_ClearBehaviors mName
-   set the behavior_DefaultStackNames of mGroup to mBehavioStackNames
+   set the view_BehaviorStackNames of mGroup to mBehavioStackNames
 end menu_StoreInitData
 
 on submenu_Dev

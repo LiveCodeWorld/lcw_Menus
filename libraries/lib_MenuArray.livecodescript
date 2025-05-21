@@ -19,6 +19,49 @@ local LocalArray
 
 --> Working on
 -
+command handler_Do hName, hObject, pTarget, pValue
+   if exists (hObject) is false then
+      -- display_DebugHistory hName
+      return "Error, hObject does not exists."
+   end if
+   
+   put hName && "pTarget,pValue" into callCommand
+   try
+      call callCommand of hObject
+      return the result
+   catch e
+      breakpoint
+      edit the script of hObject
+   end try
+end handler_Do
+
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue  
+   
+   mArray_DoHkey hKey, paramValue
+   --
+   return hKey
+end menu_DispatchTextPick
+
+private command _SetMenuObjectDefaults @tObject, @mButton
+   if exists (tObject) is false then
+      put the long id of the target into tObject
+   end if
+   if exists (mButton) is false then
+      -- defaults to the target rather than the global menu_Button
+      if exists (the menubutton) then
+         put the long id of the menubutton into mButton
+      else
+         put the long id of the target into mButton
+      end if
+   end if
+end _SetMenuObjectDefaults
+
 on menu_Dispatch mItem
    -- "menu_Dispatch mItem" placed in the mButton target
    mArray_SetActiveItem mItem
@@ -32,20 +75,17 @@ on menu_Dispatch mItem
    end switch
 end menu_Dispatch
 
-command menu_DispatchTextPick mItem, pMenuArray, pMenuButton
-   if pMenuArray is not an array then
-      put mArray_GetActiveArray() into pMenuArray
-   end if
-   --
-   mArray_SetActiveItem mItem
-   mArray_FindActive pMenuArray, mItem, hKey, paramValue  
+command mArray_DoHkey hKey, pValue
+   -- changed "dispatch" to "call" which keeps the context of the target
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
    
    put menu_GetTopTargetObject() into tObject
-   get the name of tObject
-   mArray_DoHkey hKey, paramValue, tObject
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
    --
-   return hKey
-end menu_DispatchTextPick
+   hKey_Do hKey, mTarget, pValue
+   return the result
+end mArray_DoHkey
 
 command mArray_DoHkey hKey, pValue, tObject
    -- changed "dispatch" to "call" which keeps the context of the target
@@ -58,7 +98,7 @@ command mArray_DoHkey hKey, pValue, tObject
    return the result
 end mArray_DoHkey
 
-function mArray_FindMenuTarget mController, tObject
+-- function mArray_FindMenuTarget mController, tObject
    -- logic: target, controller, defaults to tObject
    
    if exists (tObject) is false then
@@ -158,14 +198,10 @@ private command _SubmenuBit @mArray, hName, mController, tObject, @recursionArra
    --
    put the submenu_Target [hName] of mController into submenuTarget
    if submenuTarget is empty then
-      # By default we set the tObject of submenus to the mTarget of the menu
+      # By default we "could" set the tObject of submenus to the mTarget of the menu
       -- put the menu_Target [tObject] of mController into tObject -- recurses ???
-      if exists (mTarget) then
-         put mTarget into tObject
-         menu_SetTopTargetObject tObject
-      else
-         breakpoint
-      end if
+      -- put mTarget into tObject
+      -- menu_SetTopTargetObject tObject
    else
       put submenuTarget into tObject
       menu_SetTopTargetObject tObject
@@ -686,17 +722,6 @@ command hKey_Do hKey, pTarget, pValue, pQuestion
    return the result
 end hKey_Do
 
-command handler_Do hName, hObject, pTarget, pValue
-   if exists (hObject) is false then
-      -- display_DebugHistory hName
-      return "Error, hObject does not exists."
-   end if
-   
-   put hName && "pTarget,pValue" into callCommand
-   call callCommand of hObject
-   return the result
-end handler_Do
-
 
 --> mArray | Mouse
 -
@@ -862,20 +887,6 @@ private function _FindItemArray mArray, itemText
    end repeat
    return empty
 end _FindItemArray
-
-private command _SetMenuObjectDefaults @tObject, @mButton
-   if exists (tObject) is false then
-      put the long id of the target into tObject
-   end if
-   if exists (mButton) is false then
-      -- defaults to the target rather than the global menu_Button
-      if exists (the menubutton) then
-         put the long id of the menubutton into mButton
-      else
-         put the long id of the target into mButton
-      end if
-   end if
-end _SetMenuObjectDefaults
 
 
 --> Related | Props
@@ -1395,3 +1406,4 @@ function revRuggedId pObject
    
    return tId
 end revRuggedId
+

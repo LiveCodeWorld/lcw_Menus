@@ -1,4 +1,4 @@
-﻿script "behavior_MenuGroupCreate"
+﻿script "behavior_MenuGroupCreate" with behavior "behavior_ViewMenuGroupDeps"
 --> MetaData
 -
 copyright: David Bovill
@@ -13,6 +13,126 @@ Full help text can be found on the linked wiki for the view.*/
 
 --> Working on
 -
+setprop menuButton_Array buttonArray
+   # Deconstruct ButtonArray
+   put buttonArray ["m mNum"] into mNum
+   put buttonArray ["m id"] into sID
+   put buttonArray ["m mButton"] into mButton
+   if exists (mButton) is false then
+      breakpoint -- something went wrong
+      put the long id of button mNum into mButton
+   end if
+   
+   # Name
+   put buttonArray ["m mName"] into sName
+   if sName is not empty then
+      set the menuButton_Name of mButton to sName
+   end if
+   
+   # mUpdateStyle
+   put buttonArray ["m mUpdateStyle"] into mUpdateStyle
+   if mUpdateStyle is not empty then
+      set the menuButton_UpdateStyle of mButton to mUpdateStyle
+   end if
+   
+   # mTarget
+   put buttonArray ["m mTarget"] into mTarget
+   if mTarget is not empty then
+      set the menuButton_Target of mButton to mTarget
+   end if
+   
+   # mController
+   put buttonArray ["m mController"] into mController
+   if mController is not empty then
+      set the menuButton_Controller of mButton to mController
+   end if
+   
+   put buttonArray ["m cachedArray"] into cachedArray
+   if cachedArray is an array then
+      set the menuButton_CachedArray of mButton to mController
+   end if
+   
+   # mTitle
+   put buttonArray ["m mTitle"] into mTitle
+   if mTitle is not empty then
+      set the menuButton_Title of mButton to mTitle
+   end if
+   
+   return mButton
+end menuButton_Array
+
+getprop menuButton_Array
+   put the long id of the target into mButton
+   
+   # Collect mButton Data
+   put the short id of mButton into sID
+   put the short name of mButton into sName
+   put revRuggedID (mButton) into rButton
+   put the menuButton_Controller of mButton into mController
+   put revRuggedID (mController) into rController
+   put the menuButton_Target of mButton into mTarget
+   put revRuggedID (mTarget) into rTarget
+   put the menuButton_Title of mButton into mTitle
+   put the uOPN ["mUpdateStyle"] of mButton into mUpdateStyle
+   put the menuButton_CachedArray of mButton into cachedArray
+   
+   # Construct ButtonArray
+   put rButton into buttonArray ["m mButton"]
+   put sID into buttonArray ["m id"]
+   --
+   put mNum into buttonArray ["m mNum"]
+   put sName into buttonArray ["m mName"]
+   put mTitle into buttonArray ["m mTitle"]
+   put mUpdateStyle into buttonArray ["m mUpdateStyle"]
+   --
+   put rController into buttonArray ["m mController"]
+   put rTarget into buttonArray ["m mTarget"]
+   put cachedArray into buttonArray ["m cachedArray"]
+   --
+   return buttonArray
+end menuButton_Array
+
+private command _SetMenuButtonTarget mButton, mTitle
+   /*
+   Let's get a default guess from mController
+   If getprop menu_Target of mController is not empty
+   we can always set the menuButton_Target manually later
+   */
+   
+   put _MenuTargetGuess (mTitle, mButton) into mTargetGuess
+   set the menuButton_Target of mButton to mTargetGuess
+end _SetMenuButtonTarget
+
+private function _MenuTargetGuess mTitle, mButton
+   -- only used by menuButton_Title
+   -- put the menuBar_Owner of me into cardObject
+   
+   put the menu_TargetGuess of me into tObject -- on card behavior
+   if tObject is empty then
+      breakpoint -- maybe a problem
+      put mButton into tObject
+   end if
+   
+   # Work out mTarget from Controller
+   put _MenuTitleController (mTitle, mButton) into mController
+   if exists (mController) is false then return tObject
+   --
+   put the menu_Target [tObject] of mController into mTarget   
+   return mTarget
+end _MenuTargetGuess
+
+private function _MenuTitleController mTitle, mButton
+   # Stored custom property (ie for script fork)
+   put the uOPN ["menu_Controller"] of mButton into mController
+   if exists (mController) then return mController
+   
+   # Default to stack name mTitle
+   put menu_GetGlobalController (mTitle) into mController
+   if exists (mController) is true then return mController
+   
+   return mButton
+end _MenuTitleController
+
 getprop menubar_Titles
    repeat with mNum = 1 to the number of buttons of me
       put the uOPN ["mTitle"] of btn mNum of me into mTitle
@@ -45,59 +165,16 @@ setprop menubar_Lables [pAppend] mTitles
          _SetRevMenuButtonScripts "File,Edit,Tools,Help"
          return the result
       default
-         put _TableFromNames (mTitles) into mTable
+         put menubar_TableFromNames (mTitles) into mTable
          set the menubar_Table [pAppend] of me to mTable
          return mTable
    end switch
 end menubar_Lables
 
 getprop menubar_Table [mNames]
-   put _TableFromNames (mNames, false) into mTable
+   put menubar_TableFromNames (mNames, false) into mTable
    return mTable
 end menubar_Table
-
-function _TableFromNames mNames, pForceFirst
-   replace comma with CR in mNames
-   set the itemdelimiter to "|"
-   
-   put 1 into btnNum
-   if pForceFirst is true then
-      # Rewrite first mName/mTitle
-      put the module_MenuTitle of me into mTitle
-      put word 1 to -1 of item -2 of mTitle into mName
-      -- put line 1 of mNames into mName
-      put mName & ":" && mTitle & CR into mTable
-      delete line 1 of mNames
-      add 1 to btnNum
-   end if
-   
-   repeat for each line mName in mNames
-      switch
-         case mName contains "|"
-            put mName into mTitle
-            put word 1 to -1 of item -2 of mTitle into mName
-            put mName & ":" && mTitle into mLine
-            break
-         default
-            put the normalized_TitleArray [mName] of me into normArray
-            put normArray ["mTitle"] into mTitle
-            if mTitle is empty then
-               if exists (btn btnNum of me) is false then
-                  breakpoint
-               else
-                  put the long id of btn btnNum of me into mButton
-                  put the menuButton_Title of mButton into mTitle
-               end if
-            end if
-            put mName & ":" && mTitle into mLine
-      end switch
-      --
-      put mLine & CR after mTable
-      add 1 to btnNum
-   end repeat
-   delete char -1 of mTable
-   return mTable
-end _TableFromNames
 
 function _TableFromTitles mTitles
    replace comma with CR in mTitles
@@ -158,7 +235,9 @@ setprop menubar_Table [pAppend] mTable
       if it is among the items of "rev,live,mTitle,script" then
          put it into mUpdateStyle
          breakpoint
-      else if it is not empty then
+      else if it is empty then
+         put "mTitle" into mUpdateStyle
+      else
          put it into mTitle
       end if
       
@@ -179,11 +258,14 @@ setprop menubar_Table [pAppend] mTable
       end switch
       put mButton & CR after mButtons
       
-      if mUpdateStyle is not empty then
-         set the menuButton_UpdateStyle of mButton to mUpdateStyle
-      end if
-      
+      # Set
       set the menuButton_Title [mName] of mButton to mTitle
+      --
+      _SetMenuButtonTarget mButton, mTitle
+      --
+      -- from ducktyping
+      set the menuButton_UpdateStyle of mButton to mUpdateStyle
+      --
    end repeat
    delete char -1 of mButtons
    
@@ -255,31 +337,13 @@ setprop menu_Controller mController
    set the uOPN ["menu_Controller"] of mButton to mController
 end menu_Controller
 
-private function _MenuTitleController mTitle, mButton
-   # Stored custom property (ie for script fork)
-   put the uOPN ["menu_Controller"] of mButton into mController
-   if exists (mController) then return mController
-   
-   # Default to stack name mTitle
-   put menu_GetGlobalController (mTitle) into mController
-   if exists (mController) is true then return mController
-   
-   return mButton
-end _MenuTitleController
-
-private function _MenuTarget mTitle, mButton
-   put _MenuTitleController (mTitle, mButton) into mController
-   if exists (mController) is false then return empty
-   --
-   put the menu_Target [mButton] of mController into mTarget
-   return mTarget
-end _MenuTarget
-
 
 --> MenuButton | mTitle
 -
 setprop menuButton_Title [mName] mTitle
    -- Must be called on menuButton
+   -- uses put _MenuTargetGuess (mTitle, mButton) into mTarget
+   
    put the long id of the target into tObject
    put the menuButton_Object of tObject into mButton
    if exists (mButton) is false then return empty
@@ -306,8 +370,18 @@ setprop menuButton_Title [mName] mTitle
          set the script of mButton to empty
          
          # Set mTarget
-         put _MenuTarget (mTitle, mButton) into mTarget
-         set the uOPN ["mTarget"] of mButton to mTarget
+         -- do this separately???
+         /*
+         set the menuButton_Target of mButton to mTarget
+         
+         -- put _MenuTargetGuess (mTitle, mButton) into mTarget
+         -- set the uOPN ["mTarget"] of mButton to mTarget
+         -- put the menuButton_Target of mButton into mTarget
+         -- if mTarget is empty then
+         if exists (mTarget) then
+            breakpoint -- we only use fixed mTarget objects for each menuButton ???
+         end if
+         */
          
          # Check live_MenuArray
          put the live_MenuArray of mButton into mArray
@@ -424,85 +498,6 @@ setprop menuButton_NameAndTitle [mName] mTitle
    put the result into mButton
    return mButton
 end menuButton_NameAndTitle
-
-setprop menuButton_Array buttonArray
-   # Deconstruct ButtonArray
-   put buttonArray ["m mNum"] into mNum
-   put buttonArray ["m id"] into sID
-   put buttonArray ["m mButton"] into mButton
-   if exists (mButton) is false then
-      breakpoint -- something went wrong
-      put the long id of button mNum into mButton
-   end if
-   
-   # Name
-   put buttonArray ["m mName"] into sName
-   if sName is not empty then
-      set the menuButton_Name of mButton to sName
-   end if
-   
-   # mUpdateStyle
-   put buttonArray ["m mUpdateStyle"] into mUpdateStyle
-   if mUpdateStyle is not empty then
-      set the menuButton_UpdateStyle of mButton to mUpdateStyle
-   end if
-   
-   # mTarget
-   put buttonArray ["m mTarget"] into mTarget
-   if mTarget is not empty then
-      set the menuButton_Target of mButton to mTarget
-   end if
-   
-   # mController
-   put buttonArray ["m mController"] into mController
-   if mController is not empty then
-      set the menuButton_Controller of mButton to mController
-   end if
-   
-   put buttonArray ["m cachedArray"] into cachedArray
-   if cachedArray is an array then
-      set the menuButton_CachedArray of mButton to mController
-   end if
-   
-   # mTitle
-   put buttonArray ["m mTitle"] into mTitle
-   if mTitle is not empty then
-      set the menuButton_Title of mButton to mTitle
-   end if
-   
-   return mButton
-end menuButton_Array
-
-getprop menuButton_Array
-   put the long id of the target into mButton
-   
-   # Collect mButton Data
-   put the short id of mButton into sID
-   put the short name of mButton into sName
-   put revRuggedID (mButton) into rButton
-   put the menuButton_Controller of mButton into mController
-   put revRuggedID (mController) into rController
-   put the menuButton_Target of mButton into mTarget
-   put revRuggedID (mTarget) into rTarget
-   put the menuButton_Title of mButton into mTitle
-   put the uOPN ["mUpdateStyle"] of mButton into mUpdateStyle
-   put the menuButton_CachedArray of mButton into cachedArray
-   
-   # Construct ButtonArray
-   put rButton into buttonArray ["m mButton"]
-   put sID into buttonArray ["m id"]
-   --
-   put mNum into buttonArray ["m mNum"]
-   put sName into buttonArray ["m mName"]
-   put mTitle into buttonArray ["m mTitle"]
-   put mUpdateStyle into buttonArray ["m mUpdateStyle"]
-   --
-   put rController into buttonArray ["m mController"]
-   put rTarget into buttonArray ["m mTarget"]
-   put cachedArray into buttonArray ["m cachedArray"]
-   --
-   return buttonArray
-end menuButton_Array
 
 
 --> MenuButton | New and Delete

@@ -17,7 +17,8 @@ local LocalArray
 
 --> Menu | Props
 -
-getprop menu_Target [mButton]
+getprop menu_Target [tObject]
+   put display_GetObject (tObject) into mButton
    return mButton
 end menu_Target
 

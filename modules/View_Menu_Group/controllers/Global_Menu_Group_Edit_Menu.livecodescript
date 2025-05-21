@@ -32,7 +32,7 @@ return exists (dView)
 end menu_CheckTarget
 
 -- command actionUndo
-textUndo
+textUndo -- for script
 end actionUndo
 
 -- command actionRedo
@@ -255,43 +255,101 @@ private function _HasCardBehavior wikiView
    return wbObject = bObject
 end _HasCardBehavior
 
+private function _SafeToSnip
+   if the selectedField is empty then return false
+   if the selectedObjects is not empty then return false
+   if the selectedImage is not empty then return false
+   if the lockText of the selectedField is true then return false
+   return true
+end _SafeToSnip
+
+private function _SafeToPaste
+   set the defaultStack to the topStack
+   # Can't paste onto an IDE stack or a stack with cantModify set to true
+   if the clipBoard is not text and (the mode of the topStack is not 1 or the cantModify of the topStack) then
+      beep
+      return false
+   end if
+   
+   if the clipBoard is "objects" then return false
+   if the clipBoard is "image" then return false
+   
+   return true
+end _SafeToPaste
+
 
 --> Global | Menu | Group | Edit | Menu
 -
-on menu_Undo dView
-   ide_RevMenubarMenuPick "Redo", "Undo"
-end menu_Undo
+on menu_Undo.Z dView
+   -- ide_RevMenubarMenuPick "Redo", "Undo"
+   -- revIDEUndo
+   if _SafeToPaste() then
+      undo
+   end if
+end menu_Undo.Z
 
-on menu_Redo dView
-   ide_RevMenubarMenuPick "Redo", "Cut"
+-- on menu_Redo dView
+-- ide_RevMenubarMenuPick "Redo", "Cut"
+undo
 end menu_Redo
 
 private on _
 end _
 
 on menu_Cut.X dView
-   ide_RevMenubarMenuPick "Edit", "Cut"
+   -- ide_RevMenubarMenuPick "Edit", "Cut"
+   -- revIDECut
+   if _SafeToSnip() then
+      cut
+   end if
 end menu_Cut.X
 
 on menu_Copy.C dView
-   ide_RevMenubarMenuPick "Edit", "Copy"
+   -- ide_RevMenubarMenuPick "Edit", "Copy"
+   -- revIDECopy
+   if _SafeToSnip() then
+      copy
+   end if
 end menu_Copy.C
 
 on menu_Paste.V dView
-   ide_RevMenubarMenuPick "Edit", "Paste"
+   -- ide_RevMenubarMenuPick "Edit", "Paste"
+   -- revIDEPaste
+   lock messages
+   if _SafeToPaste() then
+      -- MW-2012-02-10: [[ Bug ]] Make sure the IDE doesn't interfere with the textChanged message.
+      lock screen
+      paste
+      unlock screen
+   end if
+   unlock messages
 end menu_Paste.V
+
+on menu_PasteUnformatted
+   put the clipBoardData["text"] into the selection
+end menu_PasteUnformatted
 
 private on __
 end __
 
-on menu_SelectAll.A dView
-   -- actionSelectAll
-   ide_RevMenubarMenuPick "Edit", "Select All"
+-- on menu_SelectAll.A dView
+-- actionSelectAll
+ide_RevMenubarMenuPick "Edit", "Select All"
 end menu_SelectAll.A
 
--- on menu_Revert dView
-put the params
-end menu_Revert
+on menu_Clear
+   -- revIDEActionClear
+   if _SafeToSnip() then
+      lock screen
+      lock messages
+      set the defaultStack to the topStack
+      delete
+      unlock messages
+      unlock screen
+   else
+      
+   end if
+end menu_Clear
 
 private on ___
 end ___
@@ -336,9 +394,9 @@ end menu_MenuGroupBehavior
 private on ____
 end ____
 
-on menu_MessageBox.M
+on menu_MessageBox
    revIDETogglePalette "message box"
-end menu_MessageBox.M
+end menu_MessageBox
 
 getprop disabled_MessageBox
    return false

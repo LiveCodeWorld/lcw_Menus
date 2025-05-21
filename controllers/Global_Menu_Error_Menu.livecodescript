@@ -38,6 +38,18 @@ getprop disabled_DisplayMenuError
    end if
 end disabled_DisplayMenuError
 
+on mDoubleUp_MenuError displayView, someValue
+   breakpoint
+   switch the top_Key of displayView
+      case mTitle
+         menu_Edit someValue
+         break
+      default
+         put the selected_Path of displayView into sPath
+         put the title_Text of displayView into someTitle
+   end switch
+end mDoubleUp_MenuError
+
 private function _MenuErrorData dView
    if exists (dView) then
       put the displayed_Data of dView into errorData

@@ -13,6 +13,25 @@ This behavior displays and updates a dynamic cross-platform menubar.
 
 --> Working on
 -
+private command _UpdateMenubar pForce
+   mArray_ClearActiveMenuArray
+   --
+   put the number of buttons of me into maxNum
+   repeat with mNum = 1 to maxNum
+      put the long id of btn mNum of me into mButton
+      --
+      try
+         _UpdateMenuButton mButton, pForce
+      catch sError
+         breakpoint
+         -- put the menuButton_Array of mButton into buttonArray
+         -- display_Data buttonArray, the name of mButton, "the menuButton_Array"
+         -- put buttonArray ["m mTitle"] into mTitle
+         -- set the menuButton_Title of mButton to mTitle
+      end try
+   end repeat
+end _UpdateMenubar
+
 getprop menuButton_Title [numOrName]
    put the menuButton_Object [numOrName] of the target into mButton
    if exists (mButton) is false then return empty
@@ -21,22 +40,74 @@ getprop menuButton_Title [numOrName]
    return mTitle
 end menuButton_Title
 
+getprop menuButton_Target [numOrName]
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   
+   put the uOPN ["mTarget"] of mButton into mTarget
+   if exists (mTarget) is false then
+      put _DefaultMenuTarget() into mTarget
+   end if
+   return mTarget
+end menuButton_Target
+
+setprop menuButton_Target [numOrName] mTarget
+   put the menuButton_Object [numOrName] of the target into mButton
+   if exists (mButton) is false then return empty
+   --
+   set the uOPN ["mTarget"] of mButton to mTarget
+   return the result
+end menuButton_Target
+
+
+--> Live
+-
+getprop live_MenuArray
+   # Needs to be called on an mButto that has menuButton_Title an menuButton_Target set
+   -- requires lib_MenuArray
+   
+   put the long id of the target into mButton
+   if word 1 of mButton is not "button" then
+      breakpoint
+      return empty
+   end if
+   --
+   put the menuButton_Target of mButton into tObject
+   if tObject is empty then
+      breakpoint
+      return empty
+   end if
+   --
+   put the menuButton_Title of mButton into mTitle
+   if mTitle is empty then
+      -- breakpoint
+      return empty
+   end if
+   
+   # Get live mData
+   mArray_ClearActiveMenuArray
+   menu_SetTopTargetObject tObject
+   put mArray_FromTitleTable (mTitle, tObject) into mArray -- in lib_MenuArray
+   return mArray
+end live_MenuArray
+
 
 --> Init
 -
-getprop behavior_DefaultStackNames
-   -- put "behavior_ViewMenuGroup,behavior_MenuGroupCreate" into mBehavioStackNames
-   put the behavior_DefaultStackNames of me into mBehavioStackNames
-   return mBehavioStackNames
-end behavior_DefaultStackNames
+getprop view_BehaviorStackNames
+   put the uOPN ["view_BehaviorStackNames"] of me into mBehaviorStackNames
+   return mBehaviorStackNames
+end view_BehaviorStackNames
 
-setprop behavior_DefaultStackNames mBehavioStackNames
-   set the behavior_DefaultStackNames of me to mBehavioStackNames
-   init_Module
-end behavior_DefaultStackNames
+setprop view_BehaviorStackNames mBehaviorStackNames
+   set the uOPN ["view_BehaviorStackNames"] of me to mBehaviorStackNames
+   
+   # Send-in-time to prevent behavior setting behavior
+   send "init_Module" to me in 2 ticks
+end view_BehaviorStackNames
 
 command init_Module
-   put the behavior_DefaultStackNames of me into bStackNames
+   put the view_BehaviorStackNames of me into bStackNames
    set the behavior_StackNames of me to bStackNames
    lcw_Notify "Initialised behaviors for" && the name of me
 end init_Module
@@ -52,7 +123,12 @@ end preOpenControl
 on mouseDown
    # When the menu is initiated (roled over menu)
    -- no longer sent to menu-button
-   put the long id of the target into mButton   
+   put the long id of the target into mButton
+   
+   if the optionKey is "Down" then
+      breakpoint
+      set the menuButton_Target of mButton to empty
+   end if
    --
    if word 1 of mButton is "button" then
       put the menuButton_Text of mButton into mText
@@ -80,17 +156,29 @@ on menuPick mItemPath
          break
       case "cached"
          put the menuButton_CachedArray of mButton into mArray
-         menu_DispatchTextPick mItemPath, mArray, mButton
+         _DispatchTextPick mItemPath, mArray, mButton
          put the result into hKeyLine
          break
       case "mTitle"
       default
          put the live_MenuArray of mButton into mArray
          --
-         menu_DispatchTextPick mItemPath, mArray, mButton
+         _DispatchTextPick mItemPath, mArray, mButton
          put the result into hKeyLine
    end switch
 end menuPick
+
+private command _DispatchTextPick mItemPath, mArray, mButton
+   -- menubar version of _DispatchTextPick
+   put the menuButton_Target of mButton into mTarget
+   --
+   -- put mArray_GetActiveArray() into menuArray
+   mArray_SetActiveItem mItemPath
+   mArray_FindActive mArray, mItemPath, hKey, paramValue
+   mArray_UnMarshal hKey
+   --
+   hKey_Do hKey, mTarget, paramValue
+end _DispatchTextPick
 
 
 --> Layout
@@ -271,26 +359,8 @@ getprop normalized_TitleArray [mTitle]
    return normArray
 end normalized_TitleArray
 
-private command _UpdateMenubar pForce
-   mArray_ClearActiveMenuArray
-   --
-   put the number of buttons of me into maxNum
-   repeat with mNum = 1 to maxNum
-      put the long id of btn mNum of me into mButton
-      --
-      try
-         _UpdateMenuButton mButton, pForce
-      catch sError
-         put the menuButton_Array of mButton into buttonArray
-         -- display_Data buttonArray, the name of mButton, "the menuButton_Array"
-         put buttonArray ["m mTitle"] into mTitle
-         -- set the menuButton_Title of mButton to mTitle
-      end try
-   end repeat
-end _UpdateMenubar
 
-
---> Init
+--> MenuButton | Text
 -
 getprop menuButton_Text [numOrName]
    put the long id of the target into tObject
@@ -324,30 +394,6 @@ getprop menuButton_LiveText [numOrName]
 end menuButton_LiveText
 
 
---> Live
--
-getprop live_MenuArray
-   put the long id of the target into mButton
-   put the menuBar_Owner of me into tObject
-   if word 1 of mButton is not "button" then return empty
-   put the menuButton_Target of mButton into mTarget
-   
-   put the menuButton_Title of mButton into mTitle
-   if mTitle is empty then return empty
-   
-   put _LiveMenuArray (mTitle, mTarget, tObject) into mArray
-   return mArray
-end live_MenuArray
-
-private function _LiveMenuArray mTitle, mTarget, tObject
-   # Get live mData
-   mArray_ClearActiveMenuArray
-   menu_SetTopTargetObject tObject
-   put mArray_FromTitleTable (mTitle, mTarget) into mArray
-   return mArray
-end _LiveMenuArray
-
-
 --> Module
 -
 getprop module_Menu
@@ -363,26 +409,6 @@ getprop module_Name
    replace "_" with "|" in moduleName
    return moduleName
 end module_Name
-
-command menu_NormalizeTitle @mTitle, pMakePretty
-   set the itemdelimiter to "|"
-   repeat for each item someItem in mTitle
-      if pMakePretty is true then
-         put empty into prettyItem
-         repeat for each word someWord in someItem
-            put toUpper (char 1 of someWord) into char 1 of someWord
-            put someWord & space after prettyItem
-         end repeat
-         put char 1 to -2 of prettyItem into someText
-      else
-         put word 1 to -1 of someItem into someText
-      end if
-      put space & someText & space & "|" after normalizedMenuTitle
-   end repeat
-   delete char -2 to -1 of normalizedMenuTitle
-   delete char 1 of normalizedMenuTitle
-   put normalizedMenuTitle into mTitle
-end menu_NormalizeTitle
 
 function module_ConstructGlobalMenuTitle moduleStackName, pMakePretty
    -- see "menu_GlobalTitleFromViewName"
@@ -410,7 +436,7 @@ command menuButton_ScriptTextPick mItemPath, mButton
    put the result into hKey
    
    if the optionKey is "down" then
-      hkey_OptionEdit hKey
+      hkey_Edit hKey
       return "Option edited:" && hKey
    end if
    
@@ -427,43 +453,6 @@ command menuButton_ScriptTextPick mItemPath, mButton
          break
    end switch
 end menuButton_ScriptTextPick
-
-private command wasDefault
-   put the menuButton_CachedArray of mButton into mArray
-   if mArray is not an array then
-      #  lets try and re-index and cache again
-      put the menuButton_Name of mButton into mName
-      lcw_AnswerSheet "Something went wrong. Re-index menu '[[var]]'?", mButton, mName
-      --
-      breakpoint
-      put the live_MenuArray of mButton into mArray
-      set the menuButton_CachedArray of mButton to mArray
-   end if
-   
-   menu_DispatchTextPick mItemPath, mArray
-   --
-   put the live_MenuArray of mButton into mArray
-   set the menuButton_CachedArray of mButton to mArray
-end wasDefault
-
-getprop menuButton_Target [numOrName]
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   
-   put the uOPN ["mTarget"] of mButton into mTarget
-   if exists (mTarget) is false then
-      put _DefaultMenuTarget() into mTarget
-   end if
-   return mTarget
-end menuButton_Target
-
-setprop menuButton_Target [numOrName] mTarget
-   put the menuButton_Object [numOrName] of the target into mButton
-   if exists (mButton) is false then return empty
-   --
-   set the uOPN ["mTarget"] of mButton to mTarget
-   return the result
-end menuButton_Target
 
 private function _DefaultMenuTarget
    put the top_Sister of me into sTarget
@@ -488,6 +477,37 @@ end top_Sister
 
 --> Deps | MenuButton
 -
+command menuBar_Refresh
+   put the menuBar of this stack into tOriginalMenuBar
+   put the defaultMenuBar into tOriginalDefaultMenuBar
+   
+   set the menuBar of this stack to empty
+   set the defaultMenuBar to ide_DefaultMenuGroup()
+   --
+   set the menuBar of this stack to tOriginalMenuBar
+   set the defaultMenuBar to tOriginalDefaultMenuBar
+end menuBar_Refresh
+
+command menu_NormalizeTitle @mTitle, pMakePretty
+   set the itemdelimiter to "|"
+   repeat for each item someItem in mTitle
+      if pMakePretty is true then
+         put empty into prettyItem
+         repeat for each word someWord in someItem
+            put toUpper (char 1 of someWord) into char 1 of someWord
+            put someWord & space after prettyItem
+         end repeat
+         put char 1 to -2 of prettyItem into someText
+      else
+         put word 1 to -1 of someItem into someText
+      end if
+      put space & someText & space & "|" after normalizedMenuTitle
+   end repeat
+   delete char -2 to -1 of normalizedMenuTitle
+   delete char 1 of normalizedMenuTitle
+   put normalizedMenuTitle into mTitle
+end menu_NormalizeTitle
+
 command menuButton_MouseDown mButton
    put the module_Menu of me into mTitle
    -- put "Global | Menu | Button | Menu" into mTitle
@@ -552,20 +572,6 @@ getprop module_ShortFolder
    put item -1 of moduleFolder into shortFolder
    return shortFolder
 end module_ShortFolder
-
-
---> Dep
--
-command menuBar_Refresh
-   put the menuBar of this stack into tOriginalMenuBar
-   put the defaultMenuBar into tOriginalDefaultMenuBar
-   
-   set the menuBar of this stack to empty
-   set the defaultMenuBar to ide_DefaultMenuGroup()
-   --
-   set the menuBar of this stack to tOriginalMenuBar
-   set the defaultMenuBar to tOriginalDefaultMenuBar
-end menuBar_Refresh
 
 
 --> MenuButton | Update
@@ -763,34 +769,6 @@ private command _SetButtonText mButton, mNum
    set the text of mButton to mText
    set the showBorder of mButton to false
 end _SetButtonText
-
-private function _Error
-   return empty
-end _Error
-
-private command _SetColour sColour
-   -- put the graphic_View of me into gView
-   -- if exists (gView) then
-   if sColour = "random" then put colour_GetRandom() into sColour
-   --
-   set the backgroundcolor of this cd to sColour
-   -- end if
-end _SetColour
-
-private command _NormaliseButtonNum @mNum, mBarData
-   if mNum is a number then return true
-   
-   put mNum into mName
-   repeat with itemNum = 1 to item 2 of the extents of mBarData
-      put mBarData [itemNum]["mName"] into testName
-      if testName = mName then
-         put itemNum into mNum
-         return true
-      end if
-   end repeat
-   put 0 into mNum
-   return false
-end _NormaliseButtonNum
 
 private command _NormalizeClickTarget @tObject
    if exists (tObject) then

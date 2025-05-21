@@ -169,6 +169,20 @@ end menu_EditViewBehavior
 private on _____
 end _____
 
+on menu_SetLines indexView
+   put the displayed_Lines of indexView into sLines
+   --
+   replace CR with comma in sLines
+   put lcw_Ask ("Edit lines...", sLines, indexView) into sLines
+   replace comma with CR in sLines
+   --
+   set the displayed_Lines of indexView to sLines 
+end menu_SetLines
+
+on menu_LayoutControl indexView
+   dispatch "LayoutControl" to indexView
+end menu_LayoutControl
+
 on submenu_Dev
    return menu_DevTitle()
 end submenu_Dev

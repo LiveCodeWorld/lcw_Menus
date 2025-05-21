@@ -15,10 +15,52 @@ version: 0.2
 -
 local LocalArray
 
-
 --> Working on
 -
--- function mArray_FindMenuTarget mController, tObject
+on menuPick mItem
+   menu_DispatchTextPick mItem
+end menuPick
+
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue
+   mArray_DoHkey hKey, paramValue
+   --
+   return hKey
+end menu_DispatchTextPick
+
+command menu_DispatchTextPick mItem, pMenuArray
+   if pMenuArray is not an array then
+      put mArray_GetActiveArray() into pMenuArray
+   end if
+   --
+   mArray_SetActiveItem mItem
+   mArray_FindActive pMenuArray, mItem, hKey, paramValue  
+   
+   put menu_GetTopTargetObject() into tObject
+   get the name of tObject
+   mArray_DoHkey hKey, paramValue, tObject
+   --
+   return hKey
+end menu_DispatchTextPick
+
+command mArray_DoHkey hKey, pValue
+   -- changed "dispatch" to "call" which keeps the context of the target
+   mArray_UnMarshal hKey
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   
+   put menu_GetTopTargetObject() into tObject
+   put mArray_FindMenuTarget (mController, tObject) into mTarget
+   --
+   hKey_Do hKey, mTarget, pValue
+   return the result
+end mArray_DoHkey
+
+function mArray_FindMenuTarget mController, tObject
    -- logic: controller, target (called for every nested menu)
    
    if exists (tObject) is false then
@@ -38,17 +80,33 @@ local LocalArray
    end if
 end mArray_FindMenuTarget
 
-command menu_DispatchTextPick mItem, pMenuArray
-   if pMenuArray is not an array then
-      put mArray_GetActiveArray() into pMenuArray
+command mArray_MouseDown mTitle, pMenuButton, pTargetObject
+   if pTargetObject is empty then
+      put the long id of the target into pTargetObject
+   end if
+   if pMenuButton is empty then
+      -- defaults to the target rather than the global menu_Button
+      put pTargetObject into pMenuButton
    end if
    --
-   mArray_SetActiveItem mItem
-   mArray_FindActive pMenuArray, mItem, hKey, paramValue   
-   mArray_DoHkey hKey, paramValue
+   mArray_ClearActiveMenuArray
+   menu_SetTopTargetObject pTargetObject
    --
-   return hKey
-end menu_DispatchTextPick
+   switch word 1 of pMenuButton
+      case "button"
+         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
+         put mArray_ToText (mArray) into mText
+         --
+         set the text of pMenuButton to mText
+         --
+         -- mArray_SetActive mArray, mText, mTitle
+         return mArray
+      case "widget"
+         break
+      default
+         exit to top
+   end switch
+end mArray_MouseDown
 
 function menu_GetGlobalController mTitle
    if exists (stack mTitle) then
@@ -57,6 +115,35 @@ function menu_GetGlobalController mTitle
       return empty
    end if
 end menu_GetGlobalController
+
+command hKey_Do hKey, pTarget, pValue, pQuestion
+   if the optionKey is "Down" then
+      if pQuestion is empty then
+         put "Edit script of the handler '[[var]]'?" into sQuestion
+      end if
+      --
+      put scriptEditor_GetTop() into stackObject
+      lcw_AnswerSheet sQuestion, stackObject, hKey
+      --
+      hkey_Edit hKey
+      return empty
+   end if
+   
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   handler_Do hName, hObject, pTarget, pValue
+   return the result
+end hKey_Do
+
+command handler_Do hName, hObject, pTarget, pValue
+   if exists (hObject) is false then
+      -- display_DebugHistory hName
+      return "Error, hObject does not exists."
+   end if
+   
+   put hName && "pTarget,pValue" into callCommand
+   call callCommand of hObject
+   return the result
+end handler_Do
 
 
 --> Props | Tidied
@@ -184,38 +271,8 @@ getprop view_Object
 end view_Object
 
 
--->mArray | Do
+--> mArray | Do
 -
-command mArray_DoHkey hKey, pValue
-   -- changed "dispatch" to "call" which keeps the context of the target
-   mArray_UnMarshal hKey
-   hkeyLine_Deconstruct hKey, hName, hType, mController
-   
-   put menu_GetTopTargetObject() into tObject
-   put mArray_FindMenuTarget (mController, tObject) into mTarget
-   --
-   hKey_Do hKey, mTarget, pValue
-   return the result
-end mArray_DoHkey
-
-command hKey_Do hKey, pTarget, pValue, pQuestion
-   if the optionKey is "Down" then
-      if pQuestion is empty then
-         put "Edit script of the handler '[[var]]'?" into sQuestion
-      end if
-      --
-      put scriptEditor_GetTop() into stackObject
-      lcw_AnswerSheet sQuestion, stackObject, hKey
-      --
-      hkey_Edit hKey
-      return empty
-   end if
-   
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   handler_Do hName, hObject, pTarget, pValue
-   return the result
-end hKey_Do
-
 command hkey_Edit hKey
    if hKey is empty then
       return "Error, hkey is empty"
@@ -284,10 +341,6 @@ on mouseDown
          mArray_MouseDown mTitle, mButton
    end switch   
 end mouseDown
-
-on menuPick menuPath
-   menu_DispatchTextPick menuPath
-end menuPick
 
 on resizeControl
    put the rect of me into vRect
@@ -1094,17 +1147,6 @@ function folder_ListStackPaths someFolder
    return stackFilePaths
 end folder_ListStackPaths
 
-command handler_Do hName, hObject, pTarget, pValue
-   if exists (hObject) is false then
-      -- display_DebugHistory hName
-      return "Error, hObject does not exists."
-   end if
-   
-   put hName && "pTarget,pValue" into callCommand
-   call callCommand of hObject
-   return the result
-end handler_Do
-
 function hkey_Construct hName, hType, tObject
    if exists (tObject) is false then
       put "Missing" into hObject
@@ -1481,34 +1523,6 @@ end mArray_GetParamValues
 command mArray_Marshal @hkeyController
    replace "|" with "\" in hkeyController
 end mArray_Marshal
-
-command mArray_MouseDown mTitle, pMenuButton, pTargetObject
-   if pTargetObject is empty then
-      put the long id of the target into pTargetObject
-   end if
-   if pMenuButton is empty then
-      -- defaults to the target rather than the global menu_Button
-      put pTargetObject into pMenuButton
-   end if
-   --
-   mArray_ClearActiveMenuArray
-   menu_SetTopTargetObject pTargetObject
-   --
-   switch word 1 of pMenuButton
-      case "button"
-         put mArray_FromTitleTable (mTitle, pTargetObject) into mArray -- dispatches "menu_Init"
-         put mArray_ToText (mArray) into mText
-         --
-         set the text of pMenuButton to mText
-         --
-         -- mArray_SetActive mArray, mText, mTitle
-         return mArray
-      case "widget"
-         break
-      default
-         exit to top
-   end switch
-end mArray_MouseDown
 
 command mArray_PullDown mTitle, pMenuButton, pTargetObject
    if exists (pTargetObject) is false then

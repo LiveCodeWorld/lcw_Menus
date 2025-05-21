@@ -32,12 +32,21 @@ on mDoubleUp_ProjectTree displayView, shortFile
    set the itemDelimiter to comma
    
    switch
-      case fExt = "json"
-         display_JsonFile sFile
-         put the result into dView
       case shortFile = "README.html"
          display_TiddlyFile sFile
          break
+      case fExt = "md"
+      case fExt = "html"
+         code_EditFile sFile
+         break
+      case fExt = "array"
+         display_ArrayFile sFile
+         put the result into dView
+         set the displayed_ModuleFolder of dView to moduleFolder
+         break    
+      case fExt = "json"
+         display_JsonFile sFile
+         put the result into dView
       case item 1 of sPath = "Modules"
          put shortFile into stackName
          --
@@ -150,6 +159,16 @@ end insert_Behavior
 
 private on _
 end _
+
+on menu_Readme shortFolder
+   breakpoint
+end menu_Readme
+
+on menu_RevealProjectFolder shortFolder
+   put LocalArray ["oProjectName"] into projectName
+   put project_GetFolder(projectName) into pFolder
+   finder_Reveal pFolder
+end menu_RevealProjectFolder
 
 on menu_Edit
    edit the script of me
