@@ -48,17 +48,22 @@ on mDoubleUp_ProjectTree displayView, shortFile
          display_JsonFile sFile
          put the result into dView
       case item 1 of sPath = "Modules"
-         put shortFile into stackName
+         -- put shortFile into stackName
+         put the short name of stack sFile into stackName
          --
-         display_ModuleTools stackName
-         
-         show stack stackName
-         toplevel stack stackName
-         
-         if the shiftKey is "Down" then
-            put the name of stack stackName into sObject
-            display_StackDeps sObject
+         if exists (stack stackName) is false then
+            breakpoint
+         else
+            show stack stackName
+            toplevel stack stackName
+            
+            if the shiftKey is "Down" then
+               put the name of stack stackName into sObject
+               display_StackDeps sObject
+            end if
          end if
+         
+         display_ModuleTools stackName
          break
       default
          if exists (stack sFile) is false then
@@ -170,6 +175,40 @@ on menu_RevealProjectFolder shortFolder
    finder_Reveal pFolder
 end menu_RevealProjectFolder
 
-on menu_Edit
-   edit the script of me
-end menu_Edit
+private on __
+end __
+
+on menu_CheckModuleStacks shortFolder
+   put _ModulePath() into mPath
+   if exists (stack mPath) is false then
+      breakpoint
+   end if
+   put the short name of stack mPath into moduleName
+   --
+   put LocalArray ["oProjectName"] into projectName
+   --
+   module_CheckStacks moduleName, projectName
+end menu_CheckModuleStacks
+
+getprop disabled_CheckModuleStacks [shortFolder]
+   return shortFolder is not "modules"
+end disabled_CheckModuleStacks
+
+private function _ModulePath
+   put LocalArray ["displayView"] into displayView
+   --
+   put the selected_Path of displayView into sPath
+   put item 2 of sPath into moduleName
+   --
+   put LocalArray ["oProjectName"] into projectName
+   --
+   put project_GetFolder (projectName) into projectFolder
+   put module_ConstructHomeStackPath (moduleName, projectFolder) into mPath
+   --
+   if there is a stack mPath then
+      return mPath
+   else
+      return empty
+   end if
+   return stackPath
+end _ModulePath

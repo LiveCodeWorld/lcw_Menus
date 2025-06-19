@@ -30,8 +30,7 @@ command handler_Do hName, hObject, pTarget, pValue
       call callCommand of hObject
       return the result
    catch e
-      breakpoint
-      edit the script of hObject
+      -- edit the script of hObject
    end try
 end handler_Do
 
@@ -127,7 +126,9 @@ function mArray_FindMenuTarget mController, tObject
    --
    if exists (mController) is true then
       put the menu_Target [tObject] of mController into mTarget
-      if mTarget is not empty then return mTarget
+      if mTarget is not empty then
+         return mTarget
+      end if
    end if
    --
    put the menu_Target [tObject] of tObject into mTarget
@@ -138,7 +139,7 @@ function mArray_FindMenuTarget mController, tObject
    end if
 end mArray_FindMenuTarget
 
-function mArray_FindMenuTarget mController, tObject
+-- function mArray_FindMenuTarget mController, tObject
    if exists (tObject) then
       put the menu_Target of tObject into mTarget
       if mTarget is not empty then
@@ -1313,6 +1314,7 @@ function text_StartsWithCaps someText
    end if
 end text_StartsWithCaps
 
+/*
 # Parameters
 #   pObject : either a long id or a valid reference to an object.
 # Returns
@@ -1331,7 +1333,7 @@ function revRuggedId pObject
       put the long id of pObject into tObject
    else
       put pObject into tObject
-      # MDW-2015-08-21: [[ bugfix_revRuggedId ]] pObject is empty when creating a new object
+      # MDW-2015-08-21: bugfix_revRuggedId pObject is empty when creating a new object
       if tObject is empty then
          put the long id of the target into tObject
       end if
@@ -1406,4 +1408,4 @@ function revRuggedId pObject
    
    return tId
 end revRuggedId
-
+*/

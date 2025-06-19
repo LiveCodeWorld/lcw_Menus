@@ -394,9 +394,9 @@ end menu_MenuGroupBehavior
 private on ____
 end ____
 
-on menu_MessageBox
+on menu_MessageBox.M
    revIDETogglePalette "message box"
-end menu_MessageBox
+end menu_MessageBox.M
 
 getprop disabled_MessageBox
    return false

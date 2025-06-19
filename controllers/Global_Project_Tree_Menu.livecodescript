@@ -20,6 +20,12 @@ local LocalArray
 
 --> Meu | Props
 -
+getprop checked_ProjectReadme [projectName]
+   return true
+   put project_ConstructReadMeFile (projectName) into readMeFile
+   return there is a file readMeFile
+end checked_ProjectReadme
+
 getprop menu_Target [tObject]
    put the display_View of tObject into displayView
    put displayView into LocalArray ["displayView"]
@@ -92,6 +98,10 @@ on menu_UpdateProjectArray projectName
    display_ProjectArray projectName, true
 end menu_UpdateProjectArray
 
+on menu_CheckProjectStacks projectName
+   project_CheckStacks projectName
+end menu_CheckProjectStacks
+
 on menu_RevealProjectFolder projectName
    put the project_Folder of stack projectName into projectFolder
    finder_Reveal projectFolder
@@ -103,11 +113,6 @@ end __
 on menu_ProjectReadme projectName
    display_ProjectReadme projectName
 end menu_ProjectReadme
-
-getprop checked_ProjectReadme [projectName]
-   put project_ConstructReadMeFile (projectName) into readMeFile
-   return there is a file readMeFile
-end checked_ProjectReadme
 
 -- on menu_ProjectHelp projectName
 launch_OrCreateProject projectName
