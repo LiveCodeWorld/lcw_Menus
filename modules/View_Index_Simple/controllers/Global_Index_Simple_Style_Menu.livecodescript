@@ -52,24 +52,6 @@ getprop dontWrap_Params
    return "true,false"
 end dontWrap_Params
 
-getprop setMenuTitle_Params
-   return "Card,Button,Tools,-,Ask"
-end setMenuTitle_Params
-
-getprop setMenuTitle_Param [indexView]
-   put the menu_Controller of indexView into someObject
-   switch someObject
-      case the card_Object of indexView
-         return "Card"
-      case the menu_Button of indexView
-         return "Button"
-      case menu_GetGlobalController ("Global | Index | Simple | Menu")
-         return "Tools"
-      default
-         return "Ask"
-   end switch
-end setMenuTitle_Param
-
 
 --> Global | Index | Simple | Style | Menu
 -
@@ -102,6 +84,7 @@ on menu_SetMyName indexView
    set the group_Name [tColour] of indexView to someName
 end menu_SetMyName
 
+/*
 on menu_SetMenuTitle indexView, whichTitle
    switch whichTitle
       case "Card"
@@ -125,3 +108,22 @@ on menu_SetMenuTitle indexView, whichTitle
          break
    end switch
 end menu_SetMenuTitle
+
+getprop setMenuTitle_Params
+   return "Card,Button,Tools,-,Ask"
+end setMenuTitle_Params
+
+getprop setMenuTitle_Param [indexView]
+   put the menu_Controller of indexView into someObject
+   switch someObject
+      case the card_Object of indexView
+         return "Card"
+      case the menu_Button of indexView
+         return "Button"
+      case menu_GetGlobalController ("Global | Index | Simple | Menu")
+         return "Tools"
+      default
+         return "Ask"
+   end switch
+end setMenuTitle_Param
+*/

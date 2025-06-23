@@ -13,6 +13,176 @@ Full help text can be found on the linked wiki for the view.*/
 
 --> Working on
 -
+function _TableFromTitles mTitles
+   replace comma with CR in mTitles
+   put the number of lines of mTitles into maxNum
+   set the itemdelimiter to "|"
+   repeat with mNum = 1 to maxNum
+      put line mNum of mTitles into mTitle
+      put word 1 to -1 of item -2 of mTitle into mName
+      put mName & ":" & mTitle & CR after mTable
+   end repeat
+   delete char -1 of mTable
+   return mTable
+end _TableFromTitles
+
+
+--> Menuar | Table
+-
+setprop menubar_Table [pAppend] mTable
+   -- put "File:Rev, Edit:Rev, Tools, Menu:Global|Menu|Group|Tools|Menu, Help:Rev" into mTable
+   replace comma with CR in mTable
+   put the menuBar of the defaultstack into tOriginalMenuBar
+   --
+   lock screen
+   lock menus
+   menuButton_SetTemplate
+   
+   put the number of lines of mTable into maxNum
+   set the itemdelimiter to ":"
+   repeat with lineNum = 1 to maxNum
+      put line lineNum of mTable into mLine
+      put word 1 to -1 of item 1 of mLine into mName
+      
+      # Ducktyping
+      get word 1 to -1 of item 2 of mLine
+      if it is among the items of "rev,live,mTitle,script" then
+         put it into mUpdateStyle
+         breakpoint
+      else if it is not empty then
+         put it into mTitle
+      end if
+      --
+      get word 1 to -1 of item 3 of mLine
+      if it is among the items of "rev,live,mTitle,script" then
+         put it into mUpdateStyle
+         breakpoint
+      else if it is empty then
+         put "mTitle" into mUpdateStyle
+      else
+         put it into mTitle
+      end if
+      
+      # Create if it does not exist
+      switch
+         case pAppend is not false
+            -- case exists (btn lineNum of me) is false
+            if exists (btn mName of me) is true then
+               put the long id of btn mName of me into mButton
+            else
+               create button mName in me
+               put the long id of it into mButton
+            end if
+            break
+         default
+            put the long id of btn mName of me into mButton
+            -- put the long id of btn lineNum of me into mButton
+      end switch
+
+      
+      # Set
+      set the menuButton_Title [mName] of mButton to mTitle
+      --
+      _SetMenuButtonTarget mButton, mTitle
+      --
+      -- from ducktyping
+      set the menuButton_UpdateStyle of mButton to mUpdateStyle
+      --
+   end repeat
+   delete char -1 of mButtons
+   
+   # Delete any extras
+   if pAppend is not true then
+      put the number of buttons of me into lastButtonNum
+      repeat with btnNum = lastButtonNum down to (maxNum +1)
+         delete btn btnNum of me
+      end repeat
+   end if
+   
+   reset the templateButton
+   LayoutControl
+   menuBar_Refresh tOriginalMenuBar
+   unlock menus
+   unlock screen
+   --
+   return mButtons
+end menubar_Table
+
+setprop menubar_DefaultTable mTable
+   -- used by menu_Init of beahior_WikiBrowserCard
+   put menubar_ConstructTable (mTable) into mTable -- eg "Browser-Default"
+   --
+   put menubar_TableToArray (mTable) into menubarArray
+   repeat with mNum = 1 to the number of buttons of me
+      put the short name of btn mNum of me into mName
+      put menubarArray [mName] into mTitle
+      --
+      if mTitle is empty then
+         set the menuButton_Title of btn mNum of me to mName
+      else
+         set the menuButton_Title [mName] of btn mNum of me to mTitle
+      end if
+   end repeat
+end menubar_DefaultTable
+
+function menubar_ConstructTable mTable
+   switch pTableName
+      case "Browser-Default"
+         return "File-Rev,Edit-Rev,Tools,Menu-Global|Menu|Group|Exists|Menu,Help-Rev"
+      default
+         return mTable
+   end switch
+end menubar_ConstructTable
+
+function menubar_TableToArray mTable
+   replace comma with CR in mTable
+   split mTable with CR and "-"
+   return mTable
+end menubar_TableToArray
+
+
+--> Menubar
+-
+getprop menubar_DefaultTitles
+   put the module_Name of the target into stackName
+   if stackName is empty then
+      put the project_Name of me into stackName
+      put the project_MenuTitle of stack stackName into defaultMenu
+      -- put the project_ControllerStackNames of stack stackName into mTitles
+      put empty into mTitles
+   else
+      put the module_MenuTitle of stack stackName into defaultMenu
+      put the module_ControllerStackNames of stack stackName into mTitles
+   end if
+   
+   if mTitles is empty then
+      put defaultMenu into defaultMenuTitles
+   else
+      filter mTitles without "* | Dev | Menu"
+      line_Delete defaultMenu, mTitles
+      put defaultMenu & CR & mTitles into defaultMenuTitles
+   end if
+   
+   # Add a Edit Menu if needed
+   if line 2 of defaultMenuTitles ends with "| Edit | Menu" is false then
+      put CR & "Global | Menu | Group | Edit | Menu" after line 1 of defaultMenuTitles
+   end if
+   
+   # Add Help Menu if needed
+   put lineOffset (" | Help | Menu", defaultMenuTitles) into lineNum
+   if lineNum > 0 then
+      put line lineNum of defaultMenuTitles into helpTitle
+      delete line lineNum of defaultMenuTitles
+      put CR & helpTitle after defaultMenuTitles
+   else
+      put CR & "Global | Menu | Group | Help | Menu" after defaultMenuTitles
+   end if
+   return word 1 to -1 of defaultMenuTitles
+end menubar_DefaultTitles
+
+
+--> MenuButton | Array
+-
 setprop menuButton_Array buttonArray
    # Deconstruct ButtonArray
    put buttonArray ["m mNum"] into mNum
@@ -107,9 +277,10 @@ private function _MenuTargetGuess mTitle, mButton
    -- only used by menuButton_Title
    -- put the menuBar_Owner of me into cardObject
    
-   put the menu_TargetGuess of me into tObject -- on card behavior
+   # Guess the target object
+   put the menu_TargetGuess of me into tObject -- overide on card behavior to be safe
    if tObject is empty then
-      breakpoint -- maybe a problem
+      -- Assume that the target object was the menubutton clicked on
       put mButton into tObject
    end if
    
@@ -176,19 +347,6 @@ getprop menubar_Table [mNames]
    return mTable
 end menubar_Table
 
-function _TableFromTitles mTitles
-   replace comma with CR in mTitles
-   put the number of lines of mTitles into maxNum
-   set the itemdelimiter to "|"
-   repeat with mNum = 1 to maxNum
-      put line mNum of mTitles into mTitle
-      put word 1 to -1 of item -2 of mTitle into mName
-      put mName & ":" & mTitle & CR after mTable
-   end repeat
-   delete char -1 of mTable
-   return mTable
-end _TableFromTitles
-
 command menuBar_DeleteMenuButtons pMenuButtonIDs
    if pMenuButtonIDs is empty then
       put the childControlIDs of me into pMenuButtonIDs
@@ -203,120 +361,6 @@ command menuBar_DeleteMenuButtons pMenuButtonIDs
    --
    unlock screen
 end menuBar_DeleteMenuButtons
-
-
---> Menuar | Table
--
-setprop menubar_Table [pAppend] mTable
-   -- put "File:Rev, Edit:Rev, Tools, Menu:Global|Menu|Group|Exists|Menu, Help:Rev" into mTable
-   replace comma with CR in mTable
-   put the menuBar of the defaultstack into tOriginalMenuBar
-   --
-   lock screen
-   lock menus
-   menuButton_SetTemplate
-   
-   put the number of lines of mTable into maxNum
-   set the itemdelimiter to ":"
-   repeat with lineNum = 1 to maxNum
-      put line lineNum of mTable into mLine
-      put word 1 to -1 of item 1 of mLine into mName
-      
-      # Ducktyping
-      get word 1 to -1 of item 2 of mLine
-      if it is among the items of "rev,live,mTitle,script" then
-         put it into mUpdateStyle
-         breakpoint
-      else if it is not empty then
-         put it into mTitle
-      end if
-      --
-      get word 1 to -1 of item 3 of mLine
-      if it is among the items of "rev,live,mTitle,script" then
-         put it into mUpdateStyle
-         breakpoint
-      else if it is empty then
-         put "mTitle" into mUpdateStyle
-      else
-         put it into mTitle
-      end if
-      
-      # Create if it does not exist
-      switch
-         case pAppend is true
-            -- case exists (btn lineNum of me) is false
-            if exists (btn mName of me) is true then
-               put the long id of btn mName of me into mButton
-            else
-               create button mName in me
-               put the long id of it into mButton
-            end if
-            break
-         default
-            put the long id of btn mName of me into mButton
-            -- put the long id of btn lineNum of me into mButton
-      end switch
-      put mButton & CR after mButtons
-      
-      # Set
-      set the menuButton_Title [mName] of mButton to mTitle
-      --
-      _SetMenuButtonTarget mButton, mTitle
-      --
-      -- from ducktyping
-      set the menuButton_UpdateStyle of mButton to mUpdateStyle
-      --
-   end repeat
-   delete char -1 of mButtons
-   
-   # Delete any extras
-   if pAppend is not true then
-      put the number of buttons of me into lastButtonNum
-      repeat with btnNum = lastButtonNum down to (maxNum +1)
-         delete btn btnNum of me
-      end repeat
-   end if
-   
-   reset the templateButton
-   LayoutControl
-   menuBar_Refresh tOriginalMenuBar
-   unlock menus
-   unlock screen
-   --
-   return mButtons
-end menubar_Table
-
-setprop menubar_DefaultTable mTable
-   -- used by menu_Init of beahior_WikiBrowserCard
-   put menubar_ConstructTable(mTable) into mTable -- eg "Browser-Default"
-   --
-   put menubar_TableToArray (mTable) into menubarArray
-   repeat with mNum = 1 to the number of buttons of me
-      put the short name of btn mNum of me into mName
-      put menubarArray [mName] into mTitle
-      --
-      if mTitle is empty then
-         set the menuButton_Title of btn mNum of me to mName
-      else
-         set the menuButton_Title [mName] of btn mNum of me to mTitle
-      end if
-   end repeat
-end menubar_DefaultTable
-
-function menubar_TableToArray mTable
-   replace comma with CR in mTable
-   split mTable with CR and "-"
-   return mTable
-end menubar_TableToArray
-
-function menubar_ConstructTable mTable
-   switch pTableName
-      case "Browser-Default"
-         return "File-Rev,Edit-Rev,Tools,Menu-Global|Menu|Group|Exists|Menu,Help-Rev"
-      default
-         return mTable
-   end switch
-end menubar_ConstructTable
 
 
 --> MenuButton | mController
@@ -633,25 +677,6 @@ end menu_NormalizeGlobalTitle
 
 --> Create
 -
-getprop menubar_DefaultTitles
-   put the stack_Name of me into moduleName
-   --
-   put the module_ControllerStackNames of stack moduleName into mTitles
-   filter mTitles without "* | Dev | Menu"
-   --
-   put the module_MenuTitle of stack moduleName into defaultMenu
-   line_Delete defaultMenu, mTitles
-   put defaultMenu & CR & mTitles into moduleMenuTitles
-   --
-   put lineOffset (" | Help | Menu", moduleMenuTitles) into lineNum
-   if lineNum > 0 then
-      put line lineNum of moduleMenuTitles into helpTitle
-      delete line lineNum of moduleMenuTitles
-      put CR & helpTitle after moduleMenuTitles
-   end if
-   return word 1 to -1 of moduleMenuTitles
-end menubar_DefaultTitles
-
 command menuButton_CreateAtEnd mName, pBeforeNum
    lock menus
    put the menuBar of the defaultStack into oMenuBar

@@ -332,6 +332,14 @@ end menu_PasteUnformatted
 private on __
 end __
 
+on menu_BrowserTool.9
+   choose browse tool
+end menu_BrowserTool.9
+
+on menu_PointerTool.0
+   choose pointer tool
+end menu_PointerTool.0
+
 -- on menu_SelectAll.A dView
 -- actionSelectAll
 ide_RevMenubarMenuPick "Edit", "Select All"

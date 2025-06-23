@@ -33,6 +33,25 @@ However it is not needed if yo are loading the menuTable from stored arrays that
 
 --> Working on
 -
+function menu_GlobalTitleFromViewName vName
+   put "Global |" && menu_TitleFromViewName (vName) into globalMenuTitle
+   return globalMenuTitle
+end menu_GlobalTitleFromViewName
+
+function menu_TitleFromViewName viewName, pLevelAbove, pMakePretty
+   set the itemdelimiter to "|"
+   if word 1 to -1 of item 1 of viewName = "View" then
+      delete item 1 of viewName
+   end if
+   if pLevelAbove is a number then delete item -1 to - pLevelAbove of viewName   
+   menu_NormalizeTitle viewName, pMakePretty
+   put viewName && "| Menu" after normalizedMenu
+   return normalizedMenu
+end menu_TitleFromViewName
+
+
+--> Menu | Props
+-
 getprop menu_Controller [pMenuTitle]
    put the long id of the target into tObject
    --
@@ -217,25 +236,6 @@ getprop view_MenuTitle [pNotGlobal]
    if pNotGlobal is not false then put "Global | " before mTitle
    return mTitle
 end view_MenuTitle
-
-
---> Menu | Naming
--
-function menu_GlobalTitleFromViewName vName
-   put "Global |" && menu_TitleFromViewName (vName) into globalMenuTitle
-   return globalMenuTitle
-end menu_GlobalTitleFromViewName
-
-function menu_TitleFromViewName viewName, pLevelAbove, pMakePretty
-   set the itemdelimiter to "|"
-   if word 1 to -1 of item 1 of viewName = "View" then
-      delete item 1 of viewName
-   end if
-   if pLevelAbove is a number then delete item -1 to - pLevelAbove of viewName   
-   menu_NormalizeTitle viewName, pMakePretty
-   put viewName && "| Menu" after normalizedMenu
-   return normalizedMenu
-end menu_TitleFromViewName
 
 
 --> Hack | mArray

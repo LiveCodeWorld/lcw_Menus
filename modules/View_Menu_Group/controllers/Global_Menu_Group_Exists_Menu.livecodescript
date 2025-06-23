@@ -87,13 +87,14 @@ on menu_DeleteMenuButton mGroup, mName
    dispatch "menuButton_Delete" to mGroup with mName
 end menu_DeleteMenuButton
 
-on menu_SetModuleMenus mGroup
+on menu_SetDefaultMenus mGroup
    put the menubar_DefaultTitles of mGroup into mTitles
-   -- put lcw_Ask ("Set the menubar_Titles of this module to...", mTitles, mGroup) into mTitles
-   lcw_Answer "Set the menubar_Titles of this module to [[mTitles]]?", mGroup, mTitles
+   
+   put merge ("Set the menubar_Titles of this module to [[mTitles]]?") into someQuestion
+   lcw_Answer someQuestion, mGroup
    --
    set the menubar_Titles of mGroup to mTitles
-end menu_SetModuleMenus
+end menu_SetDefaultMenus
 
 private on __
 end __
@@ -102,7 +103,8 @@ on menu_EditMenuTitle mGroup, mName
    put the menuButton_Title [mName] of mGroup into mTitle
    put lcw_Ask ("Edit menuButton_Title...", mTitle, "Edit Menu Titles", mGroup) into mTitle
    
-   set the menuButton_Title [mName] of mGroup to mTitle
+   put the menuButton_Object [mName] of mGroup into mButton
+   set the menuButton_Title of mButton to mTitle
 end menu_EditMenuTitle
 
 getprop editMenuTitle_Params [mGroup]   

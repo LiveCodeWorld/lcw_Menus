@@ -79,6 +79,14 @@ on mDoubleUp_ProjectTree displayView, shortFile
    end switch
 end mDoubleUp_ProjectTree
 
+private function _ProjectName
+   return LocalArray ["oProjectName"]
+end _ProjectName
+
+private function _DisplayView
+   return LocalArray ["displayView"]
+end _DisplayView
+
 private function _StackPath displayView, sPath
    put the title_Text of displayView into projectName
    replace comma with slash in sPath
@@ -165,8 +173,19 @@ end insert_Behavior
 private on _
 end _
 
+on menu_GoToStack shortFile
+   put _DisplayView() into dView
+   put _StackPath (dView, shortFile) into sFile
+   if there is a stack sFile then
+      go to stack sFile
+   else
+      breakpoint
+   end if
+end menu_GoToStack
+
 on menu_Readme shortFolder
-   breakpoint
+   put _ProjectName() into projectName
+   display_ProjectReadme projectName
 end menu_Readme
 
 on menu_RevealProjectFolder shortFolder

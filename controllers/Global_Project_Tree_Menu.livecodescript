@@ -110,6 +110,10 @@ end menu_RevealProjectFolder
 private on __
 end __
 
+on submenu_Menu
+   return "Global | Menu | Group | Menu"
+end submenu_Menu
+
 on menu_ProjectReadme projectName
    display_ProjectReadme projectName
 end menu_ProjectReadme

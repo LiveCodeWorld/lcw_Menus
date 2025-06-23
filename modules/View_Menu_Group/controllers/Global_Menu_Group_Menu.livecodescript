@@ -48,8 +48,9 @@ getprop disabled_InsertMenuGroup [cardObject]
    put the menuBar_View of cardObject into mGroup
    if exists (mGroup) then return true
    
-   put the top_View ["View|Menu|Group"] of cardObject into mGroup
-   return exists (mGroup)
+   put the card_Views ["View|Menu|Group"] of cardObject into mGroup
+   put exists (mGroup) into sBoolean
+   return sBoolean
 end disabled_InsertMenuGroup
 
 private on _

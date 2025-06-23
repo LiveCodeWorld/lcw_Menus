@@ -13,6 +13,11 @@ This behavior displays and updates a dynamic cross-platform menubar.
 
 --> Working on
 -
+function menuGroup_Controller mTitle
+   put the module_Controller [mTitle] of stack "View|Menu|Group" into mController
+   return mController
+end menuGroup_Controller
+
 private command _UpdateMenubar pForce
    mArray_ClearActiveMenuArray
    --
@@ -23,7 +28,7 @@ private command _UpdateMenubar pForce
       try
          _UpdateMenuButton mButton, pForce
       catch sError
-         breakpoint
+         -- breakpoint
          -- put the menuButton_Array of mButton into buttonArray
          -- display_Data buttonArray, the name of mButton, "the menuButton_Array"
          -- put buttonArray ["m mTitle"] into mTitle
@@ -302,27 +307,36 @@ getprop norm_Title [mTitle]
    return normArray ["mTitle"]
 end norm_Title
 
+private function _ConstructNormArray mController
+   put "Module" into normArray ["mUpdateStyle"]
+   --
+   put revRuggedID (mController) into normArray ["mController"]
+   put the module_Name of mController into normArray ["moduleName"]
+   put menu_TitleFromController (mController) into normArray ["mTitle"]
+   return normArray
+end _ConstructNormArray
+
 getprop normalized_TitleArray [mTitle]
+   put the long id of the target into tObject
    if mTitle is "Default" then put empty into mTitle
    
-   # Check target module for controller
-   put the module_Controller [mTitle] of the target into mController
+   # Module or Project menuController
+   if the module_Name of tObject is not empty then
+      put the module_Controller [mTitle] of tObject into mController
+   else
+      put the project_Controller [mTitle] of tObject into mController
+   end if
+   
+   # If local menu controller
    if exists (mController) then
-      put revRuggedID (mController) into normArray ["mController"]
-      put "Module" into normArray ["mUpdateStyle"]
-      put the module_Name of the target into normArray ["moduleName"]
-      put menu_TitleFromController (mController) into normArray ["mTitle"]
+      put _ConstructNormArray (mController) into normArray
       return normArray
    end if
    
    # Check menu module for controller
-   put "View|Menu|Group" into mStackName
-   put the module_Controller [mTitle] of stack mStackName into mController
+   put menuGroup_Controller (mTitle) into mController
    if exists (mController) then
-      put revRuggedID (mController) into normArray ["mController"]
-      put "Module" into normArray ["mUpdateStyle"]
-      put the module_Name of stack mStackName into normArray ["moduleName"]
-      put menu_TitleFromController (mController) into normArray ["mTitle"]
+      put _ConstructNormArray (mController) into normArray
       return normArray
    end if
    
@@ -333,6 +347,7 @@ getprop normalized_TitleArray [mTitle]
          THEN
       put "Rev" into normArray ["mUpdateStyle"]
       put mTitle into normArray ["mTitle"]
+      return normArray
    end if
    
    # Check Normalized Global Menu
@@ -340,23 +355,21 @@ getprop normalized_TitleArray [mTitle]
       menu_NormalizeGlobalTitle mTitle
       --
       put menu_GetGlobalController(mTitle) into mController
-      if exists (mController) then
-         put "Rev" into normArray ["mUpdateStyle"]
-         put mTitle into normArray ["mTitle"]
-         put mController into normArray ["mController"]
-         --
-         return normArray
-      end if
+      put "Rev" into normArray ["mUpdateStyle"]
+      put mTitle into normArray ["mTitle"]
+      put mController into normArray ["mController"]
+      return normArray
    end if
    
    # Lastly Rev Menu
    if rev_CheckMenuName (mTitle) is true then
       put "Rev" into normArray ["mUpdateStyle"]
       put mTitle into normArray ["mTitle"]
+      return normArray
    end if
    
    # Can't find
-   return normArray
+   return empty
 end normalized_TitleArray
 
 
