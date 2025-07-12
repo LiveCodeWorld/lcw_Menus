@@ -20,6 +20,46 @@ local LocalArray
 
 --> Working on
 -
+getprop selected_LineNums
+   put the hilitedlines of _fieldObject() into sIndex
+   return sIndex
+end selected_LineNums
+
+setprop deleted_LineNums lineNumList
+   replace comma with CR in lineNumList
+   sort descending numeric lineNumList
+   
+   lock screen
+   repeat for each line lineNum in lineNumList
+      if lineNum is a number then
+         put the short id of _fieldObject() into fldID
+         delete line lineNum of fld id fldID of me
+      end if
+   end repeat
+   unlock screen
+end deleted_LineNums
+
+setprop deleted_Line someLine
+   if someLine is a number then
+      put someLine into lineNum
+   else
+      put the line_Number [someLine] of me into lineNum
+   end if
+   --
+   put the short id of _fieldObject() into fldID
+   delete line lineNum of fld id fldID of me
+   return lineNum
+end deleted_Line
+
+getprop tab_Stops tStops
+   put the tabstops of _FieldObject() into tStops
+   return tStops
+end tab_Stops
+
+setprop tab_Stops tStops
+   set the tabstops of _FieldObject() to tStops
+end tab_Stops
+
 command toggle_Title
    set the title_Colour of me to colour_GetRandom()
    put the stack_Style of me into oStyle
@@ -728,21 +768,6 @@ getprop stack_Label stackLabel
    set the label of myStackObject to stackLabel
    return myStackObject
 end stack_Label
-
-
---> Deleted
--
-setprop deleted_Line someLine
-   if someLine is a number then
-      put someLine into lineNum
-   else
-      put the line_Number [someLine] of me into lineNum
-   end if
-   --
-   put the short id of _fieldObject() into fldID
-   delete line lineNum of fld id fldID of me
-   return lineNum
-end deleted_Line
 
 
 --> Displayed
