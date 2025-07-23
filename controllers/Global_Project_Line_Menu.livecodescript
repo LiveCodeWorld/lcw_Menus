@@ -48,22 +48,23 @@ on mDoubleUp_ProjectTree displayView, shortFile
          display_JsonFile sFile
          put the result into dView
       case item 1 of sPath = "Modules"
-         -- put shortFile into stackName
          put the short name of stack sFile into stackName
          --
-         if exists (stack stackName) is false then
+         if the number of items of sPath = 4 then
+            edit the script of stack sFile
+         else if exists (stack stackName) is false then
             breakpoint
          else
             show stack stackName
             toplevel stack stackName
+            --
+            display_ModuleTools stackName
             
             if the shiftKey is "Down" then
                put the name of stack stackName into sObject
                display_StackDeps sObject
             end if
          end if
-         
-         display_ModuleTools stackName
          break
       default
          if exists (stack sFile) is false then

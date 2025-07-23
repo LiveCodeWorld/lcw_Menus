@@ -9,24 +9,16 @@ version: 0.1
 
 --> Global | MenuArray | Menu
 -
-on menu_Test displayView
-   put the mArray_Controller of displayView into mArrayController
-   put keys (mArrayController)
+on menu_Test dView
+   put the mArray_Controller of dView into mArrayController
 end menu_Test
 
 on _
 end _
 
-on menu_Step displayView
-   put the mArray_Controller of displayView into mController
+on menu_ScriptMenuArray dView
+   put the mArray_Controller of dView into mController
    --
-   put the script_MenuArray of mController into mArrayController
-   display_Array mArrayController
-end menu_Step
-
-
---> Global | MenuArray | Menu | Props
--
-
---> Global | MenuArray | Menu | Disabled
--
+   put the script_MenuArray of mController into mArray
+   display_Array mArray
+end menu_ScriptMenuArray

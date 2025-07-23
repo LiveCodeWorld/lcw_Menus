@@ -31,21 +31,87 @@ end menu_CheckTarget
 
 --> Global | HkeyArray | Table | Menu
 -
-on menu_CollectHkeys dView
+on menu_CollectHkeys
+   put _FilteredHkeys() into hKeys
+   put word 1 to -1 of hkeyIndex_CollectScript (hKeys) into depScript
+   
+   -- display_HkeyArrayDeps hkeyArray, sTitle
+   put the uOPN ["displayed_Object"] of _dView() into sObject
+   display_Text depScript, sObject, "Script Deps"
+end menu_CollectHkeys
+
+on menu_DisplayHkeys
+   put _FilteredHkeys() into hKeys
+   set the displayed_Index of _dView() to hKeys
+end menu_DisplayHkeys
+
+on menu_CollectDisplayed sObject
+   put _dView() into dView
+   put the displayed_Lines of dView into stackDepTable
+   
+   -- put the uOPN ["stack_DepArray"] of dView into stackDepArray
    put the uOPN ["displayed_Object"] of dView into sObject
    put the uOPN ["hkey_Array"] of dView into hkeyArray
-   put the uOPN ["stack_DepArray"] of dView into stackDepArray
+   put stackArray_Without (hkeyArray, sObject) into stackDepArray
    
-   put the displayed_Lines of dView into stackDepTable
+   # Filter by displayed sObjects
+   put _FilterHkeyArray (stackDepArray, stackDepTable) into newHkeyArray
+   
+   # Display
+   display_ScriptHkeyArray newHkeyArray, sObject, "neato"
+end menu_CollectDisplayed
+
+private function _FilteredHkeys
+   put _FilteredHkeyArray() into hkeyArray
+   put the uOPN ["displayed_Object"] of _dView() into sObject
+   put hkeyArray_HkeysWithout (hkeyArray, sObject) into hKeys
+   return hKeys
+end _FilteredHkeys
+
+function hkeyArray_HkeysWithout hkeyArray, sObject
+   -- put keys (hkeyArray) into hKeys -- but deps could be outside sObject
+   put array_ListKeys (hkeyArray) into hKeys -- includes sObject deps
+   
+   # Filter
+   filter hKeys without ("*" && sObject)
+   return hKeys
+end hkeyArray_HkeysWithout
+
+private function _FilteredHkeyArray
+   put _dView() into dView
+   put the uOPN ["hkey_Array"] of dView into hkeyArray
+   put the uOPN ["displayed_Object"] of dView into sObject
+   
+   put stackArray_Without (hkeyArray, sObject) into stackDepArray
+   put hkeyArray_FromStackDepArray (stackDepArray) into hkeyArray
+   return hkeyArray
+end _FilteredHkeyArray
+
+on menu_ListExternalStacks
+   put _dView() into dView
+   put the uOPN ["displayed_Object"] of dView into sObject
+   put the uOPN ["hkey_Array"] of dView into hkeyArray
+   
+   -- display_HkeyArrayDepTable hkeyArray, sObject
+   put stackHkeyTable_Construct (hkeyArray, sObject) into hkeyTable
+   set the displayed_Index of dView to hkeyTable
+end menu_ListExternalStacks
+
+private function _FilterHkeyArray stackDepArray, stackDepTable
+   put _FilterStackArray(stackDepArray, stackDepTable) into newStackDepArray
+   put hkeyStackArray_ListHkeys (newStackDepArray) into newHkeyArray
+   return newHkeyArray
+end _FilterHkeyArray
+
+private function _FilterStackArray stackDepArray, stackDepTable
+   -- strips out stacks (creates new stackArray based on thos listed in stackDepTable)
    set the itemdelimiter to tab
    repeat for each line tLine in stackDepTable
       put item 1 of tLine into stackObject
       put stackDepArray [stackObject] into newStackDepArray [stackObject]
    end repeat
-   
-   put hkeyStackArray_ListHkeys (newStackDepArray) into newHkeyArray
-   display_ScriptHkeyArray newHkeyArray, sObject, "neato"
-end menu_CollectHkeys
+   return newStackDepArray
+end _FilterStackArray
 
 function hkeyStackArray_ListHkeys hkeyStackArray
    local hkeyArray
@@ -64,15 +130,25 @@ end menu_RemoveSelected
 private on _
 end _
 
-on menu_Behavior dView
-   put the behavior of dView into bObject
-   edit the script of bObject
-end menu_Behavior
+on menu_SortByDeps sObject
+   put _dView() into dView
+   put the displayed_Index of dView into hkeyTable
+   --
+   set the itemdelimiter to tab
+   sort numeric descending lines of hkeyTable by item 2 of each
+   --
+   set the displayed_Index of dView to hkeyTable
+end menu_SortByDeps
 
-on menu_ModuleTools dView
-   put the view_Name of dView into viewName
-   display_ModuleTools viewName
-end menu_ModuleTools
+on menu_SortAlphabetical sObject
+   put _dView() into dView
+   put the displayed_Index of dView into hkeyTable
+   --
+   set the itemdelimiter to tab
+   sort lines of hkeyTable by item 1 of each
+   --
+   set the displayed_Index of dView to hkeyTable
+end menu_SortAlphabetical
 
 private on __
 end __

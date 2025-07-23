@@ -415,13 +415,6 @@ command project_CreateMenuFromFolder moduleOrProjectFolder, gMenuTitle, pControl
    return mController
 end project_CreateMenuFromFolder
 
-function menu_CommandToText handlerName
-   set the itemdelimiter to "_"
-   put item 2 of handlerName into mSuffix
-   put text_SplitCaps (mSuffix) into mLine
-   return mLine
-end menu_CommandToText
-
 
 --> Menu | Param | Names | Old
 -

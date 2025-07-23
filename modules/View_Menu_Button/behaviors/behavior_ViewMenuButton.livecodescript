@@ -1554,7 +1554,7 @@ command mArray_SetTopTitle mTitle
    put mTitle into LocalArray ["active_TopMenuTitle"]
 end mArray_SetTopTitle
 
-command mArray_TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
+private command _TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
    put keys (mArray) into indexNums
    sort numeric indexNums
    repeat for each line indexNum in indexNums
@@ -1592,15 +1592,15 @@ command mArray_TextRecurse @mText, someIndent, mArray, pController, pMenuTarget
       put itemArray ["menu"] into subArray
       if subArray is an array then
          put tab & someIndent into nextIndent
-         mArray_TextRecurse mText, nextIndent, subArray
+         _TextRecurse mText, nextIndent, subArray
       end if
    end repeat
-end mArray_TextRecurse
+end _TextRecurse
 
 function mArray_ToText mArray
    local mText
    put empty into someIndent
-   mArray_TextRecurse mText, someIndent, mArray
+   _TextRecurse mText, someIndent, mArray
    delete char -1 of mText
    return mText
 end mArray_ToText

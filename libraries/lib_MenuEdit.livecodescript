@@ -4,20 +4,26 @@
 license: GPLv3
 name: lib_MenuEdit
 type: library
-version: 0.3
+version: 0.4
 deps: lib_FindHkey
 
 /*
 This library enables menu editing when present.
-
-function mArray_GetActiveTitle
-   return LocalArray ["active_MenuTitle"]
-end mArray_GetActiveTitle
-
-command mArray_SetActiveTitle mItem
-   put mItem into LocalArray ["active_MenuTitle"]
-end mArray_SetActiveTitle
 */
+
+--> Props
+-
+getprop hkey_StartLine [hkeyLine]
+   put word 1 to 2 of hkeyLine into shortHkey
+   put the revAvailableHandlers of the target into hTable
+   repeat for each line someLine in hTable
+      if word 1 to 2 of someLine = shortHkey then
+         put word 3 of someLine into startLineNum
+         return startLineNum
+      end if
+   end repeat
+   return 0
+end hkey_StartLine
 
 
 --> Working on
@@ -28,7 +34,7 @@ command menu_EditItem gMenuTitle, handlerName
    hkey_Edit hKey
    return hKey
 end menu_EditItem
-   
+
 command menu_Edit pMenuTitle
    -- if pMenuTitle is empty  we assume we are looking for top title
    
@@ -67,28 +73,16 @@ end menu_Edit
 --> Heky | Edit
 -
 command hkey_Edit hKey
-   if hKey is empty then
-      return "Error, hkey is empty"
-      -- put debug_GetCallingHkey() into hkeyLine
-      -- hkey_Deconstruct hkeyLine, fName, fType, fObject, fNum
-   end if
-   
    # Find Hkey
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the result into hkeyLine
-   if exists (hObject) is true then
-      put the found_Hkey [hkeyLine] of hObject into foundHkey
-   else
-      put hkey_Find (hKey) into foundHkey          
+   if exists (hObject) is false then
+      return "Error, cannot find object for hkey:" && hKey
    end if
    
-   # Edit found script and scroll
-   hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
-   if exists (fObject) is false then return empty
-   put the hkey_StartLine [hkeyLine] of fObject into scriptLineNum
-   scriptEditor_EditAndScroll fObject, scriptLineNum, fName  
-   
-   return foundHkey
+   put the hkey_StartLine [hkeyLine] of hObject into sLineNum
+   scriptEditor_EditAndScroll hObject, sLineNum, hName  
+   return sLineNum
 end hkey_Edit
 
 

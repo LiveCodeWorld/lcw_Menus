@@ -438,6 +438,7 @@ end menu_CheckRecursionOnExtract
 --> Props
 -
 getprop menu_Button
+   -- could be "View|Menu|Button" of project "lcw_Menus"
    put the long id of btn 1 of cd 1 of stack "View|Index|Simple" into mButton
    return mButton
 end menu_Button
@@ -857,20 +858,14 @@ end menu_CleanCheckMarks
 function menu_CleanLine mLine  
    if char 1 to 2 of mLine is among the items of "!c,!n" then delete char 1 to 2 of mLine
    if char 1 of mLine = "(" then delete char 1 of mLine
-   -- replace "(" with empty in someMenu	# only at start!
-   -- put replacetext (mLine, "/.*", empty) into mLine
-   
-   -- accelerator keys
    set the itemdelimiter to "/"
    put item 1 of mLine into mSendLine
-   
    if mLine is not mSendLine then breakpoint
    return mSendLine
 end menu_CleanLine
 
 function menu_CleanMarks mText  
    menu_CleanCheckMarks mText
-   -- replace "(" with empty in mText	# only at start!
    put replacetext (mText, "(?m)^\(", empty) into mText
    put replacetext (mText, "/.*", empty) into mText
    return mText

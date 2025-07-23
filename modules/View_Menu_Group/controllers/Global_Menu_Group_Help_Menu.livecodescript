@@ -27,9 +27,32 @@ getprop menu_CheckTarget [dView]
    return exists (dView)
 end menu_CheckTarget
 
+getprop disabled_DisplayScriptHelp
+   return LocalArray ["sHelpExists"] is false
+end disabled_DisplayScriptHelp
+
+getprop disabled_CreateScriptHelp
+   return LocalArray ["sHelpExists"]
+end disabled_CreateScriptHelp
+
 
 --> Global | Menu | Group | Help | Menu
 -
+on menu_DisplayScriptHelp sObject
+   launch_ScriptHelp sObject
+end menu_DisplayScriptHelp
+
+on menu_CreateScriptHelp sObject
+   put the help_PageArray of sObject into pageArray
+   
+   put the script_HelpDomain of sObject into hDomain
+   put the script_HelpSlug of sObject into pSlug
+   --
+   pageArray_Set hDomain, pSlug, pageArray, true
+   --
+   launch_ScriptHelp sObject
+end menu_CreateScriptHelp
+
 on menu_Dictionary
    revIDEDocumentationLoad "API", "LiveCode Script"
 end menu_Dictionary
